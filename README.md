@@ -1,25 +1,44 @@
-# CODING AGENTS: READ THIS FIRST
+# Tippin Cowgirl — interactive landing page
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+A premium, single-page landing site for **Tippin Cowgirl**, the custom mobile
+hat bar in El Paso, TX. The centerpiece is a "Mario-Kart"–style **hat
+configurator**: pick the felt, shape the brim, wrap a band, pin a charm and
+foil-stamp your initials — with a live SVG preview that recolors and
+re-decorates in real time.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+Implemented in **React + Vite**, ported from the Claude Design prototype in
+`../project/Tippin Cowgirl.dc.html`.
 
-## What you should do — IMPORTANT
+## Run
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+```bash
+npm install
+npm run dev      # local dev server
+npm run build    # production build to dist/
+npm run preview  # preview the production build
+```
 
-**Read `project/Tippin Cowgirl.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Structure
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+- `src/App.jsx` — page shell + all static sections (nav, marquee, hero,
+  how-it-works, gallery, events, footer).
+- `src/components/Configurator.jsx` — the interactive hat bar (state, step
+  tabs, swatches, monogram input, build summary, shuffle).
+- `src/hat/HatPreview.jsx` — the live SVG hat (crown, brim, band, charm,
+  monogram) that recolors from the current build.
+- `src/hat/data.js` — felt / brim / band / charm option data + SVG path and
+  color helpers, ported 1:1 from the design.
+- `src/styles.css` — reset, keyframes (sway / marquee / glow), hover & focus
+  states, and responsive breakpoints.
+- `public/logo.png` — the brand mark (cowgirl-on-donkey), cropped from the
+  Instagram profile, used in the nav, footer and favicon.
 
-## About the design files
+## Notes
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
-
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
-
-## Bundle contents
-
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `Tippin Cowgirl landing interactiva` project files (HTML prototypes, assets, components)
+- **Copy is in English** to match the brand's Instagram voice.
+- The **gallery** uses tasteful placeholder tiles (`[ pop-up event photo ]`,
+  etc.) — drop real photos into `public/` and swap the `GalleryTile`
+  placeholders in `src/App.jsx` when you have them.
+- Three design "tweaks" from the prototype are constants at the top of
+  `Configurator.jsx`: `GLOW` (stage accent — terracotta by default),
+  `SHOW_MARQUEE`, and `IDLE_SWAY`.
