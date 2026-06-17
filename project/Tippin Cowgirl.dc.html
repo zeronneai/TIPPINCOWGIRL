@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=DM+Serif+Display:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #241710; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  ::selection { background: #c25b34; color: #fff; }
+  @keyframes sway { 0%,100% { transform: rotate(-2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-6px); } }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes glowpulse { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: .8; transform: scale(1.06); } }
+  @keyframes risein { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #5a3a28; border-radius: 8px; }
+</style>
+</helmet>
+
+<div style="position:relative; font-family:'Hanken Grotesk',sans-serif; background:#241710; color:#f6efe2; overflow:hidden;">
+
+  <!-- grain overlay -->
+  <div style="position:fixed; inset:0; z-index:50; pointer-events:none; opacity:.05; mix-blend-mode:overlay; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%222%22/></filter><rect width=%22120%22 height=%22120%22 filter=%22url(%23n)%22/></svg>');"></div>
+
+  <!-- NAV -->
+  <nav style="position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:16px 36px; background:rgba(36,23,16,.78); backdrop-filter:blur(14px); border-bottom:1px solid rgba(246,239,226,.08);">
+    <div style="display:flex; align-items:center; gap:11px;">
+      <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:#c25b34; color:#fff; font-family:'DM Serif Display',serif; font-size:17px;">★</span>
+      <span style="font-family:'Rye',serif; font-size:20px; letter-spacing:.01em; color:#f6efe2;">Tippin Cowgirl</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:30px;">
+      <a href="#build" style="display:none; font-weight:600; font-size:14px; color:#e9dcc8; text-decoration:none; letter-spacing:.02em;">The Hat Bar</a>
+      <a href="#how" style="font-weight:600; font-size:14px; color:#e9dcc8; text-decoration:none; letter-spacing:.02em;">Mobile Bar</a>
+      <a href="#gallery" style="font-weight:600; font-size:14px; color:#e9dcc8; text-decoration:none; letter-spacing:.02em;">Gallery</a>
+      <a href="#events" style="display:inline-flex; align-items:center; gap:7px; padding:10px 18px; background:#c25b34; color:#fff; font-weight:700; font-size:14px; border-radius:999px; text-decoration:none; box-shadow:0 4px 14px rgba(194,91,52,.35);" style-hover="background:#a84a27;">Book the bar</a>
+    </div>
+  </nav>
+
+  <!-- MARQUEE -->
+  <sc-if value="{{ showMarquee }}" hint-placeholder-val="{{ true }}">
+  <div style="overflow:hidden; white-space:nowrap; background:#c25b34; border-bottom:2px solid #241710;">
+    <div style="display:inline-flex; gap:34px; padding:9px 0; animation:marquee 26s linear infinite;">
+      <span style="font-family:'Rye',serif; font-size:14px; color:#241710; letter-spacing:.04em;">CUSTOM HAT BAR ✦ EL PASO, TX ✦ MOBILE POP-UPS ✦ EVENTS &amp; PARTIES ✦ ONE-OF-A-KIND ✦ TIP YOUR HAT ✦ CUSTOM HAT BAR ✦ EL PASO, TX ✦ MOBILE POP-UPS ✦ EVENTS &amp; PARTIES ✦ ONE-OF-A-KIND ✦ TIP YOUR HAT ✦</span>
+      <span style="font-family:'Rye',serif; font-size:14px; color:#241710; letter-spacing:.04em;">CUSTOM HAT BAR ✦ EL PASO, TX ✦ MOBILE POP-UPS ✦ EVENTS &amp; PARTIES ✦ ONE-OF-A-KIND ✦ TIP YOUR HAT ✦ CUSTOM HAT BAR ✦ EL PASO, TX ✦ MOBILE POP-UPS ✦ EVENTS &amp; PARTIES ✦ ONE-OF-A-KIND ✦ TIP YOUR HAT ✦</span>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- HERO -->
+  <header style="position:relative; max-width:1180px; margin:0 auto; padding:64px 36px 30px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+    <div style="display:inline-flex; align-items:center; gap:9px; padding:7px 15px; border:1px solid rgba(246,239,226,.22); border-radius:999px; font-weight:600; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:#e0b48f; margin-bottom:24px;">
+      <span style="width:6px; height:6px; border-radius:50%; background:#3fa89a;"></span> El Paso, TX · Mobile Hat Bar
+    </div>
+    <h1 style="margin:0; font-family:'DM Serif Display',serif; font-weight:400; font-size:clamp(44px,7vw,86px); line-height:.98; letter-spacing:-.01em; color:#f6efe2;">Tip your hat,<br><span style="font-style:italic; color:#e0905f;">make it yours.</span></h1>
+    <p style="max-width:560px; margin:24px 0 0; font-size:17px; line-height:1.6; color:#d9c8b4;">Step up to the bar, pick your felt, shape the brim, wrap a band and pin your charm — and strut off with a one-of-a-kind custom hat. We bring the whole experience to your event.</p>
+    <div style="display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:34px;">
+      <a href="#build" style="display:inline-flex; align-items:center; gap:9px; padding:15px 28px; background:#f6efe2; color:#241710; font-weight:800; font-size:15px; border-radius:999px; text-decoration:none; box-shadow:0 8px 24px rgba(0,0,0,.3);" style-hover="transform:translateY(-2px);">Start building →</a>
+      <a href="#events" style="display:inline-flex; align-items:center; gap:9px; padding:15px 28px; background:transparent; color:#f6efe2; font-weight:700; font-size:15px; border-radius:999px; text-decoration:none; border:1px solid rgba(246,239,226,.3);" style-hover="background:rgba(246,239,226,.08);">Book an event</a>
+    </div>
+  </header>
+
+  <!-- CONFIGURATOR -->
+  <section id="build" style="position:relative; max-width:1180px; margin:0 auto; padding:40px 36px 70px;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:26px;">
+      <div>
+        <div style="font-family:'Rye',serif; font-size:13px; letter-spacing:.06em; color:#3fa89a; margin-bottom:8px;">The Hat Bar</div>
+        <h2 style="margin:0; font-family:'DM Serif Display',serif; font-weight:400; font-size:clamp(30px,4.4vw,48px); line-height:1; color:#f6efe2;">Build your brim.</h2>
+      </div>
+      <div style="font-size:13.5px; color:#bda88f; max-width:280px; text-align:right;">Live preview — every pick updates your hat in real time. <span style="color:#e0905f; font-weight:700;">{{ combo }}+</span> base combos before you even add initials.</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.05fr 0.95fr; gap:26px; align-items:stretch;">
+
+      <!-- STAGE -->
+      <div style="position:relative; border-radius:26px; overflow:hidden; background:radial-gradient(120% 90% at 50% 18%, #3a2417 0%, #241710 60%, #1c1109 100%); border:1px solid rgba(246,239,226,.08); min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px;">
+        <div style="position:absolute; top:18px; left:20px; display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9b8060;">
+          <span style="width:7px; height:7px; border-radius:50%; background:#3fa89a; box-shadow:0 0 8px #3fa89a;"></span> Live preview
+        </div>
+        <!-- glow -->
+        <div style="position:absolute; width:62%; height:50%; top:20%; border-radius:50%; filter:blur(60px); animation:glowpulse 7s ease-in-out infinite; background:{{ glowStyle }};"></div>
+        <!-- hat -->
+        <div style="position:relative; z-index:2; width:min(78%,360px);">
+          <div style="{{ swayStyle }}">{{ hat }}</div>
+        </div>
+        <!-- pedestal shadow -->
+        <div style="position:absolute; bottom:64px; width:46%; height:26px; border-radius:50%; background:rgba(0,0,0,.55); filter:blur(16px); z-index:1;"></div>
+        <div style="position:absolute; bottom:22px; left:0; right:0; text-align:center; font-family:'DM Serif Display',serif; font-style:italic; font-size:18px; color:#e9dcc8;">{{ feltName }} · {{ brimName }}</div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div style="display:flex; flex-direction:column; gap:16px; background:#f6efe2; border-radius:26px; padding:22px; color:#3a261c;">
+
+        <!-- step tabs -->
+        <div style="display:flex; gap:7px; overflow-x:auto; padding-bottom:2px;">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="5">
+            <button type="button" onClick="{{ st.onClick }}" style="{{ st.style }}">{{ st.label }}</button>
+          </sc-for>
+        </div>
+
+        <div>
+          <div style="font-family:'DM Serif Display',serif; font-size:23px; line-height:1; color:#3a261c;">{{ panelTitle }}</div>
+          <div style="font-size:13px; color:#9b8474; margin-top:5px;">{{ panelSub }}</div>
+        </div>
+
+        <!-- swatch grid -->
+        <sc-if value="{{ notMono }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:9px;">
+          <sc-for list="{{ options }}" as="opt" hint-placeholder-count="6">
+            <button type="button" onClick="{{ opt.onClick }}" style="{{ opt.cardStyle }}" style-hover="border-color:#c89a6a;">
+              <span style="{{ opt.dotStyle }}"></span>
+              <span style="display:flex; flex-direction:column; gap:1px;">
+                <span style="font-weight:700; font-size:13.5px; color:#3a261c; line-height:1.15;">{{ opt.label }}</span>
+                <span style="font-weight:500; font-size:11px; color:#9b8474; letter-spacing:.01em;">{{ opt.sub }}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- monogram panel -->
+        <sc-if value="{{ isMono }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:12px; padding:6px 2px;">
+          <input value="{{ initials }}" onInput="{{ onInit }}" maxlength="3" placeholder="ABC" style="width:100%; padding:16px 18px; border-radius:14px; border:2px solid #e2d4bd; background:#fffaf0; font-family:'DM Serif Display',serif; font-size:30px; letter-spacing:.22em; text-align:center; color:#9a5a2e; text-transform:uppercase; outline:none;" style-focus="border-color:#c25b34;">
+          <div style="display:flex; gap:8px;">
+            <button type="button" onClick="{{ onClearMono }}" style="flex:1; padding:11px; border-radius:11px; border:1px solid #e2d4bd; background:#fffaf0; font-family:'Hanken Grotesk'; font-weight:700; font-size:13px; color:#9b8474; cursor:pointer;" style-hover="background:#f0e6d4;">Clear</button>
+          </div>
+          <div style="font-size:12.5px; color:#9b8474; line-height:1.5;">Up to 3 letters, foil-stamped on the band in brass. Free with any build at the bar.</div>
+        </div>
+        </sc-if>
+
+        <div style="height:1px; background:#e6dac4; margin:2px 0;"></div>
+
+        <!-- build summary -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#b09a82;">Your build</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px 16px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9b8474;">Felt</span><span style="font-weight:700; color:#3a261c;">{{ feltName }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9b8474;">Brim</span><span style="font-weight:700; color:#3a261c;">{{ brimName }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9b8474;">Band</span><span style="font-weight:700; color:#3a261c;">{{ bandName }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9b8474;">Charm</span><span style="font-weight:700; color:#3a261c;">{{ charmName }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; grid-column:1 / -1;"><span style="color:#9b8474;">Initials</span><span style="font-weight:700; color:#c25b34; letter-spacing:.1em;">{{ monoOut }}</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:9px; margin-top:2px;">
+          <a href="#events" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px; background:#241710; color:#f6efe2; font-weight:800; font-size:14px; border-radius:13px; text-decoration:none;" style-hover="background:#3a2417;">Reserve this build</a>
+          <button type="button" onClick="{{ onRandom }}" title="Surprise me" style="flex:none; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:14px 16px; background:#3fa89a; color:#fff; font-family:'Hanken Grotesk'; font-weight:800; font-size:14px; border:none; border-radius:13px; cursor:pointer;" style-hover="background:#36948a;">↻ Shuffle</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW THE MOBILE BAR WORKS -->
+  <section id="how" style="position:relative; background:#f6efe2; color:#3a261c; padding:72px 36px;">
+    <div style="max-width:1180px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:46px;">
+        <div style="font-family:'Rye',serif; font-size:13px; letter-spacing:.06em; color:#c25b34; margin-bottom:10px;">We come to you</div>
+        <h2 style="margin:0; font-family:'DM Serif Display',serif; font-weight:400; font-size:clamp(30px,4.4vw,48px); line-height:1; color:#3a261c;">How the mobile hat bar works.</h2>
+        <p style="max-width:520px; margin:16px auto 0; font-size:16px; line-height:1.6; color:#83705e;">A full custom-hat experience that rolls right up to your party, market, wedding or wellness event.</p>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:18px;">
+        <div style="background:#fffaf0; border:1px solid #e7dcc8; border-radius:20px; padding:26px;">
+          <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#c25b34; line-height:1;">01</div>
+          <div style="font-weight:800; font-size:17px; margin:14px 0 6px;">We roll up</div>
+          <div style="font-size:14px; line-height:1.55; color:#83705e;">The mobile bar arrives stocked with felt hats, bands, charms and tools — set up and ready to style.</div>
+        </div>
+        <div style="background:#fffaf0; border:1px solid #e7dcc8; border-radius:20px; padding:26px;">
+          <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#c25b34; line-height:1;">02</div>
+          <div style="font-weight:800; font-size:17px; margin:14px 0 6px;">Pick your base</div>
+          <div style="font-size:14px; line-height:1.55; color:#83705e;">Choose your felt color and brim shape — the foundation of a hat that actually fits your vibe.</div>
+        </div>
+        <div style="background:#fffaf0; border:1px solid #e7dcc8; border-radius:20px; padding:26px;">
+          <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#c25b34; line-height:1;">03</div>
+          <div style="font-weight:800; font-size:17px; margin:14px 0 6px;">Style it live</div>
+          <div style="font-size:14px; line-height:1.55; color:#83705e;">Band it, pin a charm, foil-stamp your initials. Our hat stylist shapes it on the spot.</div>
+        </div>
+        <div style="background:#241710; color:#f6efe2; border-radius:20px; padding:26px;">
+          <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#e0905f; line-height:1;">04</div>
+          <div style="font-weight:800; font-size:17px; margin:14px 0 6px;">Tip your hat</div>
+          <div style="font-size:14px; line-height:1.55; color:#c9b7a2;">Walk away wearing a one-of-a-kind hat — and the story of how you built it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section id="gallery" style="position:relative; padding:72px 36px;">
+    <div style="max-width:1180px; margin:0 auto;">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:30px;">
+        <div>
+          <div style="font-family:'Rye',serif; font-size:13px; letter-spacing:.06em; color:#3fa89a; margin-bottom:9px;">From the bar</div>
+          <h2 style="margin:0; font-family:'DM Serif Display',serif; font-weight:400; font-size:clamp(30px,4.4vw,48px); line-height:1; color:#f6efe2;">Hats with a backstory.</h2>
+        </div>
+        <a href="https://www.instagram.com/_tippincowgirl/" target="_blank" rel="noopener" style="font-weight:700; font-size:14px; color:#e0905f; text-decoration:none;">@_tippincowgirl on Instagram →</a>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:200px; gap:12px;">
+        <div style="grid-row:span 2; border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px); border:1px solid rgba(246,239,226,.08); display:flex; align-items:flex-end; padding:16px;"><span style="font-family:ui-monospace,monospace; font-size:11px; color:#a98a68;">[ pop-up event photo · vertical ]</span></div>
+        <div style="border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px); border:1px solid rgba(246,239,226,.08); display:flex; align-items:flex-end; padding:16px;"><span style="font-family:ui-monospace,monospace; font-size:11px; color:#a98a68;">[ finished hat ]</span></div>
+        <div style="border-radius:18px; overflow:hidden; background:#c25b34; display:flex; flex-direction:column; justify-content:center; padding:20px;"><span style="font-family:'DM Serif Display',serif; font-size:22px; color:#241710; line-height:1.05;">“Best part of the whole party.”</span></div>
+        <div style="border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px); border:1px solid rgba(246,239,226,.08); display:flex; align-items:flex-end; padding:16px;"><span style="font-family:ui-monospace,monospace; font-size:11px; color:#a98a68;">[ bar setup ]</span></div>
+        <div style="border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px); border:1px solid rgba(246,239,226,.08); display:flex; align-items:flex-end; padding:16px;"><span style="font-family:ui-monospace,monospace; font-size:11px; color:#a98a68;">[ guest styling ]</span></div>
+        <div style="grid-column:span 2; border-radius:18px; overflow:hidden; background:repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px); border:1px solid rgba(246,239,226,.08); display:flex; align-items:flex-end; padding:16px;"><span style="font-family:ui-monospace,monospace; font-size:11px; color:#a98a68;">[ wide event shot · horizontal ]</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENTS / BOOK -->
+  <section id="events" style="position:relative; padding:24px 36px 90px;">
+    <div style="max-width:1180px; margin:0 auto; border-radius:28px; overflow:hidden; background:linear-gradient(135deg,#c25b34 0%,#a8421f 100%); position:relative;">
+      <div style="position:absolute; inset:0; opacity:.18; background-image:radial-gradient(circle at 80% 20%, #fff 0, transparent 40%);"></div>
+      <div style="position:relative; display:grid; grid-template-columns:1.2fr .8fr; gap:30px; padding:48px;">
+        <div>
+          <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 13px; background:rgba(36,23,16,.25); border-radius:999px; font-weight:700; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:#241710; margin-bottom:20px;">Next stop</div>
+          <h2 style="margin:0; font-family:'DM Serif Display',serif; font-weight:400; font-size:clamp(30px,4.2vw,46px); line-height:1.02; color:#241710;">June 28th — Sunday Funday Wellness Event</h2>
+          <p style="max-width:440px; margin:16px 0 0; font-size:16px; line-height:1.55; color:#3a1c0e;">Come find the bar in El Paso and build your own. Hosting a wedding, birthday, market or corporate party? Bring the hat bar to you.</p>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;">
+            <a href="https://www.instagram.com/_tippincowgirl/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px; padding:15px 26px; background:#241710; color:#f6efe2; font-weight:800; font-size:15px; border-radius:999px; text-decoration:none;" style-hover="background:#3a2417;">DM to book your event</a>
+            <a href="#build" style="display:inline-flex; align-items:center; gap:8px; padding:15px 26px; background:rgba(255,255,255,.85); color:#241710; font-weight:800; font-size:15px; border-radius:999px; text-decoration:none;" style-hover="background:#fff;">Build a hat first</a>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; justify-content:center;">
+          <div style="background:rgba(36,23,16,.16); border-radius:16px; padding:18px;"><div style="font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#3a1c0e;">Where</div><div style="font-family:'DM Serif Display',serif; font-size:20px; color:#241710; margin-top:4px;">El Paso, TX</div></div>
+          <div style="background:rgba(36,23,16,.16); border-radius:16px; padding:18px;"><div style="font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#3a1c0e;">We do</div><div style="font-family:'DM Serif Display',serif; font-size:20px; color:#241710; margin-top:4px;">Pop-ups · Private events</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="position:relative; border-top:1px solid rgba(246,239,226,.1); padding:40px 36px;">
+    <div style="max-width:1180px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:11px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#c25b34; color:#fff; font-family:'DM Serif Display',serif;">★</span>
+        <span style="font-family:'Rye',serif; font-size:18px; color:#f6efe2;">Tippin Cowgirl</span>
+      </div>
+      <div style="font-size:13.5px; color:#a98a68;">Custom Hat Bar · Mobile · El Paso, TX</div>
+      <a href="https://www.instagram.com/_tippincowgirl/" target="_blank" rel="noopener" style="font-weight:700; font-size:13.5px; color:#e0905f; text-decoration:none;">@_tippincowgirl</a>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;stageGlow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Terracotta&quot;,&quot;Turquoise&quot;,&quot;Rose&quot;],&quot;default&quot;:&quot;Terracotta&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showMarquee&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;idleSway&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { step: 0, felt: 'terracotta', brim: 'curl', band: 'turquoise', charm: 'feather', initials: '' };
+
+  FELTS = [
+    { id:'ivory', label:'Ivory Wool', sub:'Wool felt', color:'#efe6d2' },
+    { id:'tan', label:'Desert Tan', sub:'Wool felt', color:'#d8bd92' },
+    { id:'terracotta', label:'Terracotta', sub:'Brushed felt', color:'#c25b34' },
+    { id:'rose', label:'Dusty Rose', sub:'Velour felt', color:'#cf8f8a' },
+    { id:'sage', label:'Desert Sage', sub:'Wool felt', color:'#9aa57e' },
+    { id:'choc', label:'Chocolate', sub:'Beaver felt', color:'#5a3a28' },
+    { id:'midnight', label:'Midnight', sub:'Wool felt', color:'#2a2320' },
+  ];
+  BRIMS = [
+    { id:'curl', label:'Cowgirl Curl', sub:'Upturned sides', color:'#c79a4e' },
+    { id:'flat', label:'Rancher Flat', sub:'Wide & level', color:'#c79a4e' },
+    { id:'down', label:'Gambler Dip', sub:'Downturned front', color:'#c79a4e' },
+  ];
+  BANDS = [
+    { id:'none', label:'Bare', sub:'No band', color:'transparent' },
+    { id:'leather', label:'Tan Leather', sub:'Tooled strip', color:'#a9743f' },
+    { id:'turquoise', label:'Turquoise Concho', sub:'Silver & stone', color:'#3fa89a' },
+    { id:'beaded', label:'Rose Beadwork', sub:'Hand-beaded', color:'#d98c9a' },
+    { id:'horsehair', label:'Horsehair Braid', sub:'Braided', color:'#7a5c44' },
+  ];
+  CHARMS = [
+    { id:'none', label:'Clean', sub:'No charm', color:'transparent' },
+    { id:'feather', label:'Plume', sub:'Dyed feather', color:'#c25b34' },
+    { id:'concho', label:'Silver Concho', sub:'Hammered', color:'#cfd2d6' },
+    { id:'bloom', label:'Desert Bloom', sub:'Floral pin', color:'#d98c9a' },
+    { id:'star', label:'Lucky Star', sub:'Brass star', color:'#c79a4e' },
+  ];
+
+  BRIM_PATHS = {
+    curl: 'M52,256 C76,238 124,240 154,252 C184,264 236,264 266,252 C296,240 344,238 368,256 C356,278 298,290 210,290 C122,290 64,278 52,256 Z',
+    flat: 'M40,260 C92,250 150,259 210,260 C270,259 328,250 380,260 C366,278 300,286 210,286 C120,286 54,278 40,260 Z',
+    down: 'M62,248 C86,242 128,254 158,264 C188,274 232,274 262,264 C292,254 334,242 358,248 C350,276 294,296 210,296 C126,296 70,276 62,248 Z',
+  };
+  CROWN = 'M132,250 C130,198 138,150 160,116 Q186,136 210,140 Q234,136 260,116 C282,150 290,198 288,250 Q210,264 132,250 Z';
+
+  shade(hex, p){
+    let c = hex.replace('#',''); if(c.length===3) c=c.split('').map(x=>x+x).join('');
+    let r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16);
+    const t = p<0?0:255, a=Math.abs(p);
+    r=Math.round((t-r)*a+r); g=Math.round((t-g)*a+g); b=Math.round((t-b)*a+b);
+    return `rgb(${r},${g},${b})`;
+  }
+  starPath(cx,cy,R,N){
+    let p=''; const r=R*0.42;
+    for(let i=0;i<N*2;i++){ const rad=(i%2===0?R:r), a=(Math.PI/N)*i - Math.PI/2; const x=cx+Math.cos(a)*rad, y=cy+Math.sin(a)*rad; p+=(i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1); }
+    return p+'Z';
+  }
+  nameOf(arr,id){ const f=arr.find(x=>x.id===id); return f?f.label:''; }
+
+  buildBand(){
+    const h=React.createElement, id=this.state.band;
+    if(id==='none') return null;
+    const strip='M134,216 Q210,234 286,216 L288,244 Q210,260 132,244 Z';
+    if(id==='leather') return h('g',{key:'band'},[ h('path',{key:'b',d:strip,fill:'#a9743f'}), h('path',{key:'l',d:'M135,224 Q210,240 287,224',fill:'none',stroke:'#7e5326',strokeWidth:2,opacity:.6}) ]);
+    if(id==='turquoise'){ const k=[h('path',{key:'b',d:strip,fill:'#cdd0d4'})]; [168,210,252].forEach((x,i)=>k.push(h('ellipse',{key:'t'+i,cx:x,cy:230,rx:13,ry:9,fill:'#3fa89a',stroke:'#2c7d73',strokeWidth:2}))); return h('g',{key:'band'},k); }
+    if(id==='beaded'){ const k=[h('path',{key:'b',d:strip,fill:'#d98c9a'})]; for(let i=0;i<11;i++) k.push(h('circle',{key:'bd'+i,cx:142+i*15,cy:231,r:4,fill:i%2?'#c25b34':'#efe6d2'})); return h('g',{key:'band'},k); }
+    if(id==='horsehair') return h('g',{key:'band'},[ h('path',{key:'b',d:strip,fill:'#7a5c44'}), h('path',{key:'h1',d:'M135,226 Q210,242 287,226',fill:'none',stroke:'#5a4030',strokeWidth:3,opacity:.6}), h('path',{key:'h2',d:'M135,234 Q210,250 287,234',fill:'none',stroke:'#9a7a5c',strokeWidth:2,opacity:.5}) ]);
+    return null;
+  }
+  buildCharm(){
+    const h=React.createElement, id=this.state.charm;
+    if(id==='none') return null;
+    if(id==='feather') return h('g',{key:'charm',transform:'rotate(-15 168 198)'},[
+      h('path',{key:'f',d:'M168,238 C147,200 150,162 170,142 C188,164 188,204 176,238 Z',fill:'#b8451f',stroke:'#6f2a12',strokeWidth:1.6,strokeLinejoin:'round'}),
+      h('path',{key:'tip',d:'M170,142 C178,156 182,176 180,196 C176,182 172,166 170,150 Z',fill:'#e9c79a',opacity:.9}),
+      h('path',{key:'v',d:'M170,144 C162,178 164,210 170,236',fill:'none',stroke:'#f3e2cf',strokeWidth:1.8,opacity:.9}),
+      h('path',{key:'q',d:'M170,236 L175,256',stroke:'#6f2a12',strokeWidth:2.5,strokeLinecap:'round'}),
+    ]);
+    if(id==='concho') return h('g',{key:'charm'},[
+      h('circle',{key:'o',cx:166,cy:230,r:15,fill:'#d7dadf',stroke:'#9aa0a8',strokeWidth:2}),
+      h('circle',{key:'i',cx:166,cy:230,r:8,fill:'none',stroke:'#9aa0a8',strokeWidth:2}),
+      h('circle',{key:'m',cx:166,cy:230,r:2.5,fill:'#9aa0a8'}),
+    ]);
+    if(id==='bloom'){ const k=[]; for(let i=0;i<6;i++){ const a=i*Math.PI/3; k.push(h('circle',{key:'p'+i,cx:164+Math.cos(a)*9,cy:228+Math.sin(a)*9,r:6,fill:'#d98c9a'})); } k.push(h('circle',{key:'ctr',cx:164,cy:228,r:5,fill:'#c79a4e'})); return h('g',{key:'charm'},k); }
+    if(id==='star') return h('path',{key:'charm',d:this.starPath(164,228,13,5),fill:'#c79a4e',stroke:'#a87f38',strokeWidth:1.5});
+    return null;
+  }
+  buildMono(){
+    const h=React.createElement, t=(this.state.initials||'').toUpperCase().slice(0,3);
+    if(!t) return null;
+    return h('text',{key:'mono',x:226,y:238,textAnchor:'middle',fill:'#ecca8a',style:{font:"600 21px 'DM Serif Display', serif",letterSpacing:'3px'}},t);
+  }
+  buildHat(){
+    const h=React.createElement, s=this.state;
+    const felt=this.FELTS.find(f=>f.id===s.felt).color;
+    const brimFill=this.shade(felt,-0.16), crownHi=this.shade(felt,0.16), crownLo=this.shade(felt,-0.10);
+    const brimPath=this.BRIM_PATHS[s.brim];
+    const k=[];
+    k.push(h('defs',{key:'defs'},[
+      h('linearGradient',{key:'cs',id:'crownSheen',x1:'0',y1:'0',x2:'1',y2:'0.15'},[
+        h('stop',{key:'s0',offset:'0%',stopColor:'#ffffff',stopOpacity:0.20}),
+        h('stop',{key:'s1',offset:'48%',stopColor:'#ffffff',stopOpacity:0}),
+        h('stop',{key:'s2',offset:'100%',stopColor:'#000000',stopOpacity:0.16}),
+      ]),
+      h('linearGradient',{key:'bs',id:'brimSheen',x1:'0',y1:'0',x2:'0',y2:'1'},[
+        h('stop',{key:'b0',offset:'0%',stopColor:'#ffffff',stopOpacity:0.14}),
+        h('stop',{key:'b1',offset:'100%',stopColor:'#000000',stopOpacity:0.18}),
+      ]),
+    ]));
+    k.push(h('path',{key:'brim',d:brimPath,fill:brimFill}));
+    k.push(h('path',{key:'brimSheen',d:brimPath,fill:'url(#brimSheen)'}));
+    k.push(h('path',{key:'crown',d:this.CROWN,fill:felt}));
+    k.push(h('path',{key:'crownSheen',d:this.CROWN,fill:'url(#crownSheen)'}));
+    k.push(h('path',{key:'crease',d:'M210,140 C206,172 206,212 210,252',fill:'none',stroke:this.shade(felt,-0.22),strokeWidth:3,opacity:.32,strokeLinecap:'round'}));
+    const band=this.buildBand(); if(band) k.push(band);
+    const charm=this.buildCharm(); if(charm) k.push(charm);
+    const mono=this.buildMono(); if(mono) k.push(mono);
+    return h('svg',{viewBox:'0 0 420 380',width:'100%',height:'100%',style:{overflow:'visible',display:'block'}},k);
+  }
+
+  tabStyle(active){
+    return active
+      ? { flex:'none', padding:'9px 15px', borderRadius:'999px', border:'none', cursor:'pointer', background:'#c25b34', color:'#fff', fontFamily:"'Hanken Grotesk',sans-serif", fontWeight:700, fontSize:'13px', letterSpacing:'.01em', whiteSpace:'nowrap' }
+      : { flex:'none', padding:'9px 15px', borderRadius:'999px', border:'none', cursor:'pointer', background:'#ece0cc', color:'#7a6450', fontFamily:"'Hanken Grotesk',sans-serif", fontWeight:700, fontSize:'13px', letterSpacing:'.01em', whiteSpace:'nowrap' };
+  }
+  cardStyle(sel){
+    const base={ display:'flex', alignItems:'center', gap:'11px', padding:'11px 12px', borderRadius:'14px', cursor:'pointer', transition:'transform .14s ease, box-shadow .14s ease, border-color .14s ease', width:'100%', textAlign:'left', fontFamily:"'Hanken Grotesk',sans-serif" };
+    return sel
+      ? { ...base, background:'#fff4ea', border:'2px solid #c25b34', boxShadow:'0 8px 20px rgba(194,91,52,.20)', transform:'translateY(-1px)' }
+      : { ...base, background:'#fffaf0', border:'2px solid #ece0cc' };
+  }
+  dotStyle(color,sel){
+    const base={ width:'30px', height:'30px', borderRadius:'50%', flex:'none', boxShadow:'inset 0 2px 5px rgba(0,0,0,.18)', border: sel?'2px solid #c25b34':'1px solid rgba(0,0,0,.10)' };
+    if(color==='transparent') return { ...base, background:'#efe6d2', backgroundImage:'linear-gradient(45deg, transparent 44%, #b9a489 44%, #b9a489 56%, transparent 56%)' };
+    return { ...base, background:color };
+  }
+
+  shuffle(){ const r=a=>a[Math.floor(Math.random()*a.length)]; this.setState({ felt:r(this.FELTS).id, brim:r(this.BRIMS).id, band:r(this.BANDS).id, charm:r(this.CHARMS).id }); }
+
+  renderVals(){
+    const s=this.state;
+    const labels=['Felt','Brim','Band','Charm','Initials'];
+    const steps=labels.map((lab,i)=>({ label:lab, onClick:()=>this.setState({step:i}), style:this.tabStyle(i===s.step) }));
+    const titles=[ ['Choose your felt','The base of every great hat.'], ['Shape the brim','How you wear it.'], ['Wrap it up','Pick a hatband.'], ['Add a charm','Your signature touch.'], ['Make it yours','Stamp your initials in brass.'] ];
+    const dataByStep=[this.FELTS,this.BRIMS,this.BANDS,this.CHARMS];
+    const keyByStep=['felt','brim','band','charm'];
+    let options=[];
+    if(s.step<4){
+      const arr=dataByStep[s.step], key=keyByStep[s.step];
+      options=arr.map(o=>{ const sel=s[key]===o.id; return { label:o.label, sub:o.sub, onClick:()=>this.setState({[key]:o.id}), cardStyle:this.cardStyle(sel), dotStyle:this.dotStyle(o.color,sel) }; });
+    }
+    const glowMap={ Terracotta:'radial-gradient(circle, rgba(194,91,52,.55) 0%, transparent 70%)', Turquoise:'radial-gradient(circle, rgba(63,168,154,.5) 0%, transparent 70%)', Rose:'radial-gradient(circle, rgba(217,140,154,.5) 0%, transparent 70%)' };
+    const glow=this.props.stageGlow ?? 'Terracotta';
+    const sway=(this.props.idleSway ?? true) ? { animation:'sway 6s ease-in-out infinite', transformOrigin:'50% 80%' } : {};
+    return {
+      steps, options,
+      isMono: s.step===4, notMono: s.step!==4,
+      panelTitle: titles[s.step][0], panelSub: titles[s.step][1],
+      initials: s.initials,
+      onInit: e=>this.setState({ initials: e.target.value.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,3) }),
+      onClearMono: ()=>this.setState({ initials:'' }),
+      hat: this.buildHat(),
+      feltName: this.nameOf(this.FELTS,s.felt), brimName: this.nameOf(this.BRIMS,s.brim),
+      bandName: this.nameOf(this.BANDS,s.band), charmName: this.nameOf(this.CHARMS,s.charm),
+      monoOut: s.initials ? s.initials : '—',
+      combo: this.FELTS.length*this.BRIMS.length*this.BANDS.length*this.CHARMS.length,
+      onRandom: ()=>this.shuffle(),
+      glowStyle: glowMap[glow], swayStyle: sway,
+      showMarquee: this.props.showMarquee ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
