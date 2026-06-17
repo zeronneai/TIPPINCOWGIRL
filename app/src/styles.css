@@ -1,0 +1,122 @@
+/* ---- reset & base (ported from the Design Component) ---- */
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: #241710;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: #c25b34;
+  color: #fff;
+}
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #5a3a28;
+  border-radius: 8px;
+}
+
+/* ---- keyframes ---- */
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2deg) translateY(-6px);
+  }
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes glowpulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+}
+@keyframes risein {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- hover / focus states (prototype used style-hover / style-focus) ---- */
+.tc-book-nav:hover {
+  background: #a84a27;
+}
+.tc-cta-light:hover {
+  transform: translateY(-2px);
+}
+.tc-cta-ghost:hover {
+  background: rgba(246, 239, 226, 0.08);
+}
+.tc-reserve:hover {
+  background: #3a2417;
+}
+.tc-shuffle:hover {
+  background: #36948a;
+}
+.tc-mono-clear:hover {
+  background: #f0e6d4;
+}
+.tc-mono-input:focus {
+  border-color: #c25b34;
+}
+.tc-event-dark:hover {
+  background: #3a2417;
+}
+.tc-event-light:hover {
+  background: #fff;
+}
+/* swatch + tab cards already carry inline transition; add the hover sheen */
+.tc-swatch:hover {
+  border-color: #c89a6a !important;
+}
+
+/* ---- responsive: keep desktop identical, gracefully collapse below ---- */
+@media (max-width: 900px) {
+  .tc-config-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .tc-how-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .tc-gallery-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .tc-events-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 560px) {
+  .tc-how-grid,
+  .tc-gallery-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .tc-nav-links {
+    gap: 16px !important;
+  }
+}
