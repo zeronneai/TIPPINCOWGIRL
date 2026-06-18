@@ -19,9 +19,11 @@ function Brand({ size = 30, fontSize = 20 }) {
       />
       <span
         style={{
-          fontFamily: "'Rye',serif",
+          fontFamily: "'Space Grotesk',sans-serif",
           fontSize,
-          letterSpacing: ".01em",
+          fontWeight: 700,
+          letterSpacing: "-.01em",
+          textTransform: "uppercase",
           color: "#f6efe2",
         }}
       >
@@ -92,10 +94,11 @@ function Nav() {
 
 function Marquee() {
   const span = {
-    fontFamily: "'Rye',serif",
-    fontSize: 14,
+    fontFamily: "'Space Grotesk',sans-serif",
+    fontSize: 13,
+    fontWeight: 700,
     color: "#241710",
-    letterSpacing: ".04em",
+    letterSpacing: ".18em",
   };
   return (
     <div style={{ overflow: "hidden", whiteSpace: "nowrap", background: "#c25b34", borderBottom: "2px solid #241710" }}>
@@ -237,7 +240,7 @@ function HowItWorks() {
     <section id="how" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 46 }}>
-          <div style={{ fontFamily: "'Rye',serif", fontSize: 13, letterSpacing: ".06em", color: "#c25b34", marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
             We come to you
           </div>
           <h2
@@ -304,7 +307,7 @@ function Gallery() {
           }}
         >
           <div>
-            <div style={{ fontFamily: "'Rye',serif", fontSize: 13, letterSpacing: ".06em", color: "#3fa89a", marginBottom: 9 }}>
+            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#3fa89a", marginBottom: 11 }}>
               From the bar
             </div>
             <h2

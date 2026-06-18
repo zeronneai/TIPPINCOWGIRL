@@ -128,11 +128,13 @@ export default function Configurator() {
         <div>
           <div
             style={{
-              fontFamily: "'Rye',serif",
-              fontSize: 13,
-              letterSpacing: ".06em",
+              fontFamily: "'Space Grotesk',sans-serif",
+              fontSize: 11.5,
+              fontWeight: 700,
+              letterSpacing: ".24em",
+              textTransform: "uppercase",
               color: "#3fa89a",
-              marginBottom: 8,
+              marginBottom: 10,
             }}
           >
             The Hat Bar

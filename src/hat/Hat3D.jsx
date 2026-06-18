@@ -1,8 +1,16 @@
 import { Suspense, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, OrbitControls, Text } from "@react-three/drei";
+import { ContactShadows, OrbitControls, Text, Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { FELTS, shade } from "./data.js";
+
+// ---------------------------------------------------------------------------
+// GLB pipeline (drop-in). Point this at a realistic model whose meshes are
+// named "crown" / "brim" / "band" / "charm". When set, Hat3D renders the GLB
+// and recolors the felt parts from the current build — still one model, all
+// 525 combos. Until a GLB exists we render the procedural mesh below.
+// ---------------------------------------------------------------------------
+export const HAT_MODEL_URL = null;
 
 // ---------------------------------------------------------------------------
 // One parametric 3D hat. Felt / brim / band / charm / initials are *inputs*:
@@ -84,17 +92,45 @@ function useBrimGeometry(style) {
   }, [style]);
 }
 
-// Premium fabric look — physical sheen so felt catches the light like wool.
-function FeltMaterial({ color, side }) {
+// Procedural felt micro-texture (tileable noise) used as a bump map so the
+// wool catches light with real fabric grain. Swap for the brand's supplied
+// felt maps later via FELT_BUMP_URL.
+function useFeltBump() {
+  return useMemo(() => {
+    const s = 256;
+    const c = document.createElement("canvas");
+    c.width = c.height = s;
+    const ctx = c.getContext("2d");
+    const img = ctx.createImageData(s, s);
+    for (let i = 0; i < s * s; i++) {
+      const v = 188 + Math.random() * 67;
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(7, 7);
+    t.anisotropy = 4;
+    return t;
+  }, []);
+}
+
+// Premium fabric look — physical sheen + bump so felt reads like real wool.
+function FeltMaterial({ color, side, bump }) {
   return (
     <meshPhysicalMaterial
       color={color}
       roughness={0.95}
       metalness={0}
       sheen={1}
-      sheenRoughness={0.55}
-      sheenColor={shade(color, 0.35)}
-      clearcoat={0.04}
+      sheenRoughness={0.5}
+      sheenColor={shade(color, 0.4)}
+      clearcoat={0.05}
+      clearcoatRoughness={0.8}
+      bumpMap={bump}
+      bumpScale={0.012}
+      envMapIntensity={0.55}
       side={side ?? THREE.FrontSide}
     />
   );
@@ -263,6 +299,7 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
   const brimColor = shade(feltColor, -0.16);
   const crown = useCrownGeometry();
   const brimGeo = useBrimGeometry(brim);
+  const bump = useFeltBump();
 
   useFrame((state, dt) => {
     if (group.current && autoRotate) group.current.rotation.y += dt * 0.25;
@@ -274,11 +311,11 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
     <group ref={group} rotation={[0, -0.5, 0]} position={[0, -0.35, 0]}>
       {/* crown */}
       <mesh geometry={crown} castShadow receiveShadow>
-        <FeltMaterial color={feltColor} />
+        <FeltMaterial color={feltColor} bump={bump} />
       </mesh>
       {/* brim (thin sheet -> double sided) */}
       <mesh geometry={brimGeo} castShadow receiveShadow>
-        <FeltMaterial color={brimColor} side={THREE.DoubleSide} />
+        <FeltMaterial color={brimColor} side={THREE.DoubleSide} bump={bump} />
       </mesh>
       <Band id={band} crownColor={feltColor} />
       <Charm id={charm} />
@@ -303,6 +340,33 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
   );
 }
 
+// Realistic GLB variant — recolors the felt parts of a supplied model.
+function HatGLBModel({ felt, autoRotate }) {
+  const group = useRef();
+  const { scene } = useGLTF(HAT_MODEL_URL);
+  const feltColor = FELTS.find((f) => f.id === felt).color;
+
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse((o) => {
+      if (!o.isMesh) return;
+      const n = o.name.toLowerCase();
+      o.castShadow = o.receiveShadow = true;
+      if (n.includes("crown") || n.includes("brim") || n.includes("felt")) {
+        o.material = o.material.clone();
+        o.material.color = new THREE.Color(n.includes("brim") ? shade(feltColor, -0.16) : feltColor);
+      }
+    });
+    return c;
+  }, [scene, feltColor]);
+
+  useFrame((_, dt) => {
+    if (group.current && autoRotate) group.current.rotation.y += dt * 0.25;
+  });
+
+  return <primitive ref={group} object={cloned} />;
+}
+
 export default function Hat3D({ felt, brim, band, charm, initials, interactive = true }) {
   return (
     <Canvas
@@ -312,26 +376,39 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
       gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping }}
       style={{ width: "100%", height: "100%", display: "block" }}
     >
-      <ambientLight intensity={0.55} />
+      <ambientLight intensity={0.25} />
       <directionalLight
         position={[3.5, 6, 4]}
-        intensity={2.1}
+        intensity={1.6}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
       />
-      <directionalLight position={[-5, 3, -3]} intensity={0.8} color="#e0905f" />
-      <directionalLight position={[0, 2, -6]} intensity={1.1} color="#9fd6cd" />
+
+      {/* In-engine studio HDRI — premium reflections, no external download */}
+      <Environment resolution={256} frames={1}>
+        <color attach="background" args={["#1a0f08"]} />
+        <Lightformer intensity={3} position={[0, 4, 2]} scale={[7, 2.5, 1]} color="#fff4e6" />
+        <Lightformer intensity={1.4} position={[-4, 1.5, 1]} scale={[3, 4, 1]} color="#e0905f" />
+        <Lightformer intensity={1.6} position={[4, 1, -3]} scale={[4, 4, 1]} color="#a9ddd3" />
+        <Lightformer intensity={1} position={[0, -2, 3]} scale={[5, 2, 1]} color="#ffffff" />
+      </Environment>
 
       <group position={[0, 0.1, 0]}>
-        <HatModel
-          felt={felt}
-          brim={brim}
-          band={band}
-          charm={charm}
-          initials={initials}
-          autoRotate={interactive}
-        />
+        <Suspense fallback={null}>
+          {HAT_MODEL_URL ? (
+            <HatGLBModel felt={felt} autoRotate={interactive} />
+          ) : (
+            <HatModel
+              felt={felt}
+              brim={brim}
+              band={band}
+              charm={charm}
+              initials={initials}
+              autoRotate={interactive}
+            />
+          )}
+        </Suspense>
       </group>
 
       <ContactShadows position={[0, -1.05, 0]} opacity={0.55} scale={7} blur={2.6} far={3.2} color="#1c1109" />
