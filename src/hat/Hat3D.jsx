@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, Text, Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -92,9 +92,57 @@ function useBrimGeometry(style) {
   }, [style]);
 }
 
-// Procedural felt micro-texture (tileable noise) used as a bump map so the
-// wool catches light with real fabric grain. Swap for the brand's supplied
-// felt maps later via FELT_BUMP_URL.
+// ---------------------------------------------------------------------------
+// PBR felt textures (primary path). Drop tileable maps into:
+//
+//     public/textures/felt/
+//       ├─ felt-albedo.jpg      (optional — keep ~neutral/grey, it's multiplied
+//       │                         by the chosen felt color so all 7 felts stay
+//       │                         accurate)
+//       ├─ felt-normal.jpg      (the wool weave — replaces the procedural bump)
+//       └─ felt-roughness.jpg   (micro sheen variation)
+//
+// Any subset works. When a map is missing the loader silently skips it and the
+// material falls back to the procedural felt bump below — so the hat always
+// renders, with or without the brand's maps.
+// ---------------------------------------------------------------------------
+const FELT_TEX_DIR = "/textures/felt";
+const FELT_MAPS = {
+  map: "felt-albedo.jpg",
+  normalMap: "felt-normal.jpg",
+  roughnessMap: "felt-roughness.jpg",
+};
+const FELT_REPEAT = 6;
+
+function useFeltMaps() {
+  const [maps, setMaps] = useState({});
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    let active = true;
+    Object.entries(FELT_MAPS).forEach(([key, file]) => {
+      loader.load(
+        `${FELT_TEX_DIR}/${file}`,
+        (tex) => {
+          if (!active) return;
+          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+          tex.repeat.set(FELT_REPEAT, FELT_REPEAT);
+          tex.anisotropy = 8;
+          if (key === "map") tex.colorSpace = THREE.SRGBColorSpace;
+          setMaps((m) => ({ ...m, [key]: tex }));
+        },
+        undefined,
+        () => {} // missing file -> stay on the procedural fallback
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return maps;
+}
+
+// Procedural felt micro-texture (tileable noise) — the graceful fallback bump
+// used whenever a real normal map isn't present in public/textures/felt/.
 function useFeltBump() {
   return useMemo(() => {
     const s = 256;
@@ -116,11 +164,17 @@ function useFeltBump() {
   }, []);
 }
 
-// Premium fabric look — physical sheen + bump so felt reads like real wool.
-function FeltMaterial({ color, side, bump }) {
+// Premium fabric look — physical sheen + real PBR maps when present, else the
+// procedural bump. `key` forces a clean recompile when maps arrive at runtime.
+function FeltMaterial({ color, side, bump, maps = {} }) {
+  const hasNormal = !!maps.normalMap;
   return (
     <meshPhysicalMaterial
+      key={Object.keys(maps).join("|")}
       color={color}
+      map={maps.map || null}
+      normalMap={maps.normalMap || null}
+      roughnessMap={maps.roughnessMap || null}
       roughness={0.95}
       metalness={0}
       sheen={1}
@@ -128,7 +182,7 @@ function FeltMaterial({ color, side, bump }) {
       sheenColor={shade(color, 0.4)}
       clearcoat={0.05}
       clearcoatRoughness={0.8}
-      bumpMap={bump}
+      bumpMap={hasNormal ? null : bump}
       bumpScale={0.012}
       envMapIntensity={0.55}
       side={side ?? THREE.FrontSide}
@@ -300,6 +354,7 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
   const crown = useCrownGeometry();
   const brimGeo = useBrimGeometry(brim);
   const bump = useFeltBump();
+  const maps = useFeltMaps();
 
   useFrame((state, dt) => {
     if (group.current && autoRotate) group.current.rotation.y += dt * 0.25;
@@ -311,11 +366,11 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
     <group ref={group} rotation={[0, -0.5, 0]} position={[0, -0.35, 0]}>
       {/* crown */}
       <mesh geometry={crown} castShadow receiveShadow>
-        <FeltMaterial color={feltColor} bump={bump} />
+        <FeltMaterial color={feltColor} bump={bump} maps={maps} />
       </mesh>
       {/* brim (thin sheet -> double sided) */}
       <mesh geometry={brimGeo} castShadow receiveShadow>
-        <FeltMaterial color={brimColor} side={THREE.DoubleSide} bump={bump} />
+        <FeltMaterial color={brimColor} side={THREE.DoubleSide} bump={bump} maps={maps} />
       </mesh>
       <Band id={band} crownColor={feltColor} />
       <Charm id={charm} />
