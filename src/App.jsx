@@ -19,9 +19,11 @@ function Brand({ size = 30, fontSize = 20 }) {
       />
       <span
         style={{
-          fontFamily: "'Rye',serif",
+          fontFamily: "'Space Grotesk',sans-serif",
           fontSize,
-          letterSpacing: ".01em",
+          fontWeight: 700,
+          letterSpacing: "-.01em",
+          textTransform: "uppercase",
           color: "#f6efe2",
         }}
       >
@@ -33,7 +35,7 @@ function Brand({ size = 30, fontSize = 20 }) {
 
 function Nav() {
   const link = {
-    fontWeight: 600,
+    fontWeight: 800,
     fontSize: 14,
     color: "#e9dcc8",
     textDecoration: "none",
@@ -92,10 +94,11 @@ function Nav() {
 
 function Marquee() {
   const span = {
-    fontFamily: "'Rye',serif",
-    fontSize: 14,
+    fontFamily: "'Space Grotesk',sans-serif",
+    fontSize: 13,
+    fontWeight: 700,
     color: "#241710",
-    letterSpacing: ".04em",
+    letterSpacing: ".18em",
   };
   return (
     <div style={{ overflow: "hidden", whiteSpace: "nowrap", background: "#c25b34", borderBottom: "2px solid #241710" }}>
@@ -129,7 +132,7 @@ function Hero() {
           padding: "7px 15px",
           border: "1px solid rgba(246,239,226,.22)",
           borderRadius: 999,
-          fontWeight: 600,
+          fontWeight: 800,
           fontSize: 12.5,
           letterSpacing: ".14em",
           textTransform: "uppercase",
@@ -143,8 +146,8 @@ function Hero() {
       <h1
         style={{
           margin: 0,
-          fontFamily: "'DM Serif Display',serif",
-          fontWeight: 400,
+          fontFamily: "'Bricolage Grotesque',sans-serif",
+          fontWeight: 800,
           fontSize: "clamp(44px,7vw,86px)",
           lineHeight: 0.98,
           letterSpacing: "-.01em",
@@ -153,7 +156,7 @@ function Hero() {
       >
         Tip your hat,
         <br />
-        <span style={{ fontStyle: "italic", color: "#e0905f" }}>make it yours.</span>
+        <span style={{ color: "#e0905f" }}>make it yours.</span>
       </h1>
       <p style={{ maxWidth: 560, margin: "24px 0 0", fontSize: 17, lineHeight: 1.6, color: "#d9c8b4" }}>
         Step up to the bar, pick your felt, shape the brim, wrap a band and pin your charm — and strut
@@ -218,7 +221,8 @@ function HowCard({ num, title, body, dark }) {
     >
       <div
         style={{
-          fontFamily: "'DM Serif Display',serif",
+          fontFamily: "'Bricolage Grotesque',sans-serif",
+          fontWeight: 800,
           fontSize: 34,
           color: dark ? "#e0905f" : "#c25b34",
           lineHeight: 1,
@@ -237,14 +241,14 @@ function HowItWorks() {
     <section id="how" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 46 }}>
-          <div style={{ fontFamily: "'Rye',serif", fontSize: 13, letterSpacing: ".06em", color: "#c25b34", marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
             We come to you
           </div>
           <h2
             style={{
               margin: 0,
-              fontFamily: "'DM Serif Display',serif",
-              fontWeight: 400,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
               color: "#3a261c",
@@ -304,14 +308,14 @@ function Gallery() {
           }}
         >
           <div>
-            <div style={{ fontFamily: "'Rye',serif", fontSize: 13, letterSpacing: ".06em", color: "#3fa89a", marginBottom: 9 }}>
+            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#3fa89a", marginBottom: 11 }}>
               From the bar
             </div>
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'DM Serif Display',serif",
-                fontWeight: 400,
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 800,
                 fontSize: "clamp(30px,4.4vw,48px)",
                 lineHeight: 1,
                 color: "#f6efe2",
@@ -341,7 +345,7 @@ function Gallery() {
               padding: 20,
             }}
           >
-            <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 22, color: "#241710", lineHeight: 1.05 }}>
+            <span style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 22, color: "#241710", lineHeight: 1.08 }}>
               “Best part of the whole party.”
             </span>
           </div>
@@ -360,7 +364,7 @@ function EventInfo({ label, value }) {
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#3a1c0e" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
+      <div style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -412,8 +416,8 @@ function Events() {
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'DM Serif Display',serif",
-                fontWeight: 400,
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 800,
                 fontSize: "clamp(30px,4.2vw,46px)",
                 lineHeight: 1.02,
                 color: "#241710",
@@ -505,7 +509,7 @@ export default function App() {
     <div
       style={{
         position: "relative",
-        fontFamily: "'Hanken Grotesk',sans-serif",
+        fontFamily: "'Space Grotesk',sans-serif",
         background: "#241710",
         color: "#f6efe2",
         overflow: "hidden",

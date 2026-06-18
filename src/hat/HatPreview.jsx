@@ -102,7 +102,7 @@ function Monogram({ initials }) {
       y={238}
       textAnchor="middle"
       fill="#ecca8a"
-      style={{ font: "600 21px 'DM Serif Display', serif", letterSpacing: "3px" }}
+      style={{ font: "700 21px 'Bricolage Grotesque', sans-serif", letterSpacing: "3px" }}
     >
       {t}
     </text>

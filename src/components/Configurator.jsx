@@ -1,5 +1,5 @@
 import { useState } from "react";
-import HatPreview from "../hat/HatPreview.jsx";
+import Hat3D from "../hat/Hat3D.jsx";
 import { FELTS, BRIMS, BANDS, CHARMS, nameOf } from "../hat/data.js";
 
 const STEPS = ["Felt", "Brim", "Band", "Charm", "Initials"];
@@ -27,7 +27,7 @@ function tabStyle(active) {
     cursor: "pointer",
     background: active ? "#c25b34" : "#ece0cc",
     color: active ? "#fff" : "#7a6450",
-    fontFamily: "'Hanken Grotesk',sans-serif",
+    fontFamily: "'Space Grotesk',sans-serif",
     fontWeight: 700,
     fontSize: "13px",
     letterSpacing: ".01em",
@@ -46,7 +46,7 @@ function cardStyle(sel) {
     transition: "transform .14s ease, box-shadow .14s ease, border-color .14s ease",
     width: "100%",
     textAlign: "left",
-    fontFamily: "'Hanken Grotesk',sans-serif",
+    fontFamily: "'Space Grotesk',sans-serif",
   };
   return sel
     ? {
@@ -128,11 +128,13 @@ export default function Configurator() {
         <div>
           <div
             style={{
-              fontFamily: "'Rye',serif",
-              fontSize: 13,
-              letterSpacing: ".06em",
+              fontFamily: "'Space Grotesk',sans-serif",
+              fontSize: 11.5,
+              fontWeight: 700,
+              letterSpacing: ".24em",
+              textTransform: "uppercase",
               color: "#3fa89a",
-              marginBottom: 8,
+              marginBottom: 10,
             }}
           >
             The Hat Bar
@@ -140,8 +142,8 @@ export default function Configurator() {
           <h2
             style={{
               margin: 0,
-              fontFamily: "'DM Serif Display',serif",
-              fontWeight: 400,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
               color: "#f6efe2",
@@ -222,11 +224,26 @@ export default function Configurator() {
               background: GLOW,
             }}
           />
-          {/* hat */}
-          <div style={{ position: "relative", zIndex: 2, width: "min(78%,360px)" }}>
-            <div style={swayStyle}>
-              <HatPreview felt={felt} brim={brim} band={band} charm={charm} initials={initials} />
-            </div>
+          {/* hat — live 3D model, one parametric mesh for all combos */}
+          <div style={{ position: "relative", zIndex: 2, width: "100%", height: 400 }}>
+            <Hat3D felt={felt} brim={brim} band={band} charm={charm} initials={initials} />
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 48,
+              left: 0,
+              right: 0,
+              textAlign: "center",
+              fontSize: 11,
+              letterSpacing: ".16em",
+              textTransform: "uppercase",
+              color: "#6f5942",
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
+          >
+            Drag to spin · 3D preview
           </div>
           {/* pedestal shadow */}
           <div
@@ -248,9 +265,10 @@ export default function Configurator() {
               left: 0,
               right: 0,
               textAlign: "center",
-              fontFamily: "'DM Serif Display',serif",
-              fontStyle: "italic",
-              fontSize: 18,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 700,
+              fontSize: 17,
+              letterSpacing: ".02em",
               color: "#e9dcc8",
             }}
           >
@@ -282,9 +300,10 @@ export default function Configurator() {
           <div>
             <div
               style={{
-                fontFamily: "'DM Serif Display',serif",
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 700,
                 fontSize: 23,
-                lineHeight: 1,
+                lineHeight: 1.05,
                 color: "#3a261c",
               }}
             >
@@ -359,7 +378,8 @@ export default function Configurator() {
                   borderRadius: 14,
                   border: "2px solid #e2d4bd",
                   background: "#fffaf0",
-                  fontFamily: "'DM Serif Display',serif",
+                  fontFamily: "'Bricolage Grotesque',sans-serif",
+                  fontWeight: 700,
                   fontSize: 30,
                   letterSpacing: ".22em",
                   textAlign: "center",
@@ -379,7 +399,7 @@ export default function Configurator() {
                     borderRadius: 11,
                     border: "1px solid #e2d4bd",
                     background: "#fffaf0",
-                    fontFamily: "'Hanken Grotesk'",
+                    fontFamily: "'Space Grotesk'",
                     fontWeight: 700,
                     fontSize: 13,
                     color: "#9b8474",
@@ -466,7 +486,7 @@ export default function Configurator() {
                 padding: "14px 16px",
                 background: "#3fa89a",
                 color: "#fff",
-                fontFamily: "'Hanken Grotesk'",
+                fontFamily: "'Space Grotesk'",
                 fontWeight: 800,
                 fontSize: 14,
                 border: "none",
