@@ -142,8 +142,8 @@ export default function Configurator() {
           <h2
             style={{
               margin: 0,
-              fontFamily: "'Fraunces',serif",
-              fontWeight: 600,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
               color: "#f6efe2",
@@ -265,9 +265,10 @@ export default function Configurator() {
               left: 0,
               right: 0,
               textAlign: "center",
-              fontFamily: "'Fraunces',serif",
-              fontStyle: "italic",
-              fontSize: 18,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 700,
+              fontSize: 17,
+              letterSpacing: ".02em",
               color: "#e9dcc8",
             }}
           >
@@ -299,9 +300,10 @@ export default function Configurator() {
           <div>
             <div
               style={{
-                fontFamily: "'Fraunces',serif",
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 700,
                 fontSize: 23,
-                lineHeight: 1,
+                lineHeight: 1.05,
                 color: "#3a261c",
               }}
             >
@@ -376,7 +378,8 @@ export default function Configurator() {
                   borderRadius: 14,
                   border: "2px solid #e2d4bd",
                   background: "#fffaf0",
-                  fontFamily: "'Fraunces',serif",
+                  fontFamily: "'Bricolage Grotesque',sans-serif",
+                  fontWeight: 700,
                   fontSize: 30,
                   letterSpacing: ".22em",
                   textAlign: "center",

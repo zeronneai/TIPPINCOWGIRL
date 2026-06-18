@@ -35,7 +35,7 @@ function Brand({ size = 30, fontSize = 20 }) {
 
 function Nav() {
   const link = {
-    fontWeight: 600,
+    fontWeight: 800,
     fontSize: 14,
     color: "#e9dcc8",
     textDecoration: "none",
@@ -132,7 +132,7 @@ function Hero() {
           padding: "7px 15px",
           border: "1px solid rgba(246,239,226,.22)",
           borderRadius: 999,
-          fontWeight: 600,
+          fontWeight: 800,
           fontSize: 12.5,
           letterSpacing: ".14em",
           textTransform: "uppercase",
@@ -146,8 +146,8 @@ function Hero() {
       <h1
         style={{
           margin: 0,
-          fontFamily: "'Fraunces',serif",
-          fontWeight: 600,
+          fontFamily: "'Bricolage Grotesque',sans-serif",
+          fontWeight: 800,
           fontSize: "clamp(44px,7vw,86px)",
           lineHeight: 0.98,
           letterSpacing: "-.01em",
@@ -156,7 +156,7 @@ function Hero() {
       >
         Tip your hat,
         <br />
-        <span style={{ fontStyle: "italic", color: "#e0905f" }}>make it yours.</span>
+        <span style={{ color: "#e0905f" }}>make it yours.</span>
       </h1>
       <p style={{ maxWidth: 560, margin: "24px 0 0", fontSize: 17, lineHeight: 1.6, color: "#d9c8b4" }}>
         Step up to the bar, pick your felt, shape the brim, wrap a band and pin your charm — and strut
@@ -221,7 +221,8 @@ function HowCard({ num, title, body, dark }) {
     >
       <div
         style={{
-          fontFamily: "'Fraunces',serif",
+          fontFamily: "'Bricolage Grotesque',sans-serif",
+          fontWeight: 800,
           fontSize: 34,
           color: dark ? "#e0905f" : "#c25b34",
           lineHeight: 1,
@@ -246,8 +247,8 @@ function HowItWorks() {
           <h2
             style={{
               margin: 0,
-              fontFamily: "'Fraunces',serif",
-              fontWeight: 600,
+              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
               color: "#3a261c",
@@ -313,8 +314,8 @@ function Gallery() {
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'Fraunces',serif",
-                fontWeight: 600,
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 800,
                 fontSize: "clamp(30px,4.4vw,48px)",
                 lineHeight: 1,
                 color: "#f6efe2",
@@ -344,7 +345,7 @@ function Gallery() {
               padding: 20,
             }}
           >
-            <span style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: "#241710", lineHeight: 1.05 }}>
+            <span style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 22, color: "#241710", lineHeight: 1.08 }}>
               “Best part of the whole party.”
             </span>
           </div>
@@ -363,7 +364,7 @@ function EventInfo({ label, value }) {
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#3a1c0e" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
+      <div style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -415,8 +416,8 @@ function Events() {
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'Fraunces',serif",
-                fontWeight: 600,
+                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontWeight: 800,
                 fontSize: "clamp(30px,4.2vw,46px)",
                 lineHeight: 1.02,
                 color: "#241710",
