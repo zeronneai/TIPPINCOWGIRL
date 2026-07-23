@@ -19,7 +19,7 @@ function Brand({ size = 30, fontSize = 20 }) {
       />
       <span
         style={{
-          fontFamily: "'Space Grotesk',sans-serif",
+          fontFamily: "'Satoshi',sans-serif",
           fontSize,
           fontWeight: 700,
           letterSpacing: "-.01em",
@@ -94,7 +94,7 @@ function Nav() {
 
 function Marquee() {
   const span = {
-    fontFamily: "'Space Grotesk',sans-serif",
+    fontFamily: "'Satoshi',sans-serif",
     fontSize: 13,
     fontWeight: 700,
     color: "#241710",
@@ -146,11 +146,11 @@ function Hero() {
       <h1
         style={{
           margin: 0,
-          fontFamily: "'Bricolage Grotesque',sans-serif",
-          fontWeight: 800,
-          fontSize: "clamp(44px,7vw,86px)",
-          lineHeight: 0.98,
-          letterSpacing: "-.01em",
+          fontFamily: "'Clash Display',sans-serif",
+          fontWeight: 700,
+          fontSize: "clamp(46px,7.4vw,92px)",
+          lineHeight: 0.94,
+          letterSpacing: "-.035em",
           color: "#f6efe2",
         }}
       >
@@ -221,7 +221,7 @@ function HowCard({ num, title, body, dark }) {
     >
       <div
         style={{
-          fontFamily: "'Bricolage Grotesque',sans-serif",
+          fontFamily: "'Clash Display',sans-serif",
           fontWeight: 800,
           fontSize: 34,
           color: dark ? "#e0905f" : "#c25b34",
@@ -241,13 +241,13 @@ function HowItWorks() {
     <section id="how" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 46 }}>
-          <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
+          <div style={{ fontFamily: "'Satoshi',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
             We come to you
           </div>
           <h2
             style={{
               margin: 0,
-              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontFamily: "'Clash Display',sans-serif",
               fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
@@ -308,13 +308,13 @@ function Gallery() {
           }}
         >
           <div>
-            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#3fa89a", marginBottom: 11 }}>
+            <div style={{ fontFamily: "'Satoshi',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#3fa89a", marginBottom: 11 }}>
               From the bar
             </div>
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontFamily: "'Clash Display',sans-serif",
                 fontWeight: 800,
                 fontSize: "clamp(30px,4.4vw,48px)",
                 lineHeight: 1,
@@ -345,7 +345,7 @@ function Gallery() {
               padding: 20,
             }}
           >
-            <span style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 22, color: "#241710", lineHeight: 1.08 }}>
+            <span style={{ fontFamily: "'Clash Display',sans-serif", fontWeight: 700, fontSize: 22, color: "#241710", lineHeight: 1.08 }}>
               “Best part of the whole party.”
             </span>
           </div>
@@ -364,7 +364,7 @@ function EventInfo({ label, value }) {
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#3a1c0e" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 700, fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
+      <div style={{ fontFamily: "'Clash Display',sans-serif", fontWeight: 700, fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -416,7 +416,7 @@ function Events() {
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontFamily: "'Clash Display',sans-serif",
                 fontWeight: 800,
                 fontSize: "clamp(30px,4.2vw,46px)",
                 lineHeight: 1.02,
@@ -509,7 +509,7 @@ export default function App() {
     <div
       style={{
         position: "relative",
-        fontFamily: "'Space Grotesk',sans-serif",
+        fontFamily: "'Satoshi',sans-serif",
         background: "#241710",
         color: "#f6efe2",
         overflow: "hidden",

@@ -27,7 +27,7 @@ function tabStyle(active) {
     cursor: "pointer",
     background: active ? "#c25b34" : "#ece0cc",
     color: active ? "#fff" : "#7a6450",
-    fontFamily: "'Space Grotesk',sans-serif",
+    fontFamily: "'Satoshi',sans-serif",
     fontWeight: 700,
     fontSize: "13px",
     letterSpacing: ".01em",
@@ -46,7 +46,7 @@ function cardStyle(sel) {
     transition: "transform .14s ease, box-shadow .14s ease, border-color .14s ease",
     width: "100%",
     textAlign: "left",
-    fontFamily: "'Space Grotesk',sans-serif",
+    fontFamily: "'Satoshi',sans-serif",
   };
   return sel
     ? {
@@ -128,7 +128,7 @@ export default function Configurator() {
         <div>
           <div
             style={{
-              fontFamily: "'Space Grotesk',sans-serif",
+              fontFamily: "'Satoshi',sans-serif",
               fontSize: 11.5,
               fontWeight: 700,
               letterSpacing: ".24em",
@@ -142,7 +142,7 @@ export default function Configurator() {
           <h2
             style={{
               margin: 0,
-              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontFamily: "'Clash Display',sans-serif",
               fontWeight: 800,
               fontSize: "clamp(30px,4.4vw,48px)",
               lineHeight: 1,
@@ -265,7 +265,7 @@ export default function Configurator() {
               left: 0,
               right: 0,
               textAlign: "center",
-              fontFamily: "'Bricolage Grotesque',sans-serif",
+              fontFamily: "'Clash Display',sans-serif",
               fontWeight: 700,
               fontSize: 17,
               letterSpacing: ".02em",
@@ -300,7 +300,7 @@ export default function Configurator() {
           <div>
             <div
               style={{
-                fontFamily: "'Bricolage Grotesque',sans-serif",
+                fontFamily: "'Clash Display',sans-serif",
                 fontWeight: 700,
                 fontSize: 23,
                 lineHeight: 1.05,
@@ -378,7 +378,7 @@ export default function Configurator() {
                   borderRadius: 14,
                   border: "2px solid #e2d4bd",
                   background: "#fffaf0",
-                  fontFamily: "'Bricolage Grotesque',sans-serif",
+                  fontFamily: "'Clash Display',sans-serif",
                   fontWeight: 700,
                   fontSize: 30,
                   letterSpacing: ".22em",
@@ -399,7 +399,7 @@ export default function Configurator() {
                     borderRadius: 11,
                     border: "1px solid #e2d4bd",
                     background: "#fffaf0",
-                    fontFamily: "'Space Grotesk'",
+                    fontFamily: "'Satoshi'",
                     fontWeight: 700,
                     fontSize: 13,
                     color: "#9b8474",
@@ -486,7 +486,7 @@ export default function Configurator() {
                 padding: "14px 16px",
                 background: "#3fa89a",
                 color: "#fff",
-                fontFamily: "'Space Grotesk'",
+                fontFamily: "'Satoshi'",
                 fontWeight: 800,
                 fontSize: 14,
                 border: "none",

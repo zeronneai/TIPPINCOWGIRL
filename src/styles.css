@@ -8,8 +8,12 @@ html {
 body {
   margin: 0;
   background: #241710;
+  font-family: "Satoshi", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv01", "liga", "kern";
+  letter-spacing: -0.011em;
 }
 ::selection {
   background: #c25b34;
