@@ -623,10 +623,33 @@ function HatGLBModel({ felt, autoRotate }) {
 }
 
 export default function Hat3D({ felt, brim, band, charm, initials, interactive = true }) {
+  // Pause the render loop entirely while the canvas is off-screen. (A plain
+  // frameloop="demand" would also freeze the idle auto-rotation and the
+  // OrbitControls damping, so visibility-gating gets the same battery win
+  // without killing the stage's motion while it is actually on screen.)
+  const wrapRef = useRef();
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver(([e]) => setOnScreen(e.isIntersecting), { rootMargin: "80px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // Respect prefers-reduced-motion: the hat holds still until the user drags.
+  const reducedMotion = useMemo(
+    () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+  const autoRotate = interactive && !reducedMotion;
+
   return (
+    <div ref={wrapRef} style={{ width: "100%", height: "100%" }}>
     <Canvas
       shadows
       dpr={[1, 2]}
+      frameloop={onScreen ? "always" : "never"}
       camera={{ position: [0, 1.05, 5.4], fov: 30 }}
       gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping }}
       style={{ width: "100%", height: "100%", display: "block" }}
@@ -652,7 +675,7 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
       <group position={[0, 0.1, 0]}>
         <Suspense fallback={null}>
           {HAT_MODEL_URL ? (
-            <HatGLBModel felt={felt} autoRotate={interactive} />
+            <HatGLBModel felt={felt} autoRotate={autoRotate} />
           ) : (
             <HatModel
               felt={felt}
@@ -660,7 +683,7 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
               band={band}
               charm={charm}
               initials={initials}
-              autoRotate={interactive}
+              autoRotate={autoRotate}
             />
           )}
         </Suspense>
@@ -679,5 +702,6 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
         />
       )}
     </Canvas>
+    </div>
   );
 }
