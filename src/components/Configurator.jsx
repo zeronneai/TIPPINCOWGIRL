@@ -138,19 +138,13 @@ export default function Configurator() {
             The Hat Bar
           </div>
           <h2
-            style={{
-              margin: 0,
-              fontFamily: "'Clash Display',sans-serif",
-              fontWeight: 800,
-              fontSize: "clamp(30px,4.4vw,48px)",
-              lineHeight: 1,
-              color: "#f6efe2",
-            }}
+            className="tc-sticker"
+            style={{ margin: 0, fontSize: "clamp(32px,4.6vw,52px)", transform: "rotate(-.8deg)" }}
           >
             Build your brim.
           </h2>
         </div>
-        <div style={{ fontSize: 13.5, color: "#bda88f", maxWidth: 280, textAlign: "right" }}>
+        <div style={{ fontSize: 13.5, color: "#6f5b48", maxWidth: 280, textAlign: "right" }}>
           Live preview — every pick updates your hat in real time.{" "}
           <span style={{ color: "#e0905f", fontWeight: 700 }}>{combo}+</span> base combos before you
           even add initials.
@@ -272,15 +266,16 @@ export default function Configurator() {
                 color: "#a98a68",
               }}
             >
-              Drag to spin · 3D preview
+              Drag to spin · scroll to zoom · 3D preview
             </div>
             <div
               style={{
                 marginTop: 6,
-                fontFamily: "'Clash Display',sans-serif",
-                fontWeight: 700,
-                fontSize: 17,
-                letterSpacing: ".02em",
+                fontFamily: "'Alfa Slab One','Satoshi',serif",
+                fontWeight: 400,
+                fontSize: 15,
+                letterSpacing: ".04em",
+                textTransform: "uppercase",
                 color: "#e9dcc8",
               }}
             >
@@ -315,10 +310,10 @@ export default function Configurator() {
           <div>
             <div
               style={{
-                fontFamily: "'Clash Display',sans-serif",
-                fontWeight: 700,
-                fontSize: 23,
-                lineHeight: 1.05,
+                fontFamily: "'Alfa Slab One','Satoshi',serif",
+                fontWeight: 400,
+                fontSize: 21,
+                lineHeight: 1.1,
                 color: "#3a261c",
               }}
             >
@@ -394,10 +389,10 @@ export default function Configurator() {
                   borderRadius: 14,
                   border: "2px solid #e2d4bd",
                   background: "#fffaf0",
-                  fontFamily: "'Clash Display',sans-serif",
-                  fontWeight: 700,
-                  fontSize: 30,
-                  letterSpacing: ".22em",
+                  fontFamily: "'Alfa Slab One','Satoshi',serif",
+                  fontWeight: 400,
+                  fontSize: 28,
+                  letterSpacing: ".18em",
                   textAlign: "center",
                   color: "#9a5a2e",
                   textTransform: "uppercase",
