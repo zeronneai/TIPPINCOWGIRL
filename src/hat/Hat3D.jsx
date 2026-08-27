@@ -22,20 +22,42 @@ const BRASS = "#caa24a";
 const SILVER = "#d7dadf";
 
 // --- Crown: a lathed felt dome (profile rotated around Y) --------------------
+// The profile is the single source of truth for the crown's silhouette: the
+// band, beads, stones and charm mounts all derive their radii from it via
+// crownRadiusAt(), so they hug the crown for every brim style with no
+// hardcoded radii to drift out of sync.
+const CROWN_PROFILE = [
+  [1.02, 0.0],
+  [1.0, 0.12],
+  [0.99, 0.3],
+  [0.96, 0.62],
+  [0.91, 0.96],
+  [0.83, 1.24],
+  [0.7, 1.44],
+  [0.46, 1.53],
+  [0.2, 1.56],
+  [0.0, 1.57],
+];
+
+function crownRadiusAt(y) {
+  for (let i = 0; i < CROWN_PROFILE.length - 1; i++) {
+    const [r0, y0] = CROWN_PROFILE[i];
+    const [r1, y1] = CROWN_PROFILE[i + 1];
+    if (y >= y0 && y <= y1) return r0 + ((y - y0) / (y1 - y0)) * (r1 - r0);
+  }
+  return y < 0 ? CROWN_PROFILE[0][0] : 0;
+}
+
+// Where the brim surface meets the crown (u≈0 in the brim mesh: y = -0.03,
+// style curls only affect the outer rings). The band rests ON this.
+const BRIM_ROOT_Y = -0.031;
+const BAND_TUBE = 0.085;
+const BAND_Y = BRIM_ROOT_Y + BAND_TUBE + 0.006; // tube bottom kisses the brim
+const BAND_R = crownRadiusAt(BAND_Y) + BAND_TUBE * 0.25; // wraps the crown wall
+
 function useCrownGeometry() {
   return useMemo(() => {
-    const pts = [
-      [1.02, 0.0],
-      [1.0, 0.12],
-      [0.99, 0.3],
-      [0.96, 0.62],
-      [0.91, 0.96],
-      [0.83, 1.24],
-      [0.7, 1.44],
-      [0.46, 1.53],
-      [0.2, 1.56],
-      [0.0, 1.57],
-    ].map(([x, y]) => new THREE.Vector2(x, y));
+    const pts = CROWN_PROFILE.map(([x, y]) => new THREE.Vector2(x, y));
     const g = new THREE.LatheGeometry(pts, 96);
     g.computeVertexNormals();
     return g;
@@ -203,20 +225,20 @@ function FeltMaterial({ color, side, bump, maps = {} }) {
 
 // --- Beaded ring: one instanced mesh instead of 28 separate spheres ----------
 const BEAD_COUNT = 28;
-function BeadRing({ y }) {
+function BeadRing({ y, r }) {
   const ref = useRef();
   useLayoutEffect(() => {
     const m = new THREE.Matrix4();
     const c = new THREE.Color();
     for (let k = 0; k < BEAD_COUNT; k++) {
       const a = (k / BEAD_COUNT) * Math.PI * 2;
-      m.setPosition(Math.cos(a) * 1.0, y, Math.sin(a) * 1.0);
+      m.setPosition(Math.cos(a) * r, y, Math.sin(a) * r);
       ref.current.setMatrixAt(k, m);
       ref.current.setColorAt(k, c.set(k % 2 ? "#c25b34" : "#efe6d2"));
     }
     ref.current.instanceMatrix.needsUpdate = true;
     if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
-  }, [y]);
+  }, [y, r]);
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, BEAD_COUNT]} castShadow>
       <sphereGeometry args={[0.05, 12, 10]} />
@@ -225,12 +247,14 @@ function BeadRing({ y }) {
   );
 }
 
+// All bands sit at BAND_Y (resting on the brim) with radius BAND_R (hugging
+// the crown wall) — both derived from the lathe profile above, so the ring
+// can no longer poke through the brim for any brim style.
 function Band({ id, crownColor }) {
   if (id === "none") return null;
-  const y = 0.2;
-  const ring = (color, props = {}) => (
-    <mesh position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow {...props}>
-      <torusGeometry args={[1.0, 0.085, 24, 96]} />
+  const ring = (color, tube = BAND_TUBE, dy = 0, dr = 0) => (
+    <mesh position={[0, BAND_Y + dy, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+      <torusGeometry args={[BAND_R + dr, tube, 24, 96]} />
       <meshStandardMaterial color={color} roughness={0.5} metalness={0.05} />
     </mesh>
   );
@@ -239,8 +263,8 @@ function Band({ id, crownColor }) {
     return (
       <group>
         {ring("#a9743f")}
-        <mesh position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.0, 0.052, 16, 96]} />
+        <mesh position={[0, BAND_Y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[BAND_R + 0.012, 0.052, 16, 96]} />
           <meshStandardMaterial color="#7e5326" roughness={0.6} />
         </mesh>
       </group>
@@ -249,12 +273,18 @@ function Band({ id, crownColor }) {
   if (id === "turquoise")
     return (
       <group>
-        {ring("#cdd0d4", { rotation: [Math.PI / 2, 0, 0] })}
+        {ring("#cdd0d4")}
         {[0, 1, 2, 3, 4, 5].map((k) => {
           const a = (k / 6) * Math.PI * 2;
+          const r = BAND_R + 0.05;
           return (
-            <mesh key={k} position={[Math.cos(a) * 1.0, y, Math.sin(a) * 1.0]} rotation={[0, -a, 0]} castShadow>
-              <sphereGeometry args={[0.11, 18, 14]} />
+            <mesh
+              key={k}
+              position={[Math.cos(a) * r, BAND_Y + 0.035, Math.sin(a) * r]}
+              rotation={[0, -a, 0]}
+              castShadow
+            >
+              <sphereGeometry args={[0.1, 18, 14]} />
               <meshStandardMaterial color="#3fa89a" roughness={0.32} metalness={0.1} />
             </mesh>
           );
@@ -266,7 +296,7 @@ function Band({ id, crownColor }) {
     return (
       <group>
         {ring("#d98c9a")}
-        <BeadRing y={y} />
+        <BeadRing y={BAND_Y + 0.01} r={BAND_R + 0.03} />
       </group>
     );
 
@@ -274,8 +304,8 @@ function Band({ id, crownColor }) {
     return (
       <group>
         {ring("#7a5c44")}
-        <mesh position={[0, y + 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.0, 0.04, 12, 96]} />
+        <mesh position={[0, BAND_Y + 0.03, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[BAND_R + 0.008, 0.04, 12, 96]} />
           <meshStandardMaterial color="#9a7a5c" roughness={0.7} />
         </mesh>
       </group>
@@ -346,7 +376,12 @@ function useFeatherGeometry() {
   }, []);
 }
 
-function FeatherCharm({ position }) {
+// Tucked into the band on the viewer's right, pointing up and back. The quill
+// bottom sits at the band; the vane rises steeply (slope ~2:1) so it clears
+// the brim for every style — even curl's upswept sides — and tilts outward
+// enough to clear the crown wall on the way up.
+const FEATHER_AZ = 0.95; // band azimuth of the mount (viewer's right at load)
+function FeatherCharm() {
   const vane = useFeatherGeometry();
   const rachis = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3([
@@ -357,25 +392,41 @@ function FeatherCharm({ position }) {
     ]);
     return new THREE.TubeGeometry(curve, 20, 0.016, 8, false);
   }, []);
+  const mount = useMemo(
+    () => [Math.cos(FEATHER_AZ) * (BAND_R + 0.02), BAND_Y + 0.02, Math.sin(FEATHER_AZ) * (BAND_R + 0.02)],
+    []
+  );
+  // Align the feather's +Y with "mostly up, a bit outward, a bit toward the
+  // back of the hat" — computed, not eyeballed, so it stays put if the band
+  // moves again.
+  const quat = useMemo(() => {
+    const out = new THREE.Vector3(Math.cos(FEATHER_AZ), 0, Math.sin(FEATHER_AZ));
+    const back = new THREE.Vector3(-Math.sin(FEATHER_AZ), 0, Math.cos(FEATHER_AZ));
+    const dir = new THREE.Vector3(0, 1, 0).addScaledVector(out, 0.33).addScaledVector(back, 0.45).normalize();
+    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  }, []);
   return (
-    <group position={position} rotation={[0.15, 0.55, 0.42]} scale={0.95}>
-      <mesh geometry={vane} castShadow>
-        <meshPhysicalMaterial
-          color="#c25b34"
-          roughness={0.62}
-          sheen={0.8}
-          sheenColor="#e8926a"
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <mesh geometry={rachis} castShadow>
-        <meshStandardMaterial color="#f3e2cf" roughness={0.5} />
-      </mesh>
-      {/* bare quill below the vane */}
-      <mesh position={[0, -0.68, 0.01]} rotation={[0.12, 0, 0]}>
-        <cylinderGeometry args={[0.014, 0.011, 0.16, 8]} />
-        <meshStandardMaterial color="#6f2a12" roughness={0.45} />
-      </mesh>
+    <group position={mount} quaternion={quat} scale={0.9}>
+      {/* shift so the quill bottom sits at the mount point on the band */}
+      <group position={[0, 0.66, 0]}>
+        <mesh geometry={vane} castShadow>
+          <meshPhysicalMaterial
+            color="#c25b34"
+            roughness={0.62}
+            sheen={0.8}
+            sheenColor="#e8926a"
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        <mesh geometry={rachis} castShadow>
+          <meshStandardMaterial color="#f3e2cf" roughness={0.5} />
+        </mesh>
+        {/* bare quill below the vane */}
+        <mesh position={[0, -0.68, 0.01]} rotation={[0.12, 0, 0]}>
+          <cylinderGeometry args={[0.014, 0.011, 0.16, 8]} />
+          <meshStandardMaterial color="#6f2a12" roughness={0.45} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -414,13 +465,13 @@ function usePetalGeometry() {
   }, []);
 }
 
-function BloomCharm({ position }) {
+function BloomCharm({ position, rotation }) {
   const petal = usePetalGeometry();
   const petalMat = (color) => (
     <meshPhysicalMaterial color={color} roughness={0.5} sheen={0.9} sheenColor="#f2c7cf" side={THREE.DoubleSide} />
   );
   return (
-    <group position={position} rotation={[0.35, 0.45, 0]} scale={1.05}>
+    <group position={position} rotation={rotation} scale={1.05}>
       {/* outer ring of 6 petals, opened wide */}
       {Array.from({ length: 6 }, (_, k) => (
         <group key={`o${k}`} rotation={[0, 0, (k * Math.PI) / 3]}>
@@ -475,33 +526,48 @@ function StarCharm({ position }) {
   );
 }
 
+// Charms pin onto the band at CHARM_AZ (front of the hat at load). Positions
+// derive from BAND_R/BAND_Y so they ride the band, proud of its surface and
+// clear of the brim for all three styles; FACE_OUT turns each flat charm's
+// +Z toward the band's outward normal.
+const CHARM_AZ = 0.55;
+const FACE_OUT = Math.PI / 2 - CHARM_AZ;
+const charmBase = (dr, y) => [
+  Math.cos(CHARM_AZ) * (BAND_R + dr),
+  y,
+  Math.sin(CHARM_AZ) * (BAND_R + dr),
+];
+
 function Charm({ id }) {
   if (id === "none") return null;
-  // front-left of the band
-  const base = [0.84, 0.26, 0.52];
 
   const glb = charmModelUrl(id);
-  if (glb) return <CharmGLB url={glb} position={base} rotation={[0.2, 0.5, 0.25]} />;
+  if (glb) return <CharmGLB url={glb} position={charmBase(0.05, 0.22)} rotation={[0, FACE_OUT, 0]} />;
 
-  if (id === "feather") return <FeatherCharm position={base} />;
+  if (id === "feather") return <FeatherCharm />;
 
   if (id === "concho")
     return (
-      <group position={base} rotation={[Math.PI / 2, 0, 0]}>
-        <mesh castShadow>
+      <group position={charmBase(0.05, 0.2)} rotation={[0, FACE_OUT, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[0.2, 0.2, 0.05, 32]} />
           <meshStandardMaterial color={SILVER} metalness={1} roughness={0.25} />
         </mesh>
-        <mesh position={[0, 0.04, 0]}>
+        <mesh position={[0, 0, 0.045]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.07, 0.07, 0.04, 24]} />
           <meshStandardMaterial color="#9aa0a8" metalness={1} roughness={0.3} />
         </mesh>
       </group>
     );
 
-  if (id === "bloom") return <BloomCharm position={base} />;
+  if (id === "bloom") return <BloomCharm position={charmBase(0.04, 0.26)} rotation={[0.25, FACE_OUT, 0]} />;
 
-  if (id === "star") return <StarCharm position={base} />;
+  if (id === "star")
+    return (
+      <group position={charmBase(0.03, 0.24)} rotation={[0, FACE_OUT, 0]}>
+        <StarCharm position={[0, 0, -0.03]} />
+      </group>
+    );
 
   return null;
 }
@@ -650,22 +716,27 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
       shadows
       dpr={[1, 2]}
       frameloop={onScreen ? "always" : "never"}
-      camera={{ position: [0, 1.05, 5.4], fov: 30 }}
-      gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping }}
+      camera={{ position: [2.1, 2.7, 6.4], fov: 30 }}
+      gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.35 }}
       style={{ width: "100%", height: "100%", display: "block" }}
     >
-      <ambientLight intensity={0.25} />
+      {/* key (warm, casts the shadow) + fill from the opposite side + cool
+          rim from behind that draws the brim edge — classic 3-point product
+          setup, with exposure lifted so the felt reads. */}
+      <ambientLight intensity={0.4} />
       <directionalLight
         position={[3.5, 6, 4]}
-        intensity={1.6}
+        intensity={1.7}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
       />
+      <directionalLight position={[-4, 2, 3.5]} intensity={0.55} color="#e8eef2" />
+      <directionalLight position={[-1.5, 3, -4.5]} intensity={1.6} color="#dff5ee" />
 
       {/* In-engine studio HDRI — premium reflections, no external download */}
       <Environment resolution={256} frames={1}>
-        <color attach="background" args={["#1a0f08"]} />
+        <color attach="background" args={["#141a19"]} />
         <Lightformer intensity={3} position={[0, 4, 2]} scale={[7, 2.5, 1]} color="#fff4e6" />
         <Lightformer intensity={1.4} position={[-4, 1.5, 1]} scale={[3, 4, 1]} color="#e0905f" />
         <Lightformer intensity={1.6} position={[4, 1, -3]} scale={[4, 4, 1]} color="#a9ddd3" />
@@ -693,10 +764,11 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
 
       {interactive && (
         <OrbitControls
+          target={[0, 0.3, 0]}
           enablePan={false}
           enableZoom={false}
-          minPolarAngle={Math.PI * 0.18}
-          maxPolarAngle={Math.PI * 0.62}
+          minPolarAngle={Math.PI * 0.16}
+          maxPolarAngle={Math.PI * 0.46}
           enableDamping
           dampingFactor={0.08}
         />
