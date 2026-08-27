@@ -174,9 +174,11 @@ export default function Configurator() {
             position: "relative",
             borderRadius: 26,
             overflow: "hidden",
+            // Cool slate-teal backdrop: the warm felt separates from it
+            // instead of melting into the old brown-on-brown.
             background:
-              "radial-gradient(120% 90% at 50% 18%, #3a2417 0%, #241710 60%, #1c1109 100%)",
-            border: "1px solid rgba(246,239,226,.08)",
+              "radial-gradient(120% 90% at 50% 18%, #46514e 0%, #2a3230 55%, #161c1a 100%)",
+            border: "1px solid rgba(246,239,226,.1)",
             minHeight: 480,
             display: "flex",
             flexDirection: "column",
