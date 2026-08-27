@@ -1,14 +1,22 @@
 /* ---- design tokens ---- */
 :root {
+  /* brand — coral comic-sticker on warm cream */
+  --coral: #e8674a; /* protagonist: sticker headlines, marquee, accents */
+  --coral-deep: #b04e28; /* CTA surfaces (AA-safe under white text) */
+  --cream: #faf1e2; /* page ground */
+  --cream-2: #f6efe2; /* panels */
+  --ink: #2b1a10; /* text + comic outlines */
+  --teal: #3fa89a; /* small hits only */
+
   /* z-index scale — the only five layers this site has. No ad-hoc values. */
   --z-base: 0; /* decorative backdrops (glow, pedestal shadow) */
   --z-canvas: 10; /* the 3D stage */
   --z-ui: 20; /* labels/badges that sit near the canvas */
-  --z-nav: 100; /* sticky navigation */
+  --z-nav: 100; /* sticky navigation + mobile CTA bar */
   --z-overlay: 200; /* full-viewport overlays (grain) */
 }
 
-/* ---- reset & base (ported from the Design Component) ---- */
+/* ---- reset & base ---- */
 * {
   box-sizing: border-box;
 }
@@ -17,13 +25,105 @@ html {
 }
 body {
   margin: 0;
-  background: #241710;
+  background: var(--cream);
+  color: var(--ink);
   font-family: "Satoshi", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: "ss01", "cv01", "liga", "kern";
   letter-spacing: -0.011em;
+}
+
+/* ---- sticker display type: Alfa Slab One, coral fill, fat white outline.
+   webkit-text-stroke paints under the fill via paint-order where supported;
+   the 8-direction text-shadow is the everywhere-fallback outline, plus a
+   soft drop so it lifts off the page like a die-cut sticker. ---- */
+.tc-sticker {
+  font-family: "Alfa Slab One", "Satoshi", serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1.04;
+  letter-spacing: 0.01em;
+  color: var(--coral);
+  -webkit-text-stroke: 2px #fff;
+  paint-order: stroke fill;
+  text-shadow:
+    -3px -3px 0 #fff,
+    3px -3px 0 #fff,
+    -3px 3px 0 #fff,
+    3px 3px 0 #fff,
+    -4px 0 0 #fff,
+    4px 0 0 #fff,
+    0 -4px 0 #fff,
+    0 4px 0 #fff,
+    0 8px 18px rgba(43, 26, 16, 0.22);
+}
+
+/* comic halftone texture for section backdrops */
+.tc-halftone {
+  background-image: radial-gradient(rgba(232, 103, 74, 0.14) 1.5px, transparent 1.6px);
+  background-size: 15px 15px;
+}
+
+/* comic CTA buttons: pill + ink border + hard offset shadow */
+.tc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 15px 28px;
+  background: var(--coral-deep);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  white-space: nowrap;
+}
+.tc-btn:hover {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--ink);
+}
+.tc-btn--ghost {
+  background: #fff;
+  color: var(--ink);
+}
+
+/* sticky mobile booking bar — hidden on desktop, slides up after the hero */
+.tc-sticky-cta {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: var(--z-nav);
+  display: none;
+  transform: translateY(140%);
+  transition: transform 0.28s ease;
+}
+.tc-sticky-cta.on {
+  transform: none;
+}
+.tc-sticky-cta a {
+  flex: 1;
+}
+@media (max-width: 700px) {
+  .tc-sticky-cta {
+    display: flex;
+  }
+}
+
+/* hero video slot */
+.tc-hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 ::selection {
   background: #c25b34;
@@ -87,16 +187,7 @@ body {
   }
 }
 
-/* ---- hover / focus states (prototype used style-hover / style-focus) ---- */
-.tc-book-nav:hover {
-  background: #a84a27;
-}
-.tc-cta-light:hover {
-  transform: translateY(-2px);
-}
-.tc-cta-ghost:hover {
-  background: rgba(246, 239, 226, 0.08);
-}
+/* ---- hover / focus states ---- */
 .tc-reserve:hover {
   background: #3a2417;
 }
@@ -108,12 +199,6 @@ body {
 }
 .tc-mono-input:focus {
   border-color: #c25b34;
-}
-.tc-event-dark:hover {
-  background: #3a2417;
-}
-.tc-event-light:hover {
-  background: #fff;
 }
 /* swatch + tab cards already carry inline transition; add the hover sheen */
 .tc-swatch:hover {
@@ -132,14 +217,20 @@ body {
   align-items: center;
   gap: 7px;
   padding: 10px 18px;
-  background: #b04e28;
+  background: var(--coral-deep);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 14px;
   border-radius: 999px;
+  border: 2px solid var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
   text-decoration: none;
-  box-shadow: 0 4px 14px rgba(194, 91, 52, 0.35);
   white-space: nowrap;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.tc-book-nav:hover {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 var(--ink);
 }
 .tc-burger {
   display: none;
@@ -147,10 +238,10 @@ body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(246, 239, 226, 0.25);
+  border: 2px solid rgba(43, 26, 16, 0.35);
   border-radius: 10px;
   background: transparent;
-  color: #f6efe2;
+  color: var(--ink);
   font-size: 17px;
   cursor: pointer;
   flex: none;
@@ -170,7 +261,7 @@ body {
     flex-direction: column;
     gap: 4px;
     padding: 6px 0 14px;
-    border-top: 1px solid rgba(246, 239, 226, 0.08);
+    border-top: 1px solid rgba(43, 26, 16, 0.12);
   }
   .tc-nav-mobile a {
     padding: 10px 2px;
@@ -195,19 +286,29 @@ body {
   .tc-config-grid {
     grid-template-columns: 1fr !important;
   }
-  .tc-how-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
   .tc-gallery-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .tc-events-grid {
-    grid-template-columns: 1fr !important;
   }
 }
 @media (max-width: 560px) {
-  .tc-how-grid,
   .tc-gallery-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- new-section responsive collapses ---- */
+@media (max-width: 900px) {
+  .tc-deborah-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .tc-deborah-grid > div:first-child {
+    min-height: 320px !important;
+  }
+  .tc-solana-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .tc-solana-grid > div:last-child {
+    border-left: none !important;
+    border-top: 2px solid var(--ink);
   }
 }

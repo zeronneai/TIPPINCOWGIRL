@@ -1,4 +1,25 @@
-// Configurator option data.
+// Configurator option data + site content data.
+
+// ---------------------------------------------------------------------------
+// Events & pop-ups — add an entry here and drop its media (one .mp4/.webp/
+// .jpg/.png) into src/assets/events/<id>/ ; the section renders it with no
+// component changes. `featured: true` promotes ONE event to the big
+// Grand-Opening slot at the top of the page; remove the flag when the moment
+// passes and it flows back into the chapter list automatically.
+// ---------------------------------------------------------------------------
+export const EVENTS = [
+  {
+    id: "grand-opening",
+    title: "Grand Opening",
+    date: "TODO — confirm date", // e.g. "Sat · Sep 14 · 11am–6pm"
+    blurb:
+      "TODO — one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
+    cta: { label: "Book the bar", href: "#events" },
+    featured: true,
+  },
+  // { id: "fall-market", title: "Fall Market Pop-Up", date: "Oct — TBA",
+  //   blurb: "One line about it.", },
+];
 
 export const FELTS = [
   { id: "ivory", label: "Ivory Wool", sub: "Wool felt", color: "#efe6d2" },
