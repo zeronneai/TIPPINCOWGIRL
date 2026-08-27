@@ -49,7 +49,7 @@ function Nav() {
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 40,
+        zIndex: "var(--z-nav)",
         background: "rgba(36,23,16,.78)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
@@ -116,11 +116,11 @@ function Marquee() {
     fontFamily: "'Satoshi',sans-serif",
     fontSize: 13,
     fontWeight: 700,
-    color: "#241710",
+    color: "#f8ead9",
     letterSpacing: ".18em",
   };
   return (
-    <div style={{ overflow: "hidden", whiteSpace: "nowrap", background: "#c25b34", borderBottom: "2px solid #241710" }}>
+    <div style={{ overflow: "hidden", whiteSpace: "nowrap", background: "#a8421f", borderBottom: "2px solid #241710" }}>
       <div style={{ display: "inline-flex", gap: 34, padding: "9px 0", animation: "marquee 26s linear infinite" }}>
         <span style={span}>{MARQUEE_TEXT}</span>
         <span style={span}>{MARQUEE_TEXT}</span>
@@ -251,7 +251,7 @@ function HowCard({ num, title, body, dark }) {
         {num}
       </div>
       <div style={{ fontWeight: 800, fontSize: 17, margin: "14px 0 6px" }}>{title}</div>
-      <div style={{ fontSize: 14, lineHeight: 1.55, color: dark ? "#c9b7a2" : "#83705e" }}>{body}</div>
+      <div style={{ fontSize: 14, lineHeight: 1.55, color: dark ? "#c9b7a2" : "#6b5744" }}>{body}</div>
     </div>
   );
 }
@@ -261,7 +261,7 @@ function HowItWorks() {
     <section id="how" className="tc-px" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 46 }}>
-          <div style={{ fontFamily: "'Satoshi',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
+          <div style={{ fontFamily: "'Satoshi',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#a8431c", marginBottom: 12 }}>
             We come to you
           </div>
           <h2
@@ -276,7 +276,7 @@ function HowItWorks() {
           >
             How the mobile hat bar works.
           </h2>
-          <p style={{ maxWidth: 520, margin: "16px auto 0", fontSize: 16, lineHeight: 1.6, color: "#83705e" }}>
+          <p style={{ maxWidth: 520, margin: "16px auto 0", fontSize: 16, lineHeight: 1.6, color: "#6b5744" }}>
             A full custom-hat experience that rolls right up to your party, market, wedding or wellness
             event.
           </p>
@@ -422,11 +422,11 @@ function Gallery() {
 
 function EventInfo({ label, value }) {
   return (
-    <div style={{ background: "rgba(36,23,16,.16)", borderRadius: 16, padding: 18 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#3a1c0e" }}>
+    <div style={{ background: "rgba(36,23,16,.3)", borderRadius: 16, padding: 18 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#f0dfc8" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "'Clash Display',sans-serif", fontWeight: 700, fontSize: 20, color: "#241710", marginTop: 4 }}>{value}</div>
+      <div style={{ fontFamily: "'Clash Display',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -440,7 +440,7 @@ function Events() {
           margin: "0 auto",
           borderRadius: 28,
           overflow: "hidden",
-          background: "linear-gradient(135deg,#c25b34 0%,#a8421f 100%)",
+          background: "linear-gradient(135deg,#b04e28 0%,#8f3717 100%)",
           position: "relative",
         }}
       >
@@ -469,7 +469,7 @@ function Events() {
                 fontSize: 12,
                 letterSpacing: ".1em",
                 textTransform: "uppercase",
-                color: "#241710",
+                color: "#f6efe2",
                 marginBottom: 20,
               }}
             >
@@ -482,12 +482,12 @@ function Events() {
                 fontWeight: 800,
                 fontSize: "clamp(30px,4.2vw,46px)",
                 lineHeight: 1.02,
-                color: "#241710",
+                color: "#fbf3e6",
               }}
             >
               Bring the hat bar to your next event.
             </h2>
-            <p style={{ maxWidth: 440, margin: "16px 0 0", fontSize: 16, lineHeight: 1.55, color: "#3a1c0e" }}>
+            <p style={{ maxWidth: 440, margin: "16px 0 0", fontSize: 16, lineHeight: 1.55, color: "#f4e3d2" }}>
               Weddings, birthdays, markets, corporate parties — the bar rolls up anywhere in El Paso.
               Follow us on Instagram for the next public pop-up.
             </p>
@@ -582,7 +582,7 @@ export default function App() {
         style={{
           position: "fixed",
           inset: 0,
-          zIndex: 50,
+          zIndex: "var(--z-overlay)",
           pointerEvents: "none",
           opacity: 0.05,
           mixBlendMode: "overlay",
