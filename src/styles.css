@@ -312,3 +312,15 @@ body {
     border-top: 2px solid var(--ink);
   }
 }
+
+/* how-it-works cards: 4 -> 2 -> 1 columns */
+@media (max-width: 900px) {
+  .tc-how-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 560px) {
+  .tc-how-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

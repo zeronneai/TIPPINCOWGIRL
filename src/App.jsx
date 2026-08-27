@@ -502,6 +502,102 @@ function MeetDeborah() {
   );
 }
 
+// --- How the hat bar works: the in-person experience, four comic steps -------
+const HOW_STEPS = [
+  {
+    num: "01",
+    title: "Step up to the bar",
+    body: "Walk up and try on the base hats — felts in every color, laid out like a candy shop.",
+  },
+  {
+    num: "02",
+    title: "Pick your base",
+    body: "Choose your felt color and brim shape. That hat is yours from this moment on.",
+  },
+  {
+    num: "03",
+    title: "Make it yours",
+    body: "Wrap a band, pin charms and feathers, brand your initials — styled with you, on the spot.",
+  },
+  {
+    num: "04",
+    title: "Wear it out",
+    body: "No box, no bag. You built it, you're wearing it — straight into the party.",
+    accent: true,
+  },
+];
+
+function HowCard({ num, title, body, accent, tilt }) {
+  return (
+    <div
+      style={{
+        background: accent ? "var(--coral)" : "#fffaf0",
+        color: accent ? "#fff" : "var(--ink)",
+        border: "2px solid var(--ink)",
+        boxShadow: "0 5px 0 var(--ink)",
+        borderRadius: 18,
+        padding: 24,
+        transform: `rotate(${tilt}deg)`,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'Alfa Slab One','Satoshi',serif",
+          fontSize: 30,
+          lineHeight: 1,
+          color: accent ? "#fff" : "var(--coral)",
+        }}
+      >
+        {num}
+      </div>
+      <div
+        style={{
+          fontFamily: "'Alfa Slab One','Satoshi',serif",
+          fontWeight: 400,
+          fontSize: 17,
+          margin: "13px 0 7px",
+          textTransform: "uppercase",
+          letterSpacing: ".02em",
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ fontSize: 14, lineHeight: 1.55, color: accent ? "#ffe9df" : "#4a3a2c" }}>{body}</div>
+    </div>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <section id="how" className="tc-px tc-halftone" style={{ position: "relative", padding: "68px 36px" }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 42 }}>
+          <div
+            style={{
+              fontSize: 11.5,
+              fontWeight: 800,
+              letterSpacing: ".24em",
+              textTransform: "uppercase",
+              color: "var(--teal)",
+              marginBottom: 12,
+            }}
+          >
+            Four steps, one hat
+          </div>
+          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(32px,4.8vw,54px)", transform: "rotate(-.8deg)" }}>
+            How the hat bar works
+          </h2>
+        </div>
+        <div className="tc-how-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
+          {HOW_STEPS.map((s, i) => (
+            <HowCard key={s.num} {...s} tilt={i % 2 ? 0.8 : -0.8} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // --- Events & Pop-Ups: vertical chapters, data-driven from data.js ----------
 function EventsSection() {
   const chapters = EVENTS.filter((e) => !e.featured);
@@ -866,6 +962,7 @@ export default function App() {
       <Marquee />
       {featured && <EventFeature event={featured} featured />}
       <MeetDeborah />
+      <HowItWorks />
       <Configurator />
       <EventsSection />
       <Gallery />
