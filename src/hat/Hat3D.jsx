@@ -1,6 +1,6 @@
-import { Suspense, useMemo, useRef, useState, useEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, OrbitControls, Text, Environment, Lightformer, useGLTF } from "@react-three/drei";
+import { ContactShadows, OrbitControls, Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { FELTS, shade } from "./data.js";
 
@@ -44,7 +44,7 @@ function useCrownGeometry() {
 
 // --- Brim: a procedural surface whose edge curls per style -------------------
 function useBrimGeometry(style) {
-  return useMemo(() => {
+  const geo = useMemo(() => {
     const S = 180; // around
     const R = 30; // inner -> outer rings
     const rInner = 0.97;
@@ -90,59 +90,70 @@ function useBrimGeometry(style) {
     g.computeVertexNormals();
     return g;
   }, [style]);
+
+  // free the old brim's GPU buffers when the style swaps it out
+  useEffect(() => () => geo.dispose(), [geo]);
+  return geo;
 }
 
 // ---------------------------------------------------------------------------
-// PBR felt textures (primary path). Drop tileable maps into:
+// PBR felt textures (primary path). Drop tileable maps into
+// src/assets/textures/felt/ named:
 //
-//     public/textures/felt/
-//       ├─ felt-albedo.jpg      (optional — keep ~neutral/grey, it's multiplied
-//       │                         by the chosen felt color so all 7 felts stay
-//       │                         accurate)
-//       ├─ felt-normal.jpg      (the wool weave — replaces the procedural bump)
-//       └─ felt-roughness.jpg   (micro sheen variation)
+//   felt-albedo.jpg     (optional — keep ~neutral/grey: it's multiplied by
+//                         the chosen felt color so all 7 felts stay accurate)
+//   felt-normal.jpg     (the wool weave — replaces the procedural bump)
+//   felt-roughness.jpg  (micro sheen variation)
 //
-// Any subset works. When a map is missing the loader silently skips it and the
-// material falls back to the procedural felt bump below — so the hat always
-// renders, with or without the brand's maps.
+// (.png / .webp also work.) Detection happens at BUILD time via
+// import.meta.glob, so nothing is probed over the network: an empty folder
+// means zero requests — the material silently uses the procedural bump below.
 // ---------------------------------------------------------------------------
-const FELT_TEX_DIR = "/textures/felt";
-const FELT_MAPS = {
-  map: "felt-albedo.jpg",
-  normalMap: "felt-normal.jpg",
-  roughnessMap: "felt-roughness.jpg",
-};
+const FELT_TEX_FILES = import.meta.glob("../assets/textures/felt/*.{jpg,jpeg,png,webp}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+const FELT_SLOTS = { albedo: "map", normal: "normalMap", roughness: "roughnessMap" };
 const FELT_REPEAT = 6;
 
 function useFeltMaps() {
   const [maps, setMaps] = useState({});
   useEffect(() => {
+    const entries = Object.entries(FELT_TEX_FILES)
+      .map(([path, url]) => {
+        const m = path.match(/felt-(albedo|normal|roughness)\.(jpg|jpeg|png|webp)$/);
+        return m ? [FELT_SLOTS[m[1]], url] : null;
+      })
+      .filter(Boolean);
+    if (!entries.length) return undefined;
     const loader = new THREE.TextureLoader();
     let active = true;
-    Object.entries(FELT_MAPS).forEach(([key, file]) => {
-      loader.load(
-        `${FELT_TEX_DIR}/${file}`,
-        (tex) => {
-          if (!active) return;
-          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-          tex.repeat.set(FELT_REPEAT, FELT_REPEAT);
-          tex.anisotropy = 8;
-          if (key === "map") tex.colorSpace = THREE.SRGBColorSpace;
-          setMaps((m) => ({ ...m, [key]: tex }));
-        },
-        undefined,
-        () => {} // missing file -> stay on the procedural fallback
-      );
+    const loaded = [];
+    entries.forEach(([key, url]) => {
+      loader.load(url, (tex) => {
+        if (!active) {
+          tex.dispose();
+          return;
+        }
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(FELT_REPEAT, FELT_REPEAT);
+        tex.anisotropy = 8;
+        if (key === "map") tex.colorSpace = THREE.SRGBColorSpace;
+        loaded.push(tex);
+        setMaps((m) => ({ ...m, [key]: tex }));
+      });
     });
     return () => {
       active = false;
+      loaded.forEach((t) => t.dispose());
     };
   }, []);
   return maps;
 }
 
-// Procedural felt micro-texture (tileable noise) — the graceful fallback bump
-// used whenever a real normal map isn't present in public/textures/felt/.
+// Procedural felt micro-texture (tileable noise) — the silent fallback bump
+// used whenever no real normal map is present in src/assets/textures/felt/.
 function useFeltBump() {
   return useMemo(() => {
     const s = 256;
@@ -190,6 +201,30 @@ function FeltMaterial({ color, side, bump, maps = {} }) {
   );
 }
 
+// --- Beaded ring: one instanced mesh instead of 28 separate spheres ----------
+const BEAD_COUNT = 28;
+function BeadRing({ y }) {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4();
+    const c = new THREE.Color();
+    for (let k = 0; k < BEAD_COUNT; k++) {
+      const a = (k / BEAD_COUNT) * Math.PI * 2;
+      m.setPosition(Math.cos(a) * 1.0, y, Math.sin(a) * 1.0);
+      ref.current.setMatrixAt(k, m);
+      ref.current.setColorAt(k, c.set(k % 2 ? "#c25b34" : "#efe6d2"));
+    }
+    ref.current.instanceMatrix.needsUpdate = true;
+    if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
+  }, [y]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, BEAD_COUNT]} castShadow>
+      <sphereGeometry args={[0.05, 12, 10]} />
+      <meshStandardMaterial roughness={0.4} />
+    </instancedMesh>
+  );
+}
+
 function Band({ id, crownColor }) {
   if (id === "none") return null;
   const y = 0.2;
@@ -231,15 +266,7 @@ function Band({ id, crownColor }) {
     return (
       <group>
         {ring("#d98c9a")}
-        {Array.from({ length: 28 }, (_, k) => {
-          const a = (k / 28) * Math.PI * 2;
-          return (
-            <mesh key={k} position={[Math.cos(a) * 1.0, y, Math.sin(a) * 1.0]} castShadow>
-              <sphereGeometry args={[0.05, 12, 10]} />
-              <meshStandardMaterial color={k % 2 ? "#c25b34" : "#efe6d2"} roughness={0.4} />
-            </mesh>
-          );
-        })}
+        <BeadRing y={y} />
       </group>
     );
 
@@ -257,65 +284,166 @@ function Band({ id, crownColor }) {
   return ring(shade(crownColor, -0.2));
 }
 
-function Charm({ id }) {
-  if (id === "none") return null;
-  // front-left of the band
-  const base = [0.84, 0.26, 0.52];
+// ---------------------------------------------------------------------------
+// Charms. Each charm may be swapped for a small realistic GLB dropped into
+// src/assets/models/charms/<id>.glb (feather.glb, bloom.glb, concho.glb,
+// star.glb). Charms never recolor per felt, so baked mini-models are safe —
+// detection is at build time, missing files cost nothing. Until then the
+// procedural versions below render.
+// ---------------------------------------------------------------------------
+const CHARM_GLBS = import.meta.glob("../assets/models/charms/*.glb", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+const charmModelUrl = (id) => CHARM_GLBS[`../assets/models/charms/${id}.glb`] || null;
 
-  if (id === "feather")
-    return (
-      <group position={base} rotation={[0.2, 0.5, 0.25]}>
-        <mesh castShadow>
-          <coneGeometry args={[0.18, 1.0, 20]} />
-          <meshStandardMaterial color="#b8451f" roughness={0.6} />
-        </mesh>
-        <mesh scale={[1, 1, 0.18]} position={[0, 0, 0]} castShadow>
-          <coneGeometry args={[0.2, 1.05, 20]} />
-          <meshStandardMaterial color="#c25b34" roughness={0.6} />
-        </mesh>
-        <mesh position={[0, -0.55, 0]}>
-          <cylinderGeometry args={[0.012, 0.012, 0.3, 8]} />
-          <meshStandardMaterial color="#6f2a12" />
-        </mesh>
-      </group>
-    );
+function CharmGLB({ url, position, rotation, scale = 1 }) {
+  const { scene } = useGLTF(url);
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse((o) => {
+      if (o.isMesh) o.castShadow = true;
+    });
+    return c;
+  }, [scene]);
+  return <primitive object={cloned} position={position} rotation={rotation} scale={scale} />;
+}
 
-  if (id === "concho")
-    return (
-      <group position={base} rotation={[Math.PI / 2, 0, 0]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[0.2, 0.2, 0.05, 32]} />
-          <meshStandardMaterial color={SILVER} metalness={1} roughness={0.25} />
-        </mesh>
-        <mesh position={[0, 0.04, 0]}>
-          <cylinderGeometry args={[0.07, 0.07, 0.04, 24]} />
-          <meshStandardMaterial color="#9aa0a8" metalness={1} roughness={0.3} />
-        </mesh>
-      </group>
-    );
+// --- Feather: curved vane + rachis + quill (replaces the old two cones) ------
+function useFeatherGeometry() {
+  return useMemo(() => {
+    const U = 48; // along the feather
+    const V = 10; // across the vane
+    const pos = [];
+    const uvs = [];
+    for (let i = 0; i <= U; i++) {
+      const u = i / U;
+      // leaf-shaped width profile, tapering into the tip
+      let w = 0.17 * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.75)), 0.8);
+      // subtle barb splits along the upper half
+      if (u > 0.35) w *= 1 - 0.12 * Math.pow(Math.max(0, Math.sin(26 * Math.PI * u)), 2);
+      for (let j = 0; j <= V; j++) {
+        const v = (j / V) * 2 - 1;
+        pos.push(v * w, u * 1.08 - 0.54, 0.045 * (1 - v * v) + 0.09 * Math.sin(Math.PI * u));
+        uvs.push(j / V, u);
+      }
+    }
+    const idx = [];
+    const row = V + 1;
+    for (let i = 0; i < U; i++) {
+      for (let j = 0; j < V; j++) {
+        const a = i * row + j;
+        idx.push(a, a + row, a + 1, a + 1, a + row, a + row + 1);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+}
 
-  if (id === "bloom")
-    return (
-      <group position={base}>
-        {Array.from({ length: 6 }, (_, k) => {
-          const a = (k * Math.PI) / 3;
-          return (
-            <mesh key={k} position={[Math.cos(a) * 0.13, Math.sin(a) * 0.13, 0]} castShadow>
-              <sphereGeometry args={[0.085, 16, 12]} />
-              <meshStandardMaterial color="#d98c9a" roughness={0.45} />
-            </mesh>
-          );
-        })}
-        <mesh castShadow>
-          <sphereGeometry args={[0.08, 16, 12]} />
-          <meshStandardMaterial color={BRASS} metalness={0.7} roughness={0.4} />
-        </mesh>
-      </group>
-    );
+function FeatherCharm({ position }) {
+  const vane = useFeatherGeometry();
+  const rachis = useMemo(() => {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, -0.64, 0.02),
+      new THREE.Vector3(0, -0.2, 0.08),
+      new THREE.Vector3(0, 0.2, 0.13),
+      new THREE.Vector3(0, 0.5, 0.14),
+    ]);
+    return new THREE.TubeGeometry(curve, 20, 0.016, 8, false);
+  }, []);
+  return (
+    <group position={position} rotation={[0.15, 0.55, 0.42]} scale={0.95}>
+      <mesh geometry={vane} castShadow>
+        <meshPhysicalMaterial
+          color="#c25b34"
+          roughness={0.62}
+          sheen={0.8}
+          sheenColor="#e8926a"
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh geometry={rachis} castShadow>
+        <meshStandardMaterial color="#f3e2cf" roughness={0.5} />
+      </mesh>
+      {/* bare quill below the vane */}
+      <mesh position={[0, -0.68, 0.01]} rotation={[0.12, 0, 0]}>
+        <cylinderGeometry args={[0.014, 0.011, 0.16, 8]} />
+        <meshStandardMaterial color="#6f2a12" roughness={0.45} />
+      </mesh>
+    </group>
+  );
+}
 
-  if (id === "star") return <StarCharm position={base} />;
+// --- Bloom: two rings of curled petals around a brass heart ------------------
+function usePetalGeometry() {
+  return useMemo(() => {
+    const U = 22;
+    const V = 8;
+    const pos = [];
+    const uvs = [];
+    for (let i = 0; i <= U; i++) {
+      const u = i / U;
+      const w = 0.085 * Math.sin(Math.PI * Math.pow(u, 0.9));
+      for (let j = 0; j <= V; j++) {
+        const v = (j / V) * 2 - 1;
+        // camber across + upward curl along the petal
+        pos.push(v * w, u * 0.24, 0.02 * (1 - v * v) + 0.085 * u * u);
+        uvs.push(j / V, u);
+      }
+    }
+    const idx = [];
+    const row = V + 1;
+    for (let i = 0; i < U; i++) {
+      for (let j = 0; j < V; j++) {
+        const a = i * row + j;
+        idx.push(a, a + row, a + 1, a + 1, a + row, a + row + 1);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+}
 
-  return null;
+function BloomCharm({ position }) {
+  const petal = usePetalGeometry();
+  const petalMat = (color) => (
+    <meshPhysicalMaterial color={color} roughness={0.5} sheen={0.9} sheenColor="#f2c7cf" side={THREE.DoubleSide} />
+  );
+  return (
+    <group position={position} rotation={[0.35, 0.45, 0]} scale={1.05}>
+      {/* outer ring of 6 petals, opened wide */}
+      {Array.from({ length: 6 }, (_, k) => (
+        <group key={`o${k}`} rotation={[0, 0, (k * Math.PI) / 3]}>
+          <mesh geometry={petal} rotation={[0.95, 0, 0]} castShadow>
+            {petalMat("#d98c9a")}
+          </mesh>
+        </group>
+      ))}
+      {/* inner ring of 5 petals, more upright */}
+      {Array.from({ length: 5 }, (_, k) => (
+        <group key={`i${k}`} rotation={[0, 0, (k * 2 * Math.PI) / 5 + 0.6]}>
+          <mesh geometry={petal} rotation={[0.55, 0, 0]} scale={0.62} castShadow>
+            {petalMat("#e8aab6")}
+          </mesh>
+        </group>
+      ))}
+      {/* brass heart */}
+      <mesh position={[0, 0, 0.05]} castShadow>
+        <sphereGeometry args={[0.07, 16, 12]} />
+        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+      </mesh>
+    </group>
+  );
 }
 
 function StarCharm({ position }) {
@@ -347,6 +475,96 @@ function StarCharm({ position }) {
   );
 }
 
+function Charm({ id }) {
+  if (id === "none") return null;
+  // front-left of the band
+  const base = [0.84, 0.26, 0.52];
+
+  const glb = charmModelUrl(id);
+  if (glb) return <CharmGLB url={glb} position={base} rotation={[0.2, 0.5, 0.25]} />;
+
+  if (id === "feather") return <FeatherCharm position={base} />;
+
+  if (id === "concho")
+    return (
+      <group position={base} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.2, 0.2, 0.05, 32]} />
+          <meshStandardMaterial color={SILVER} metalness={1} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0.04, 0]}>
+          <cylinderGeometry args={[0.07, 0.07, 0.04, 24]} />
+          <meshStandardMaterial color="#9aa0a8" metalness={1} roughness={0.3} />
+        </mesh>
+      </group>
+    );
+
+  if (id === "bloom") return <BloomCharm position={base} />;
+
+  if (id === "star") return <StarCharm position={base} />;
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Monogram plate: the initials are drawn with the page's own brand font
+// (Clash Display, already loaded by the site's stylesheet) onto a canvas
+// texture — no external glyph font is fetched, and the type matches the site.
+// ---------------------------------------------------------------------------
+function useMonogramTexture(mono) {
+  const [tex, setTex] = useState(null);
+  useEffect(() => {
+    if (!mono) {
+      setTex(null);
+      return undefined;
+    }
+    let cancelled = false;
+    let texture = null;
+    const draw = () => {
+      if (cancelled) return;
+      const spaced = mono.split("").join("  ");
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 256;
+      const ctx = c.getContext("2d");
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.font = "600 150px 'Clash Display', 'Satoshi', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 10;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#7a5a16";
+      ctx.strokeText(spaced, 256, 136);
+      ctx.fillStyle = "#e6c06a";
+      ctx.fillText(spaced, 256, 136);
+      texture = new THREE.CanvasTexture(c);
+      texture.anisotropy = 8;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      setTex(texture);
+    };
+    // wait for the brand font so the first paint isn't a fallback face
+    if (document.fonts?.ready) document.fonts.ready.then(draw);
+    else draw();
+    return () => {
+      cancelled = true;
+      if (texture) texture.dispose();
+    };
+  }, [mono]);
+  return tex;
+}
+
+function Monogram({ initials }) {
+  const mono = (initials || "").toUpperCase().slice(0, 3);
+  const tex = useMonogramTexture(mono);
+  if (!tex) return null;
+  return (
+    <mesh position={[1.03, 0.2, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <planeGeometry args={[0.82, 0.41]} />
+      <meshBasicMaterial map={tex} transparent depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
 function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
   const group = useRef();
   const feltColor = FELTS.find((f) => f.id === felt).color;
@@ -360,8 +578,6 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
     if (group.current && autoRotate) group.current.rotation.y += dt * 0.25;
   });
 
-  const mono = (initials || "").toUpperCase().slice(0, 3);
-
   return (
     <group ref={group} rotation={[0, -0.5, 0]} position={[0, -0.35, 0]}>
       {/* crown */}
@@ -374,23 +590,7 @@ function HatModel({ felt, brim, band, charm, initials, autoRotate }) {
       </mesh>
       <Band id={band} crownColor={feltColor} />
       <Charm id={charm} />
-      {mono && (
-        <Suspense fallback={null}>
-          <Text
-            position={[1.02, 0.2, 0]}
-            rotation={[0, Math.PI / 2, 0]}
-            fontSize={0.22}
-            letterSpacing={0.12}
-            color={BRASS}
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.004}
-            outlineColor="#7a5a16"
-          >
-            {mono}
-          </Text>
-        </Suspense>
-      )}
+      <Monogram initials={initials} />
     </group>
   );
 }
