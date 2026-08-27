@@ -574,7 +574,7 @@ function Charm({ id }) {
 
 // ---------------------------------------------------------------------------
 // Monogram plate: the initials are drawn with the page's own brand font
-// (Clash Display, already loaded by the site's stylesheet) onto a canvas
+// (Alfa Slab One, already loaded by the site's stylesheet) onto a canvas
 // texture — no external glyph font is fetched, and the type matches the site.
 // ---------------------------------------------------------------------------
 function useMonogramTexture(mono) {
@@ -594,7 +594,7 @@ function useMonogramTexture(mono) {
       c.height = 256;
       const ctx = c.getContext("2d");
       ctx.clearRect(0, 0, c.width, c.height);
-      ctx.font = "600 150px 'Clash Display', 'Satoshi', sans-serif";
+      ctx.font = "400 150px 'Alfa Slab One', 'Satoshi', serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.lineWidth = 10;
@@ -766,7 +766,9 @@ export default function Hat3D({ felt, brim, band, charm, initials, interactive =
         <OrbitControls
           target={[0, 0.3, 0]}
           enablePan={false}
-          enableZoom={false}
+          enableZoom
+          minDistance={4.2}
+          maxDistance={9.5}
           minPolarAngle={Math.PI * 0.16}
           maxPolarAngle={Math.PI * 0.46}
           enableDamping
