@@ -113,6 +113,7 @@ export default function Configurator() {
   return (
     <section
       id="build"
+      className="tc-px"
       style={{ position: "relative", maxWidth: 1180, margin: "0 auto", padding: "40px 36px 70px" }}
     >
       <div
@@ -168,7 +169,9 @@ export default function Configurator() {
           alignItems: "stretch",
         }}
       >
-        {/* STAGE */}
+        {/* STAGE — badge and captions live in normal flow above/below the
+            canvas, so the brim can never overlap them no matter the style
+            or how far the user drags the hat around. */}
         <div
           style={{
             position: "relative",
@@ -180,16 +183,42 @@ export default function Configurator() {
             minHeight: 480,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 30,
+            padding: "16px 20px 18px",
           }}
         >
+          {/* decorative backdrops, behind everything */}
           <div
             style={{
               position: "absolute",
-              top: 18,
-              left: 20,
+              zIndex: "var(--z-base)",
+              width: "62%",
+              height: "50%",
+              top: "18%",
+              left: "19%",
+              borderRadius: "50%",
+              filter: "blur(60px)",
+              animation: "glowpulse 7s ease-in-out infinite",
+              background: GLOW,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              zIndex: "var(--z-base)",
+              bottom: 92,
+              left: "27%",
+              width: "46%",
+              height: 26,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,.55)",
+              filter: "blur(16px)",
+            }}
+          />
+          {/* badge row — reserved space, in flow */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: "var(--z-ui)",
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
@@ -211,72 +240,39 @@ export default function Configurator() {
             />{" "}
             Live preview
           </div>
-          {/* glow */}
-          <div
-            style={{
-              position: "absolute",
-              width: "62%",
-              height: "50%",
-              top: "20%",
-              borderRadius: "50%",
-              filter: "blur(60px)",
-              animation: "glowpulse 7s ease-in-out infinite",
-              background: GLOW,
-            }}
-          />
           {/* hat — live 3D model, one parametric mesh for all combos */}
-          <div style={{ position: "relative", zIndex: 2, width: "100%", height: 400 }}>
+          <div style={{ position: "relative", zIndex: "var(--z-canvas)", width: "100%", flex: 1, minHeight: 330 }}>
             <Hat3D felt={felt} brim={brim} band={band} charm={charm} initials={initials} />
           </div>
-          <div
-            style={{
-              position: "absolute",
-              bottom: 48,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontSize: 11,
-              letterSpacing: ".16em",
-              textTransform: "uppercase",
-              color: "#6f5942",
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            Drag to spin · 3D preview
-          </div>
-          {/* pedestal shadow */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 64,
-              width: "46%",
-              height: 26,
-              borderRadius: "50%",
-              background: "rgba(0,0,0,.55)",
-              filter: "blur(16px)",
-              zIndex: 1,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: 22,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontFamily: "'Clash Display',sans-serif",
-              fontWeight: 700,
-              fontSize: 17,
-              letterSpacing: ".02em",
-              color: "#e9dcc8",
-            }}
-          >
-            {feltName} · {brimName}
+          {/* captions — reserved space below the canvas, in flow */}
+          <div style={{ position: "relative", zIndex: "var(--z-ui)", textAlign: "center", paddingTop: 10 }}>
+            <div
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase",
+                color: "#a98a68",
+              }}
+            >
+              Drag to spin · 3D preview
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontFamily: "'Clash Display',sans-serif",
+                fontWeight: 700,
+                fontSize: 17,
+                letterSpacing: ".02em",
+                color: "#e9dcc8",
+              }}
+            >
+              {feltName} · {brimName}
+            </div>
           </div>
         </div>
 
-        {/* CONTROLS */}
+        {/* CONTROLS — fixed minHeight so switching to the shorter Initials
+            step never reflows the stage next to it. */}
         <div
           style={{
             display: "flex",
@@ -286,6 +282,7 @@ export default function Configurator() {
             borderRadius: 26,
             padding: 22,
             color: "#3a261c",
+            minHeight: 540,
           }}
         >
           {/* step tabs */}

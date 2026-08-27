@@ -1,3 +1,13 @@
+/* ---- design tokens ---- */
+:root {
+  /* z-index scale — the only five layers this site has. No ad-hoc values. */
+  --z-base: 0; /* decorative backdrops (glow, pedestal shadow) */
+  --z-canvas: 10; /* the 3D stage */
+  --z-ui: 20; /* labels/badges that sit near the canvas */
+  --z-nav: 100; /* sticky navigation */
+  --z-overlay: 200; /* full-viewport overlays (grain) */
+}
+
 /* ---- reset & base (ported from the Design Component) ---- */
 * {
   box-sizing: border-box;
