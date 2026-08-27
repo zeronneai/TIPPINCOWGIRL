@@ -114,7 +114,7 @@ function Nav() {
           padding: "13px 0",
         }}
       >
-        <a href="#top" style={{ textDecoration: "none", minWidth: 0 }} aria-label="Tippin Cowgirl — home">
+        <a href="#top" style={{ textDecoration: "none", minWidth: 0 }} aria-label="Tippin Cowgirl, home">
           <Brand />
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -219,32 +219,22 @@ function Hero() {
       <div style={{ position: "relative", maxWidth: 900 }}>
         <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "7px 15px",
-            background: overVideo ? "rgba(250,241,226,.92)" : "#fff",
-            border: "2px solid var(--ink)",
-            borderRadius: 999,
             fontWeight: 800,
             fontSize: 12.5,
-            letterSpacing: ".14em",
+            letterSpacing: ".2em",
             textTransform: "uppercase",
-            color: "var(--ink)",
-            marginBottom: 26,
-            boxShadow: "0 3px 0 var(--ink)",
+            color: overVideo ? "#faf1e2" : "var(--coral-deep)",
+            marginBottom: 22,
           }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--teal)" }} /> Mobile hat
-          bar · El Paso, TX
+          Mobile hat bar · El Paso, TX
         </div>
-        <h1
-          className="tc-sticker"
-          style={{ margin: 0, fontSize: "clamp(44px,8.2vw,104px)", transform: "rotate(-1.2deg)" }}
-        >
+        <h1 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(44px,8.2vw,104px)" }}>
           El Paso&apos;s
           <br />
-          first hat bar
+          first
+          <br />
+          hat bar
         </h1>
         <p
           style={{
@@ -256,7 +246,7 @@ function Hero() {
             color: overVideo ? "#faf1e2" : "var(--ink)",
           }}
         >
-          Pick your felt, shape the brim, pin your charm — walk away with a hat nobody else has.
+          Pick your felt, shape the brim, pin your charm. Walk away with a hat nobody else has.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 34 }}>
           <a href="#events" className="tc-btn">
@@ -273,10 +263,10 @@ function Hero() {
 
 function Marquee() {
   const span = {
-    fontFamily: "'Alfa Slab One','Satoshi',serif",
-    fontSize: 15,
+    fontWeight: 800,
+    fontSize: 14,
     color: "var(--ink)",
-    letterSpacing: ".08em",
+    letterSpacing: ".14em",
     textTransform: "uppercase",
   };
   return (
@@ -357,7 +347,6 @@ function EventFeature({ event, featured = false }) {
           <div
             style={{
               display: "inline-block",
-              transform: "rotate(2deg)",
               background: "var(--teal)",
               color: "#fff",
               border: "2px solid var(--ink)",
@@ -373,7 +362,7 @@ function EventFeature({ event, featured = false }) {
           >
             {event.date}
           </div>
-          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(40px,6.4vw,76px)", transform: "rotate(-1deg)" }}>
+          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(40px,6.4vw,76px)" }}>
             {event.title}
           </h2>
           <p style={{ maxWidth: 560, margin: "20px auto 28px", fontSize: 17, lineHeight: 1.6, color: "#4a3a2c" }}>
@@ -443,7 +432,6 @@ function MeetDeborah() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            transform: "rotate(-1.2deg)",
           }}
         >
           {photo ? (
@@ -477,24 +465,24 @@ function MeetDeborah() {
             Meet Deborah
           </h2>
           <p style={{ margin: "20px 0 0", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" }}>
-            TODO — Deborah&apos;s real story goes here: how the first hat happened, why El Paso, what the bar
+            TODO: Deborah&apos;s real story goes here. How the first hat happened, why El Paso, what the bar
             means to her. Two or three sentences, first person or close third.
           </p>
           <p style={{ margin: "14px 0 0", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" }}>
-            TODO — second short paragraph: what a guest experiences at the bar, in her words.
+            TODO: second short paragraph. What a guest experiences at the bar, in her words.
           </p>
           <blockquote
             style={{
               margin: "26px 0 0",
               padding: 0,
               border: 0,
-              fontFamily: "'Alfa Slab One','Satoshi',serif",
+              fontWeight: 800,
               fontSize: "clamp(19px,2.4vw,24px)",
-              lineHeight: 1.3,
+              lineHeight: 1.35,
               color: "var(--coral-deep)",
             }}
           >
-            “TODO — one line from Deborah that sounds like her.”
+            “TODO: one line from Deborah that sounds like her.”
           </blockquote>
         </div>
       </div>
@@ -507,7 +495,7 @@ const HOW_STEPS = [
   {
     num: "01",
     title: "Step up to the bar",
-    body: "Walk up and try on the base hats — felts in every color, laid out like a candy shop.",
+    body: "Walk up and try on the base hats. Felts in every color, laid out like a candy shop.",
   },
   {
     num: "02",
@@ -517,17 +505,17 @@ const HOW_STEPS = [
   {
     num: "03",
     title: "Make it yours",
-    body: "Wrap a band, pin charms and feathers, brand your initials — styled with you, on the spot.",
+    body: "Wrap a band, pin charms and feathers, brand your initials. Styled with you, on the spot.",
   },
   {
     num: "04",
     title: "Wear it out",
-    body: "No box, no bag. You built it, you're wearing it — straight into the party.",
+    body: "No box, no bag. You built it, you're wearing it, straight into the party.",
     accent: true,
   },
 ];
 
-function HowCard({ num, title, body, accent, tilt }) {
+function HowCard({ num, title, body, accent }) {
   return (
     <div
       style={{
@@ -537,13 +525,12 @@ function HowCard({ num, title, body, accent, tilt }) {
         boxShadow: "0 5px 0 var(--ink)",
         borderRadius: 18,
         padding: 24,
-        transform: `rotate(${tilt}deg)`,
       }}
     >
       <div
         style={{
-          fontFamily: "'Alfa Slab One','Satoshi',serif",
-          fontSize: 30,
+          fontWeight: 800,
+          fontSize: 28,
           lineHeight: 1,
           color: accent ? "#fff" : "var(--coral)",
         }}
@@ -552,9 +539,8 @@ function HowCard({ num, title, body, accent, tilt }) {
       </div>
       <div
         style={{
-          fontFamily: "'Alfa Slab One','Satoshi',serif",
-          fontWeight: 400,
-          fontSize: 17,
+          fontWeight: 800,
+          fontSize: 15.5,
           margin: "13px 0 7px",
           textTransform: "uppercase",
           letterSpacing: ".02em",
@@ -584,13 +570,13 @@ function HowItWorks() {
           >
             Four steps, one hat
           </div>
-          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(32px,4.8vw,54px)", transform: "rotate(-.8deg)" }}>
+          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(32px,4.8vw,54px)" }}>
             How the hat bar works
           </h2>
         </div>
         <div className="tc-how-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
           {HOW_STEPS.map((s, i) => (
-            <HowCard key={s.num} {...s} tilt={i % 2 ? 0.8 : -0.8} />
+            <HowCard key={s.num} {...s} />
           ))}
         </div>
       </div>
@@ -605,11 +591,11 @@ function EventsSection() {
     <section id="events" className="tc-px" style={{ position: "relative", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 44 }}>
-          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(34px,5vw,58px)", transform: "rotate(-.8deg)" }}>
+          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(34px,5vw,58px)" }}>
             Events &amp; Pop-Ups
           </h2>
           <p style={{ maxWidth: 540, margin: "18px auto 0", fontSize: 16, lineHeight: 1.6, color: "#4a3a2c" }}>
-            Weddings, birthdays, markets, corporate parties — the bar rolls up anywhere in El Paso. DM{" "}
+            Weddings, birthdays, markets, corporate parties. The bar rolls up anywhere in El Paso. DM{" "}
             <a href={IG} target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
               @_tippincowgirl
             </a>{" "}
@@ -634,7 +620,7 @@ function EventsSection() {
               fontWeight: 600,
             }}
           >
-            More pop-ups announcing soon — follow{" "}
+            More pop-ups announcing soon. Follow{" "}
             <a href={IG} target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
               @_tippincowgirl
             </a>{" "}
@@ -763,7 +749,7 @@ function Gallery() {
               padding: 18,
             }}
           >
-            <span style={{ fontFamily: "'Alfa Slab One','Satoshi',serif", fontSize: 19, color: "#fff", lineHeight: 1.15 }}>
+            <span style={{ fontWeight: 800, fontSize: 18, color: "#fff", lineHeight: 1.3 }}>
               “Best part of the whole party.”
             </span>
           </div>
@@ -813,7 +799,6 @@ function Solana() {
                 letterSpacing: ".12em",
                 textTransform: "uppercase",
                 color: "var(--ink)",
-                transform: "rotate(-2deg)",
                 marginBottom: 16,
               }}
             >
@@ -834,7 +819,7 @@ function Solana() {
           <div style={{ minHeight: 340, position: "relative", borderLeft: "2px solid var(--ink)" }}>
             {mapOn ? (
               <iframe
-                title="Map — The Shoppes at Solana, El Paso"
+                title="Map: The Shoppes at Solana, El Paso"
                 src={MAPS_EMBED}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"

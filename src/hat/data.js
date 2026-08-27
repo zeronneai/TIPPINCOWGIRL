@@ -11,13 +11,13 @@ export const EVENTS = [
   {
     id: "grand-opening",
     title: "Grand Opening",
-    date: "TODO — confirm date", // e.g. "Sat · Sep 14 · 11am–6pm"
+    date: "TODO: confirm date", // e.g. "Sat · Sep 14 · 11am to 6pm"
     blurb:
-      "TODO — one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
+      "TODO: one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
     cta: { label: "Book the bar", href: "#events" },
     featured: true,
   },
-  // { id: "fall-market", title: "Fall Market Pop-Up", date: "Oct — TBA",
+  // { id: "fall-market", title: "Fall Market Pop-Up", date: "Oct, TBA",
   //   blurb: "One line about it.", },
 ];
 

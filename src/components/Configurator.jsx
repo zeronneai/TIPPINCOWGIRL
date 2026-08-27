@@ -139,13 +139,13 @@ export default function Configurator() {
           </div>
           <h2
             className="tc-sticker"
-            style={{ margin: 0, fontSize: "clamp(32px,4.6vw,52px)", transform: "rotate(-.8deg)" }}
+            style={{ margin: 0, fontSize: "clamp(32px,4.6vw,52px)" }}
           >
             Build your brim.
           </h2>
         </div>
         <div style={{ fontSize: 13.5, color: "#6f5b48", maxWidth: 280, textAlign: "right" }}>
-          Live preview — every pick updates your hat in real time.{" "}
+          Live preview: every pick updates your hat in real time.{" "}
           <span style={{ color: "#e0905f", fontWeight: 700 }}>{combo}+</span> base combos before you
           even add initials.
         </div>
@@ -271,10 +271,9 @@ export default function Configurator() {
             <div
               style={{
                 marginTop: 6,
-                fontFamily: "'Alfa Slab One','Satoshi',serif",
-                fontWeight: 400,
-                fontSize: 15,
-                letterSpacing: ".04em",
+                fontWeight: 800,
+                fontSize: 14,
+                letterSpacing: ".08em",
                 textTransform: "uppercase",
                 color: "#e9dcc8",
               }}
@@ -310,10 +309,9 @@ export default function Configurator() {
           <div>
             <div
               style={{
-                fontFamily: "'Alfa Slab One','Satoshi',serif",
-                fontWeight: 400,
-                fontSize: 21,
-                lineHeight: 1.1,
+                fontWeight: 800,
+                fontSize: 20,
+                lineHeight: 1.15,
                 color: "#3a261c",
               }}
             >
@@ -381,7 +379,7 @@ export default function Configurator() {
                 }
                 maxLength={3}
                 placeholder="ABC"
-                aria-label="Your initials — up to 3 letters, stamped on the band"
+                aria-label="Your initials, up to 3 letters, stamped on the band"
                 className="tc-mono-input"
                 style={{
                   width: "100%",
@@ -389,8 +387,7 @@ export default function Configurator() {
                   borderRadius: 14,
                   border: "2px solid #e2d4bd",
                   background: "#fffaf0",
-                  fontFamily: "'Alfa Slab One','Satoshi',serif",
-                  fontWeight: 400,
+                  fontWeight: 800,
                   fontSize: 28,
                   letterSpacing: ".18em",
                   textAlign: "center",
@@ -403,19 +400,8 @@ export default function Configurator() {
                 <button
                   type="button"
                   onClick={() => setInitials("")}
-                  className="tc-mono-clear"
-                  style={{
-                    flex: 1,
-                    padding: 11,
-                    borderRadius: 11,
-                    border: "1px solid #e2d4bd",
-                    background: "#fffaf0",
-                    fontFamily: "'Satoshi'",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: "#6f5b48",
-                    cursor: "pointer",
-                  }}
+                  className="tc-btn tc-btn--ghost"
+                  style={{ flex: 1, padding: 11, fontSize: 13 }}
                 >
                   Clear
                 </button>
@@ -463,47 +449,15 @@ export default function Configurator() {
           </div>
 
           <div style={{ display: "flex", gap: 9, marginTop: 2 }}>
-            <a
-              href="#events"
-              className="tc-reserve"
-              style={{
-                flex: 1,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                padding: 14,
-                background: "#241710",
-                color: "#f6efe2",
-                fontWeight: 800,
-                fontSize: 14,
-                borderRadius: 13,
-                textDecoration: "none",
-              }}
-            >
+            <a href="#events" className="tc-btn" style={{ flex: 1, padding: 14, fontSize: 14 }}>
               Reserve this build
             </a>
             <button
               type="button"
               onClick={shuffle}
               title="Surprise me"
-              className="tc-shuffle"
-              style={{
-                flex: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                padding: "14px 16px",
-                background: "#3fa89a",
-                color: "#fff",
-                fontFamily: "'Satoshi'",
-                fontWeight: 800,
-                fontSize: 14,
-                border: "none",
-                borderRadius: 13,
-                cursor: "pointer",
-              }}
+              className="tc-btn tc-btn--ghost"
+              style={{ flex: "none", padding: "14px 16px", fontSize: 14 }}
             >
               ↻ Shuffle
             </button>
