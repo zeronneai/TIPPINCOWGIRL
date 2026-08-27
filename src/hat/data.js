@@ -1,4 +1,4 @@
-// Configurator option data — ported verbatim from the Design Component.
+// Configurator option data.
 
 export const FELTS = [
   { id: "ivory", label: "Ivory Wool", sub: "Wool felt", color: "#efe6d2" },
@@ -32,15 +32,6 @@ export const CHARMS = [
   { id: "star", label: "Lucky Star", sub: "Brass star", color: "#c79a4e" },
 ];
 
-export const BRIM_PATHS = {
-  curl: "M52,256 C76,238 124,240 154,252 C184,264 236,264 266,252 C296,240 344,238 368,256 C356,278 298,290 210,290 C122,290 64,278 52,256 Z",
-  flat: "M40,260 C92,250 150,259 210,260 C270,259 328,250 380,260 C366,278 300,286 210,286 C120,286 54,278 40,260 Z",
-  down: "M62,248 C86,242 128,254 158,264 C188,274 232,274 262,264 C292,254 334,242 358,248 C350,276 294,296 210,296 C126,296 70,276 62,248 Z",
-};
-
-export const CROWN =
-  "M132,250 C130,198 138,150 160,116 Q186,136 210,140 Q234,136 260,116 C282,150 290,198 288,250 Q210,264 132,250 Z";
-
 export function nameOf(arr, id) {
   const f = arr.find((x) => x.id === id);
   return f ? f.label : "";
@@ -59,17 +50,4 @@ export function shade(hex, p) {
   g = Math.round((t - g) * a + g);
   b = Math.round((t - b) * a + b);
   return `rgb(${r},${g},${b})`;
-}
-
-export function starPath(cx, cy, R, N) {
-  let p = "";
-  const r = R * 0.42;
-  for (let i = 0; i < N * 2; i++) {
-    const rad = i % 2 === 0 ? R : r,
-      a = (Math.PI / N) * i - Math.PI / 2;
-    const x = cx + Math.cos(a) * rad,
-      y = cy + Math.sin(a) * rad;
-    p += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
-  }
-  return p + "Z";
 }
