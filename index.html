@@ -8,13 +8,67 @@
       name="description"
       content="Tippin Cowgirl is a custom mobile hat bar in El Paso, TX. Step up to the bar, build your own one-of-a-kind hat — pick the felt, shape the brim, wrap a band, pin a charm — and book the experience for your event."
     />
-    <link rel="icon" type="image/png" href="/logo.png" />
+
+    <!-- TODO: swap for the custom domain if/when one exists — keep all four
+         absolute URLs below (canonical, og:url, og:image, twitter:image) and
+         public/sitemap.xml + robots.txt in sync. -->
+    <link rel="canonical" href="https://tippincowgirl.vercel.app/" />
+
+    <!-- Open Graph: what IG bios / WhatsApp / iMessage show when the link is shared -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tippin Cowgirl" />
+    <meta property="og:title" content="Tippin Cowgirl · Custom Mobile Hat Bar · El Paso, TX" />
+    <meta
+      property="og:description"
+      content="Build your own one-of-a-kind custom hat — felt, brim, band, charm, initials. A mobile hat bar for weddings, birthdays, markets and corporate events in El Paso."
+    />
+    <meta property="og:url" content="https://tippincowgirl.vercel.app/" />
+    <meta property="og:image" content="https://tippincowgirl.vercel.app/logo.png" />
+    <meta property="og:image:alt" content="Tippin Cowgirl — custom mobile hat bar, El Paso TX" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Tippin Cowgirl · Custom Mobile Hat Bar · El Paso, TX" />
+    <meta
+      name="twitter:description"
+      content="Build your own one-of-a-kind custom hat at the mobile hat bar. El Paso pop-ups and private events."
+    />
+    <meta name="twitter:image" content="https://tippincowgirl.vercel.app/logo.png" />
+
+    <meta name="theme-color" content="#241710" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <link
       href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap"
       rel="stylesheet"
     />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Tippin Cowgirl",
+        "description": "Custom mobile hat bar: build a one-of-a-kind hat — felt, brim shape, hatband, charm and foil-stamped initials — at pop-ups and private events.",
+        "image": "https://tippincowgirl.vercel.app/logo.png",
+        "logo": "https://tippincowgirl.vercel.app/logo.png",
+        "url": "https://tippincowgirl.vercel.app/",
+        "sameAs": ["https://www.instagram.com/_tippincowgirl/"],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "750 Sunland Park Dr (The Shoppes at Solana)",
+          "addressLocality": "El Paso",
+          "addressRegion": "TX",
+          "postalCode": "79912",
+          "addressCountry": "US"
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "El Paso"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
