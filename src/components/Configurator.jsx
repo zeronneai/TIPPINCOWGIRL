@@ -1,6 +1,9 @@
-import { useState } from "react";
-import Hat3D from "../hat/Hat3D.jsx";
+import { lazy, Suspense, useState } from "react";
 import { FELTS, BRIMS, BANDS, CHARMS, nameOf } from "../hat/data.js";
+
+// The 3D stack (three + react-three) is ~1MB minified — lazy-load it so the
+// landing paints from a small initial chunk (see manualChunks in vite.config).
+const Hat3D = lazy(() => import("../hat/Hat3D.jsx"));
 
 const STEPS = ["Felt", "Brim", "Band", "Charm", "Initials"];
 const TITLES = [
@@ -15,8 +18,6 @@ const KEY_BY_STEP = ["felt", "brim", "band", "charm"];
 
 // Stage glow accent — Terracotta is the brand default (props.stageGlow in the DC).
 const GLOW = "radial-gradient(circle, rgba(194,91,52,.55) 0%, transparent 70%)";
-const SHOW_MARQUEE = true; // exposed as a tweak in the design; on by default
-const IDLE_SWAY = true; // gentle hat sway; on by default
 
 function tabStyle(active) {
   return {
@@ -26,7 +27,7 @@ function tabStyle(active) {
     border: "none",
     cursor: "pointer",
     background: active ? "#c25b34" : "#ece0cc",
-    color: active ? "#fff" : "#7a6450",
+    color: active ? "#fff" : "#695442",
     fontFamily: "'Satoshi',sans-serif",
     fontWeight: 700,
     fontSize: "13px",
@@ -105,10 +106,6 @@ export default function Configurator() {
   const charmName = nameOf(CHARMS, charm);
   const monoOut = initials ? initials : "—";
   const combo = FELTS.length * BRIMS.length * BANDS.length * CHARMS.length;
-
-  const swayStyle = IDLE_SWAY
-    ? { animation: "sway 6s ease-in-out infinite", transformOrigin: "50% 80%" }
-    : {};
 
   return (
     <section
@@ -242,7 +239,26 @@ export default function Configurator() {
           </div>
           {/* hat — live 3D model, one parametric mesh for all combos */}
           <div style={{ position: "relative", zIndex: "var(--z-canvas)", width: "100%", flex: 1, minHeight: 330 }}>
-            <Hat3D felt={felt} brim={brim} band={band} charm={charm} initials={initials} />
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    letterSpacing: ".16em",
+                    textTransform: "uppercase",
+                    color: "#a98a68",
+                  }}
+                >
+                  Saddling up…
+                </div>
+              }
+            >
+              <Hat3D felt={felt} brim={brim} band={band} charm={charm} initials={initials} />
+            </Suspense>
           </div>
           {/* captions — reserved space below the canvas, in flow */}
           <div style={{ position: "relative", zIndex: "var(--z-ui)", textAlign: "center", paddingTop: 10 }}>
@@ -306,7 +322,7 @@ export default function Configurator() {
             >
               {TITLES[step][0]}
             </div>
-            <div style={{ fontSize: 13, color: "#9b8474", marginTop: 5 }}>{TITLES[step][1]}</div>
+            <div style={{ fontSize: 13, color: "#6f5b48", marginTop: 5 }}>{TITLES[step][1]}</div>
           </div>
 
           {/* swatch grid */}
@@ -345,7 +361,7 @@ export default function Configurator() {
                         style={{
                           fontWeight: 500,
                           fontSize: 11,
-                          color: "#9b8474",
+                          color: "#6f5b48",
                           letterSpacing: ".01em",
                         }}
                       >
@@ -368,6 +384,7 @@ export default function Configurator() {
                 }
                 maxLength={3}
                 placeholder="ABC"
+                aria-label="Your initials — up to 3 letters, stamped on the band"
                 className="tc-mono-input"
                 style={{
                   width: "100%",
@@ -399,14 +416,14 @@ export default function Configurator() {
                     fontFamily: "'Satoshi'",
                     fontWeight: 700,
                     fontSize: 13,
-                    color: "#9b8474",
+                    color: "#6f5b48",
                     cursor: "pointer",
                   }}
                 >
                   Clear
                 </button>
               </div>
-              <div style={{ fontSize: 12.5, color: "#9b8474", lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12.5, color: "#6f5b48", lineHeight: 1.5 }}>
                 Up to 3 letters, foil-stamped on the band in brass. Free with any build at the bar.
               </div>
             </div>
@@ -422,7 +439,7 @@ export default function Configurator() {
                 fontWeight: 700,
                 letterSpacing: ".12em",
                 textTransform: "uppercase",
-                color: "#b09a82",
+                color: "#7d6650",
               }}
             >
               Your build
@@ -440,7 +457,7 @@ export default function Configurator() {
                   gridColumn: "1 / -1",
                 }}
               >
-                <span style={{ color: "#9b8474" }}>Initials</span>
+                <span style={{ color: "#6f5b48" }}>Initials</span>
                 <span style={{ fontWeight: 700, color: "#c25b34", letterSpacing: ".1em" }}>
                   {monoOut}
                 </span>
@@ -503,7 +520,7 @@ export default function Configurator() {
 function SummaryRow({ label, value }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-      <span style={{ color: "#9b8474" }}>{label}</span>
+      <span style={{ color: "#6f5b48" }}>{label}</span>
       <span style={{ fontWeight: 700, color: "#3a261c" }}>{value}</span>
     </div>
   );
