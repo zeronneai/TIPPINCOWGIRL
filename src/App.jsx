@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Configurator from "./components/Configurator.jsx";
 import logo from "/logo.png";
 
@@ -11,7 +12,7 @@ const MARQUEE_TEXT =
 
 function Brand({ size = 30, fontSize = 20 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+    <div className="tc-brand" style={{ display: "flex", alignItems: "center", gap: 11 }}>
       <img
         src={logo}
         alt="Tippin Cowgirl logo"
@@ -34,6 +35,7 @@ function Brand({ size = 30, fontSize = 20 }) {
 }
 
 function Nav() {
+  const [open, setOpen] = useState(false);
   const link = {
     fontWeight: 800,
     fontSize: 14,
@@ -43,51 +45,68 @@ function Nav() {
   };
   return (
     <nav
+      className="tc-px"
       style={{
         position: "sticky",
         top: 0,
         zIndex: 40,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "16px 36px",
         background: "rgba(36,23,16,.78)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         borderBottom: "1px solid rgba(246,239,226,.08)",
       }}
     >
-      <Brand />
-      <div className="tc-nav-links" style={{ display: "flex", alignItems: "center", gap: 30 }}>
-        <a href="#build" style={{ ...link, display: "none" }}>
-          The Hat Bar
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "14px 0",
+        }}
+      >
+        <a href="#top" style={{ textDecoration: "none", minWidth: 0 }} aria-label="Tippin Cowgirl — home">
+          <Brand />
         </a>
-        <a href="#how" style={link}>
-          Mobile Bar
-        </a>
-        <a href="#gallery" style={link}>
-          Gallery
-        </a>
-        <a
-          href="#events"
-          className="tc-book-nav"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "10px 18px",
-            background: "#c25b34",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 14,
-            borderRadius: 999,
-            textDecoration: "none",
-            boxShadow: "0 4px 14px rgba(194,91,52,.35)",
-          }}
-        >
-          Book the bar
-        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="tc-nav-desktop" style={{ display: "flex", alignItems: "center", gap: 26, marginRight: 8 }}>
+            <a href="#how" style={link}>
+              Mobile Bar
+            </a>
+            <a href="#gallery" style={link}>
+              Gallery
+            </a>
+          </div>
+          <a href="#events" className="tc-book-nav">
+            Book the bar
+          </a>
+          <button
+            type="button"
+            className="tc-burger"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? "✕" : "☰"}
+          </button>
+        </div>
       </div>
+      {open && (
+        <div className="tc-nav-mobile">
+          <a href="#build" style={link} onClick={() => setOpen(false)}>
+            The Hat Bar
+          </a>
+          <a href="#how" style={link} onClick={() => setOpen(false)}>
+            Mobile Bar
+          </a>
+          <a href="#gallery" style={link} onClick={() => setOpen(false)}>
+            Gallery
+          </a>
+          <a href="#events" style={{ ...link, color: "#e0905f" }} onClick={() => setOpen(false)}>
+            Book an event
+          </a>
+        </div>
+      )}
     </nav>
   );
 }
@@ -113,6 +132,7 @@ function Marquee() {
 function Hero() {
   return (
     <header
+      className="tc-px"
       style={{
         position: "relative",
         maxWidth: 1180,
@@ -238,7 +258,7 @@ function HowCard({ num, title, body, dark }) {
 
 function HowItWorks() {
   return (
-    <section id="how" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
+    <section id="how" className="tc-px" style={{ position: "relative", background: "#f6efe2", color: "#3a261c", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 46 }}>
           <div style={{ fontFamily: "'Satoshi',sans-serif", fontSize: 11.5, fontWeight: 700, letterSpacing: ".24em", textTransform: "uppercase", color: "#c25b34", marginBottom: 12 }}>
@@ -274,20 +294,52 @@ function HowItWorks() {
 
 const HATCH = "repeating-linear-gradient(135deg,#3a2417,#3a2417 14px,#2f1d11 14px,#2f1d11 28px)";
 
-function GalleryTile({ label, style }) {
+// ---------------------------------------------------------------------------
+// Real gallery photos: drop files into src/assets/gallery/ named 01…05 —
+// ideally a 01.webp + 01.jpg pair (WebP served, JPG fallback), or a single
+// .webp/.jpg/.png. They replace the placeholder tiles automatically at build
+// time; slots without files keep the placeholder. Keep photos ≤ ~1600px wide.
+// ---------------------------------------------------------------------------
+const GALLERY_FILES = import.meta.glob("./assets/gallery/*.{webp,jpg,jpeg,png}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+function gallerySrc(name) {
+  const find = (ext) => GALLERY_FILES[`./assets/gallery/${name}.${ext}`];
+  const webp = find("webp");
+  const fallback = find("jpg") || find("jpeg") || find("png");
+  if (!webp && !fallback) return null;
+  return { webp, fallback: fallback || webp };
+}
+
+function GalleryTile({ name, alt, label, style }) {
+  const src = name ? gallerySrc(name) : null;
+  const frame = {
+    borderRadius: 18,
+    overflow: "hidden",
+    border: "1px solid rgba(246,239,226,.08)",
+    ...style,
+  };
+  if (src) {
+    return (
+      <figure style={{ ...frame, margin: 0 }}>
+        <picture>
+          {src.webp && <source srcSet={src.webp} type="image/webp" />}
+          <img
+            src={src.fallback}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </picture>
+      </figure>
+    );
+  }
   return (
-    <div
-      style={{
-        borderRadius: 18,
-        overflow: "hidden",
-        background: HATCH,
-        border: "1px solid rgba(246,239,226,.08)",
-        display: "flex",
-        alignItems: "flex-end",
-        padding: 16,
-        ...style,
-      }}
-    >
+    <div style={{ ...frame, background: HATCH, display: "flex", alignItems: "flex-end", padding: 16 }}>
       <span style={{ fontFamily: "ui-monospace,monospace", fontSize: 11, color: "#a98a68" }}>{label}</span>
     </div>
   );
@@ -295,7 +347,7 @@ function GalleryTile({ label, style }) {
 
 function Gallery() {
   return (
-    <section id="gallery" style={{ position: "relative", padding: "72px 36px" }}>
+    <section id="gallery" className="tc-px" style={{ position: "relative", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div
           style={{
@@ -332,8 +384,13 @@ function Gallery() {
           className="tc-gallery-grid"
           style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "200px", gap: 12 }}
         >
-          <GalleryTile label="[ pop-up event photo · vertical ]" style={{ gridRow: "span 2" }} />
-          <GalleryTile label="[ finished hat ]" />
+          <GalleryTile
+            name="01"
+            alt="Guests building custom hats at a Tippin Cowgirl pop-up"
+            label="[ pop-up event photo · vertical ]"
+            style={{ gridRow: "span 2" }}
+          />
+          <GalleryTile name="02" alt="A finished custom hat with band and charm" label="[ finished hat ]" />
           <div
             style={{
               borderRadius: 18,
@@ -349,9 +406,14 @@ function Gallery() {
               “Best part of the whole party.”
             </span>
           </div>
-          <GalleryTile label="[ bar setup ]" />
-          <GalleryTile label="[ guest styling ]" />
-          <GalleryTile label="[ wide event shot · horizontal ]" style={{ gridColumn: "span 2" }} />
+          <GalleryTile name="03" alt="The mobile hat bar set up at an event" label="[ bar setup ]" />
+          <GalleryTile name="04" alt="A guest styling their hat at the bar" label="[ guest styling ]" />
+          <GalleryTile
+            name="05"
+            alt="Wide shot of the Tippin Cowgirl hat bar at an event"
+            label="[ wide event shot · horizontal ]"
+            style={{ gridColumn: "span 2" }}
+          />
         </div>
       </div>
     </section>
@@ -371,7 +433,7 @@ function EventInfo({ label, value }) {
 
 function Events() {
   return (
-    <section id="events" style={{ position: "relative", padding: "24px 36px 90px" }}>
+    <section id="events" className="tc-px" style={{ position: "relative", padding: "24px 36px 90px" }}>
       <div
         style={{
           maxWidth: 1180,
@@ -411,7 +473,7 @@ function Events() {
                 marginBottom: 20,
               }}
             >
-              Next stop
+              Now booking
             </div>
             <h2
               style={{
@@ -423,11 +485,11 @@ function Events() {
                 color: "#241710",
               }}
             >
-              June 28th — Sunday Funday Wellness Event
+              Bring the hat bar to your next event.
             </h2>
             <p style={{ maxWidth: 440, margin: "16px 0 0", fontSize: 16, lineHeight: 1.55, color: "#3a1c0e" }}>
-              Come find the bar in El Paso and build your own. Hosting a wedding, birthday, market or
-              corporate party? Bring the hat bar to you.
+              Weddings, birthdays, markets, corporate parties — the bar rolls up anywhere in El Paso.
+              Follow us on Instagram for the next public pop-up.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 28 }}>
               <a
@@ -482,7 +544,7 @@ function Events() {
 
 function Footer() {
   return (
-    <footer style={{ position: "relative", borderTop: "1px solid rgba(246,239,226,.1)", padding: "40px 36px" }}>
+    <footer className="tc-px" style={{ position: "relative", borderTop: "1px solid rgba(246,239,226,.1)", padding: "40px 36px" }}>
       <div
         style={{
           maxWidth: 1180,
