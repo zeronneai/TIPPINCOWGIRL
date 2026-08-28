@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Configurator from "./components/Configurator.jsx";
-import { EVENTS } from "./hat/data.js";
+import { EVENTS, REMOTE_MEDIA } from "./hat/data.js";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -58,6 +58,68 @@ function eventMedia(id) {
 }
 
 // ---------------------------------------------------------------------------
+
+// Autoplaying loop that stays lazy: the src only attaches when the tile nears
+// the viewport (everything is lazy except the hero video, per spec).
+function LazyVideo({ src, caption, ariaLabel, style }) {
+  const ref = useRef(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      setOn(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setOn(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "relative", width: "100%", height: "100%" }}>
+      {on && (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          src={src}
+          aria-label={ariaLabel}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...style }}
+        />
+      )}
+      {caption && (
+        <span
+          style={{
+            position: "absolute",
+            left: 10,
+            bottom: 10,
+            zIndex: "var(--z-ui)",
+            background: "rgba(43,26,16,.82)",
+            color: "#faf1e2",
+            fontWeight: 800,
+            fontSize: 11.5,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+            padding: "5px 10px",
+            borderRadius: 8,
+          }}
+        >
+          {caption}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function Brand({ size = 30, fontSize = 19 }) {
   return (
@@ -171,8 +233,9 @@ function Nav() {
 
 // --- Hero: autoplay video loop slot with sticker headline over it ------------
 function Hero() {
-  const video = firstUrl(HERO_VIDEO);
-  const poster = firstUrl(HERO_POSTER);
+  // local files override the Cloudinary manifest when present
+  const video = firstUrl(HERO_VIDEO) || REMOTE_MEDIA.heroVideo;
+  const poster = firstUrl(HERO_POSTER) || REMOTE_MEDIA.heroPoster;
   const overVideo = !!(video || poster);
   return (
     <header
@@ -189,7 +252,7 @@ function Hero() {
       }}
     >
       {video ? (
-        <video className="tc-hero-video" autoPlay muted loop playsInline preload="metadata" poster={poster || undefined}>
+        <video className="tc-hero-video" autoPlay muted loop playsInline preload="auto" poster={poster || undefined}>
           <source src={video} type="video/mp4" />
         </video>
       ) : poster ? (
@@ -212,7 +275,8 @@ function Hero() {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(180deg, rgba(30,15,8,.30) 0%, rgba(30,15,8,.52) 100%)",
+            background:
+              "linear-gradient(0deg, rgba(232,103,74,.14), rgba(232,103,74,.14)), linear-gradient(180deg, rgba(30,15,8,.38) 0%, rgba(30,15,8,.6) 100%)",
           }}
         />
       )}
@@ -290,51 +354,75 @@ function Marquee() {
 // --- EventFeature: one reusable chapter. `featured` renders the big
 // Grand-Opening treatment; without it, the same data renders as a chapter in
 // the Events section — demoting the opening is a one-line data change. -------
-function EventMediaSlot({ id, title, tall }) {
-  const media = eventMedia(id);
-  const frame = {
-    borderRadius: 22,
-    overflow: "hidden",
-    border: "2px solid var(--ink)",
-    boxShadow: "0 6px 0 var(--ink)",
-    background: "#e9d9bf",
-    minHeight: tall ? 380 : 260,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-  if (media?.video)
+// One frame per photo/clip. Frames use fixed aspect-ratios with object-fit
+// cover, so portrait and landscape originals both sit well without knowing
+// their dimensions up front; on mobile the whole set becomes a scroll-snap
+// carousel (see .tc-event-media in styles.css).
+const eventFrame = {
+  borderRadius: 18,
+  overflow: "hidden",
+  border: "2px solid var(--ink)",
+  boxShadow: "0 5px 0 var(--ink)",
+  background: "#e9d9bf",
+};
+
+function EventMediaSlot({ event, tall }) {
+  const local = eventMedia(event.id); // local file overrides the manifest
+  const remote = event.media;
+  const main = local
+    ? { url: local.url, video: local.video }
+    : remote
+      ? { url: remote.main, video: /\.(mp4|webm)($|\?)/.test(remote.main) }
+      : null;
+
+  if (!main)
     return (
-      <div style={frame}>
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          src={media.url}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
+      <div
+        className="tc-halftone"
+        style={{
+          ...eventFrame,
+          minHeight: tall ? 380 : 260,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 40 }}>🤠</span>
+        <span style={{ fontFamily: "ui-monospace,monospace", fontSize: 11.5, color: "#6f5b48" }}>
+          [ drop media in src/assets/events/{event.id}/ ]
+        </span>
       </div>
     );
-  if (media)
-    return (
-      <div style={frame}>
-        <img
-          src={media.url}
-          alt={title}
-          loading="lazy"
-          decoding="async"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-      </div>
-    );
+
+  const extras = (!local && remote?.extras ? remote.extras : []).slice(0, 2);
   return (
-    <div className="tc-halftone" style={{ ...frame, flexDirection: "column", gap: 8 }}>
-      <span style={{ fontSize: 40 }}>🤠</span>
-      <span style={{ fontFamily: "ui-monospace,monospace", fontSize: 11.5, color: "#6f5b48" }}>
-        [ drop media in src/assets/events/{id}/ ]
-      </span>
+    <div className="tc-event-media">
+      <figure className="tc-event-slide tc-event-slide--main" style={{ ...eventFrame, margin: 0 }}>
+        {main.video ? (
+          <LazyVideo src={main.url} ariaLabel={event.title} />
+        ) : (
+          <img
+            src={main.url}
+            alt={event.title}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        )}
+      </figure>
+      {extras.map((url, i) => (
+        <figure key={url} className="tc-event-slide" style={{ ...eventFrame, margin: 0 }}>
+          <img
+            src={url}
+            alt={`${event.title}, photo ${i + 2}`}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </figure>
+      ))}
     </div>
   );
 }
@@ -368,7 +456,7 @@ function EventFeature({ event, featured = false }) {
           <p style={{ maxWidth: 560, margin: "20px auto 28px", fontSize: 17, lineHeight: 1.6, color: "#4a3a2c" }}>
             {event.blurb}
           </p>
-          <EventMediaSlot id={event.id} title={event.title} tall />
+          <EventMediaSlot event={event} tall />
           {event.cta && (
             <div style={{ marginTop: 30 }}>
               <a href={event.cta.href} className="tc-btn">
@@ -382,7 +470,7 @@ function EventFeature({ event, featured = false }) {
 
   return (
     <article style={{ display: "grid", gap: 22 }}>
-      <EventMediaSlot id={event.id} title={event.title} />
+      <EventMediaSlot event={event} />
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "10px 16px" }}>
         <h3 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(26px,3.4vw,38px)" }}>
           {event.title}
@@ -406,7 +494,7 @@ function EventFeature({ event, featured = false }) {
 
 // --- Meet Deborah -------------------------------------------------------------
 function MeetDeborah() {
-  const photo = firstUrl(DEBORAH_PHOTO);
+  const photo = firstUrl(DEBORAH_PHOTO) || REMOTE_MEDIA.deborah;
   return (
     <section id="deborah" className="tc-px" style={{ position: "relative", padding: "72px 36px" }}>
       <div
@@ -656,41 +744,52 @@ function gallerySrc(name) {
 }
 
 function GalleryTile({ name, alt, label, style }) {
-  const src = name ? gallerySrc(name) : null;
+  const local = name ? gallerySrc(name) : null;
+  const remote = name ? REMOTE_MEDIA.gallery[name] : null;
   const frame = {
     borderRadius: 16,
     overflow: "hidden",
     border: "2px solid var(--ink)",
     ...style,
   };
-  if (src?.video)
+  // local file overrides the Cloudinary manifest
+  if (local?.video)
     return (
       <div style={frame}>
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          src={src.video}
-          aria-label={alt}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
+        <LazyVideo src={local.video} ariaLabel={alt} />
       </div>
     );
-  if (src)
+  if (local)
     return (
       <figure style={{ ...frame, margin: 0 }}>
         <picture>
-          {src.webp && <source srcSet={src.webp} type="image/webp" />}
+          {local.webp && <source srcSet={local.webp} type="image/webp" />}
           <img
-            src={src.fallback}
+            src={local.fallback}
             alt={alt}
             loading="lazy"
             decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         </picture>
+      </figure>
+    );
+  if (remote?.video)
+    return (
+      <div style={frame}>
+        <LazyVideo src={remote.video} caption={remote.caption} ariaLabel={alt} />
+      </div>
+    );
+  if (remote?.image)
+    return (
+      <figure style={{ ...frame, margin: 0 }}>
+        <img
+          src={remote.image}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
       </figure>
     );
   return (

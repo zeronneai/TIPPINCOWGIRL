@@ -317,3 +317,38 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ---- event media: main + up to 2 extras. Desktop: main wide on top, extras
+   as a pair below. Mobile: one scroll-snap carousel, orientation-proof via
+   fixed aspect frames + object-fit cover. ---- */
+.tc-event-media {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tc-event-slide {
+  aspect-ratio: 4 / 3;
+}
+.tc-event-slide--main {
+  grid-column: 1 / -1;
+  aspect-ratio: 16 / 10;
+}
+@media (max-width: 700px) {
+  .tc-event-media {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 10px;
+    padding-bottom: 6px;
+  }
+  .tc-event-media::-webkit-scrollbar {
+    display: none;
+  }
+  .tc-event-media > * {
+    flex: 0 0 88%;
+    scroll-snap-align: center;
+    aspect-ratio: 3 / 2 !important;
+  }
+}

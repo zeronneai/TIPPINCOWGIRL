@@ -1,6 +1,38 @@
 // Configurator option data + site content data.
 
 // ---------------------------------------------------------------------------
+// Remote media (Cloudinary). The real content lives on Cloudinary, NOT in the
+// repo; local files in src/assets/ remain as overrides (local wins when both
+// exist). Optimization transforms are injected into every URL after /upload/:
+// images f_auto,q_auto,w_1600 (w_800 for gallery/extras), videos
+// f_auto,q_auto,w_1280, and the hero poster is frame zero of the hero video
+// (so_0) delivered as jpg.
+// ---------------------------------------------------------------------------
+const CLD = "https://res.cloudinary.com/dsprn0ew4";
+const cldImg = (path, w = 1600) => `${CLD}/image/upload/f_auto,q_auto,w_${w}/${path}`;
+const cldVid = (path) => `${CLD}/video/upload/f_auto,q_auto,w_1280/${path}`;
+const cldPoster = (path) =>
+  `${CLD}/video/upload/so_0,f_auto,q_auto,w_1280/${path.replace(/\.mp4$/, ".jpg")}`;
+
+const HERO_CLIP = "v1787954335/Horseback_-_Tippin_x_HoB_qdpgsu.mp4";
+
+export const REMOTE_MEDIA = {
+  heroVideo: cldVid(HERO_CLIP),
+  heroPoster: cldPoster(HERO_CLIP),
+  deborah: cldImg("v1787954497/26072026-NZR_8425_yxijsp.jpg"),
+  gallery: {
+    "01": { video: cldVid("v1787954343/UTEP_Hat_-_Tippin_cshbzm.mp4"), caption: "Custom UTEP build" },
+    "02": {
+      video: cldVid("v1787954349/Dallas_Cowboys_Hat_1_iovxcw.mp4"),
+      caption: "Custom Cowboys build",
+    },
+    "03": { image: cldImg("v1787954494/NZR_8627_ravngt.jpg", 800) },
+    "04": { image: cldImg("v1787954514/26072026-NZR_8159_ii0xav.jpg", 800) },
+    "05": { image: cldImg("v1787954495/NZR_7116_n4j27w.jpg", 800) },
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Events & pop-ups — add an entry here and drop its media (one .mp4/.webp/
 // .jpg/.png) into src/assets/events/<id>/ ; the section renders it with no
 // component changes. `featured: true` promotes ONE event to the big
@@ -16,9 +48,47 @@ export const EVENTS = [
       "TODO: one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
     cta: { label: "Book the bar", href: "#events" },
     featured: true,
+    // media pending: drop a file in src/assets/events/grand-opening/
   },
-  // { id: "fall-market", title: "Fall Market Pop-Up", date: "Oct, TBA",
-  //   blurb: "One line about it.", },
+  {
+    id: "stride-swim-elmont",
+    title: "Stride & Swim at The Elmont",
+    date: "July 2026",
+    blurb: "The hat bar poolside at The Elmont. Felts, bands and charms in the summer sun.",
+    media: {
+      main: cldImg("v1787954497/29072026-NZR_8890_rhhflb.jpg"),
+      extras: [
+        cldImg("v1787954493/NZR_8689_sjnnzd.jpg", 800),
+        cldImg("v1787954493/NZR_8666_onavdj.jpg", 800),
+      ],
+    },
+  },
+  {
+    id: "tippin-x-house-of-beauty",
+    title: "Tippin' x House of Beauty",
+    date: "July 26, 2026",
+    blurb: "A collab pop-up with House of Beauty. Custom hats to match fresh looks.",
+    media: {
+      main: cldImg("v1787954552/26072026-NZR_8266_xzjmyo.jpg"),
+      extras: [
+        cldImg("v1787954552/26072026-NZR_8445_ehln2u.jpg", 800),
+        cldImg("v1787954552/26072026-NZR_8161_zo0yn4.jpg", 800),
+      ],
+    },
+  },
+  {
+    id: "hat-bar-popups",
+    title: "Hat Bar Pop-Ups",
+    date: "Recurring",
+    blurb: "The bar keeps rolling around El Paso. Catch the next one on Instagram.",
+    media: {
+      main: cldImg("v1787954494/NZR_7221_mkcxrk.jpg"),
+      extras: [
+        cldImg("v1787954494/NZR_7104_mcvmgd.jpg", 800),
+        cldImg("v1787954494/NZR_7172_ra1dq1.jpg", 800),
+      ],
+    },
+  },
 ];
 
 export const FELTS = [
