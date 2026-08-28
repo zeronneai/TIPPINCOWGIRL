@@ -81,7 +81,7 @@ function dotStyle(color, sel) {
 
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
 
-export default function Configurator() {
+export default function Configurator({ onBook }) {
   const [step, setStep] = useState(0);
   const [felt, setFelt] = useState("terracotta");
   const [brim, setBrim] = useState("curl");
@@ -401,7 +401,7 @@ export default function Configurator() {
                   type="button"
                   onClick={() => setInitials("")}
                   className="tc-btn tc-btn--ghost"
-                  style={{ flex: 1, padding: 11, fontSize: 13 }}
+                  style={{ flex: 1, padding: 10, fontSize: 11.5 }}
                 >
                   Clear
                 </button>
@@ -449,15 +449,15 @@ export default function Configurator() {
           </div>
 
           <div style={{ display: "flex", gap: 9, marginTop: 2 }}>
-            <a href="#events" className="tc-btn" style={{ flex: 1, padding: 14, fontSize: 14 }}>
+            <button type="button" className="tc-btn" style={{ flex: 1, padding: 13, fontSize: 12 }} onClick={onBook}>
               Reserve this build
-            </a>
+            </button>
             <button
               type="button"
               onClick={shuffle}
               title="Surprise me"
               className="tc-btn tc-btn--ghost"
-              style={{ flex: "none", padding: "14px 16px", fontSize: 14 }}
+              style={{ flex: "none", padding: "13px 15px", fontSize: 12 }}
             >
               ↻ Shuffle
             </button>

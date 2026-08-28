@@ -66,33 +66,46 @@ body {
   background-size: 15px 15px;
 }
 
-/* comic CTA buttons: pill + ink border + hard offset shadow */
+/* ---- wood-sign buttons, FLAT: subtle CSS/SVG grain over a medium-brown
+   base, cream uppercase type, thin ink border, small radius. No offset
+   shadow, no lift; hover just darkens the wood. Primary = wood, secondary
+   = cream with ink border and brown text, same shape. ---- */
 .tc-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  padding: 15px 28px;
-  background: var(--coral-deep);
-  color: #fff;
-  font-family: "Satoshi", system-ui, sans-serif;
-  font-weight: 800;
-  font-size: 15px;
-  border-radius: 11px;
+  gap: 8px;
+  padding: 13px 24px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.22' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.08 0 0 0 0 0.03 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='160' height='40' filter='url(%23w)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #8d5a33 0%, #7a4c2a 60%, #6f4526 100%);
+  color: #f6e7cf;
+  font-family: "Alfa Slab One", "Satoshi", serif;
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   border: 2px solid var(--ink);
-  box-shadow: 0 4px 0 var(--ink);
+  border-radius: 7px;
+  box-shadow: none;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: filter 0.15s ease;
   white-space: nowrap;
 }
 .tc-btn:hover {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 var(--ink);
+  filter: brightness(0.87);
+}
+.tc-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
 }
 .tc-btn--ghost {
-  background: #fff;
-  color: var(--ink);
+  background: #fdf6e8;
+  color: #6f4526;
+}
+.tc-btn--ghost:hover {
+  filter: brightness(0.96);
 }
 
 /* sticky mobile booking bar — hidden on desktop, slides up after the hero */
@@ -109,7 +122,8 @@ body {
 .tc-sticky-cta.on {
   transform: none;
 }
-.tc-sticky-cta a {
+.tc-sticky-cta a,
+.tc-sticky-cta button {
   flex: 1;
 }
 @media (max-width: 700px) {
@@ -208,22 +222,26 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 18px;
-  background: var(--coral-deep);
-  color: #fff;
-  font-family: "Satoshi", system-ui, sans-serif;
-  font-weight: 800;
-  font-size: 14px;
-  border-radius: 11px;
+  padding: 10px 16px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.22' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.08 0 0 0 0 0.03 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='160' height='40' filter='url(%23w)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #8d5a33 0%, #7a4c2a 60%, #6f4526 100%);
+  color: #f6e7cf;
+  font-family: "Alfa Slab One", "Satoshi", serif;
+  font-weight: 400;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   border: 2px solid var(--ink);
-  box-shadow: 0 3px 0 var(--ink);
+  border-radius: 7px;
+  box-shadow: none;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  transition: filter 0.15s ease;
 }
 .tc-book-nav:hover {
-  transform: translateY(1px);
-  box-shadow: 0 2px 0 var(--ink);
+  filter: brightness(0.87);
 }
 .tc-burger {
   display: none;
@@ -260,8 +278,8 @@ body {
     padding: 10px 2px;
   }
   .tc-book-nav {
-    padding: 9px 14px;
-    font-size: 13px;
+    padding: 8px 12px;
+    font-size: 10.5px;
   }
 }
 @media (max-width: 420px) {
@@ -387,5 +405,32 @@ body {
     flex: 0 0 88%;
     scroll-snap-align: center;
     aspect-ratio: 3 / 2 !important;
+  }
+  /* a single slide (e.g. the Grand Opening video) is not a carousel:
+     let it fill the row so it sits centered instead of hugging the left */
+  .tc-event-media > *:only-child {
+    flex-basis: 100%;
+  }
+}
+
+/* ---- booking drawer: slides from the right, full-width on mobile ---- */
+.tc-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(430px, 100%);
+  background: var(--cream);
+  border-left: 2px solid var(--ink);
+  padding: 24px 24px 36px;
+  overflow-y: auto;
+  animation: drawerin 0.28s ease;
+}
+@keyframes drawerin {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
   }
 }

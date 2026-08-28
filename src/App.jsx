@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Configurator from "./components/Configurator.jsx";
-import { EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
+import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -121,6 +121,194 @@ function LazyVideo({ src, caption, ariaLabel, style }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Booking drawer: opens from every "Book the bar" on the site. POSTs
+// URL-encoded fields to the Google Apps Script endpoint via no-cors (the
+// standard doPost(e) pattern); since no-cors hides the response, success is
+// optimistic when the fetch does not throw. Focus-trapped, Escape/backdrop
+// close, focus returns to the opener.
+// ---------------------------------------------------------------------------
+const EVENT_TYPES = ["Birthday", "Bachelorette", "Corporate", "Wedding", "Pop-up / Market", "Other"];
+
+const fieldStyle = {
+  width: "100%",
+  padding: "11px 12px",
+  borderRadius: 8,
+  border: "1.5px solid rgba(43,26,16,.55)",
+  background: "#fffaf0",
+  fontFamily: "'Satoshi',sans-serif",
+  fontSize: 14.5,
+  color: "var(--ink)",
+};
+const labelStyle = {
+  display: "block",
+  fontWeight: 800,
+  fontSize: 11.5,
+  letterSpacing: ".1em",
+  textTransform: "uppercase",
+  margin: "0 0 6px",
+  color: "#6f4526",
+};
+
+function Field({ id, label, optional, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label htmlFor={id} style={labelStyle}>
+        {label}
+        {optional && <span style={{ opacity: 0.6, textTransform: "none", letterSpacing: 0 }}> (optional)</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function BookingDrawer({ open, onClose, returnRef }) {
+  const panelRef = useRef(null);
+  const firstFieldRef = useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | sending | done | error
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setStatus("idle");
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const t = setTimeout(() => firstFieldRef.current?.focus(), 80);
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Tab") {
+        const els = panelRef.current?.querySelectorAll("input,select,textarea,button,a[href]");
+        if (!els?.length) return;
+        const list = Array.from(els).filter((el) => !el.disabled);
+        const first = list[0];
+        const last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(t);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+      returnRef?.current?.focus?.();
+    };
+  }, [open, onClose, returnRef]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const params = new URLSearchParams(new FormData(form));
+    setStatus("sending");
+    try {
+      if (BOOKING_ENDPOINT.startsWith("PASTE_")) {
+        console.warn("[booking] BOOKING_ENDPOINT is still the placeholder; simulating success.");
+        await new Promise((r) => setTimeout(r, 500));
+      } else {
+        await fetch(BOOKING_ENDPOINT, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+      }
+      form.reset();
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)" }}>
+      <div
+        onClick={onClose}
+        aria-hidden
+        style={{ position: "absolute", inset: 0, background: "rgba(43,26,16,.5)" }}
+      />
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="booking-title" className="tc-drawer">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+          <h2 id="booking-title" className="tc-sticker" style={{ margin: 0, fontSize: "clamp(28px,6vw,36px)" }}>
+            Book the bar
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close booking form"
+            style={{
+              flex: "none",
+              width: 38,
+              height: 38,
+              border: "2px solid rgba(43,26,16,.4)",
+              borderRadius: 8,
+              background: "transparent",
+              color: "var(--ink)",
+              fontSize: 16,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {status === "done" ? (
+          <div>
+            <p style={{ fontSize: 16.5, lineHeight: 1.6, fontWeight: 600, color: "#4a3a2c" }}>
+              You&apos;re on the list. We&apos;ll get back to you within a day.
+            </p>
+            <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 10 }} onClick={onClose}>
+              Done
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit}>
+            <Field id="bk-name" label="Name">
+              <input ref={firstFieldRef} id="bk-name" name="name" type="text" required autoComplete="name" style={fieldStyle} />
+            </Field>
+            <Field id="bk-email" label="Email">
+              <input id="bk-email" name="email" type="email" required autoComplete="email" style={fieldStyle} />
+            </Field>
+            <Field id="bk-phone" label="Phone">
+              <input id="bk-phone" name="phone" type="tel" required autoComplete="tel" style={fieldStyle} />
+            </Field>
+            <Field id="bk-type" label="Event type">
+              <select id="bk-type" name="eventType" required defaultValue="" style={fieldStyle}>
+                <option value="" disabled>
+                  Pick one
+                </option>
+                {EVENT_TYPES.map((t2) => (
+                  <option key={t2} value={t2}>
+                    {t2}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="bk-date" label="Tentative date" optional>
+              <input id="bk-date" name="date" type="date" style={fieldStyle} />
+            </Field>
+            <Field id="bk-notes" label="Notes" optional>
+              <textarea id="bk-notes" name="notes" rows={3} style={{ ...fieldStyle, resize: "vertical" }} />
+            </Field>
+            {status === "error" && (
+              <p style={{ margin: "0 0 12px", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+                Something hiccuped on the network. Give it another try?
+              </p>
+            )}
+            <button type="submit" className="tc-btn" disabled={status === "sending"} style={{ width: "100%" }}>
+              {status === "sending" ? "Sending..." : "Send booking request"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Brand({ size = 30, fontSize = 19 }) {
   return (
     <div className="tc-brand" style={{ display: "flex", alignItems: "center", gap: 11 }}>
@@ -145,7 +333,7 @@ function Brand({ size = 30, fontSize = 19 }) {
   );
 }
 
-function Nav() {
+function Nav({ onBook }) {
   const [open, setOpen] = useState(false);
   const link = {
     fontWeight: 800,
@@ -191,9 +379,9 @@ function Nav() {
               Gallery
             </a>
           </div>
-          <a href="#events" className="tc-book-nav">
+          <button type="button" className="tc-book-nav" onClick={onBook}>
             Book the bar
-          </a>
+          </button>
           <button
             type="button"
             className="tc-burger"
@@ -232,7 +420,7 @@ function Nav() {
 }
 
 // --- Hero: autoplay video loop slot with sticker headline over it ------------
-function Hero() {
+function Hero({ onBook }) {
   // local files override the Cloudinary manifest when present
   const video = firstUrl(HERO_VIDEO) || REMOTE_MEDIA.heroVideo;
   const poster = firstUrl(HERO_POSTER) || REMOTE_MEDIA.heroPoster;
@@ -313,9 +501,9 @@ function Hero() {
           Pick your felt, shape the brim, pin your charm. Walk away with a hat nobody else has.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 34 }}>
-          <a href="#events" className="tc-btn">
+          <button type="button" className="tc-btn" onClick={onBook}>
             Book the bar
-          </a>
+          </button>
           <a href="#build" className="tc-btn tc-btn--ghost">
             Build a hat →
           </a>
@@ -427,7 +615,7 @@ function EventMediaSlot({ event, tall }) {
   );
 }
 
-function EventFeature({ event, featured = false }) {
+function EventFeature({ event, featured = false, onBook }) {
   if (featured)
     return (
       <section id="grand-opening" className="tc-px" style={{ position: "relative", padding: "76px 36px 40px" }}>
@@ -459,9 +647,9 @@ function EventFeature({ event, featured = false }) {
           <EventMediaSlot event={event} tall />
           {event.cta && (
             <div style={{ marginTop: 30 }}>
-              <a href={event.cta.href} className="tc-btn">
+              <button type="button" className="tc-btn" onClick={onBook}>
                 {event.cta.label}
-              </a>
+              </button>
             </div>
           )}
         </div>
@@ -553,11 +741,16 @@ function MeetDeborah() {
             Meet Deborah
           </h2>
           <p style={{ margin: "20px 0 0", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" }}>
-            TODO: Deborah&apos;s real story goes here. How the first hat happened, why El Paso, what the bar
-            means to her. Two or three sentences, first person or close third.
+            Tippin&apos; Cowgirl didn&apos;t start with a storefront. It started with a bar on wheels,
+            because Deborah knew the best hat moments don&apos;t wait for business hours. The bachelorette
+            that comes together in a week. The birthday nobody planned. The Sunday somebody finally
+            decides it&apos;s their hat day.
           </p>
           <p style={{ margin: "14px 0 0", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" }}>
-            TODO: second short paragraph. What a guest experiences at the bar, in her words.
+            She thought about a permanent home for a long time. What held her back was simple: she
+            never wanted to be the shop you have to come to. She wanted to be the one that shows up.
+            Now, with the first Hat Bar in El Paso opening at The Solana, she doesn&apos;t have to
+            choose. The bar has a home, and it still rolls.
           </p>
           <blockquote
             style={{
@@ -570,7 +763,7 @@ function MeetDeborah() {
               color: "var(--coral-deep)",
             }}
           >
-            “TODO: one line from Deborah that sounds like her.”
+            “A hat finds you at the right moment. I just make sure I&apos;m there when it does.”
           </blockquote>
         </div>
       </div>
@@ -986,7 +1179,7 @@ function Solana() {
 }
 
 // --- Sticky mobile booking CTA: appears after the hero, hides at the footer --
-function StickyCTA() {
+function StickyCTA({ onBook }) {
   const [heroGone, setHeroGone] = useState(false);
   const [footerSeen, setFooterSeen] = useState(false);
   useEffect(() => {
@@ -1004,9 +1197,9 @@ function StickyCTA() {
   }, []);
   return (
     <div className={`tc-sticky-cta${heroGone && !footerSeen ? " on" : ""}`}>
-      <a href="#events" className="tc-btn" style={{ width: "100%" }}>
+      <button type="button" className="tc-btn" style={{ width: "100%" }} onClick={onBook}>
         🤠 Book the bar
-      </a>
+      </button>
     </div>
   );
 }
@@ -1048,6 +1241,13 @@ function Footer() {
 
 export default function App() {
   const featured = EVENTS.find((e) => e.featured);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const bookingReturnRef = useRef(null);
+  const openBooking = (e) => {
+    bookingReturnRef.current = e?.currentTarget || null;
+    setBookingOpen(true);
+  };
+  const closeBooking = () => setBookingOpen(false);
   return (
     <div
       style={{
@@ -1070,18 +1270,19 @@ export default function App() {
           backgroundImage: GRAIN,
         }}
       />
-      <Nav />
-      <Hero />
+      <Nav onBook={openBooking} />
+      <Hero onBook={openBooking} />
       <Marquee />
-      {featured && <EventFeature event={featured} featured />}
+      {featured && <EventFeature event={featured} featured onBook={openBooking} />}
       <MeetDeborah />
       <HowItWorks />
       <TheProcess />
-      <Configurator />
+      <Configurator onBook={openBooking} />
       <EventsSection />
       <Gallery />
       <Solana />
-      <StickyCTA />
+      <StickyCTA onBook={openBooking} />
+      <BookingDrawer open={bookingOpen} onClose={closeBooking} returnRef={bookingReturnRef} />
       <Footer />
     </div>
   );

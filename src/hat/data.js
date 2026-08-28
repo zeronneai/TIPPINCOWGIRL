@@ -1,6 +1,14 @@
 // Configurator option data + site content data.
 
 // ---------------------------------------------------------------------------
+// Booking form endpoint: paste the Google Apps Script web-app URL here (the
+// drawer POSTs URL-encoded fields to it via no-cors, standard doPost(e)
+// pattern). While it still holds the placeholder the drawer logs a console
+// warning and simulates success so the flow can be tested end to end.
+// ---------------------------------------------------------------------------
+export const BOOKING_ENDPOINT = "PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+// ---------------------------------------------------------------------------
 // Remote media (Cloudinary). The real content lives on Cloudinary, NOT in the
 // repo; local files in src/assets/ remain as overrides (local wins when both
 // exist). Optimization transforms are injected into every URL after /upload/:
@@ -59,7 +67,7 @@ export const EVENTS = [
     title: "Grand Opening",
     date: "September 5",
     blurb:
-      "TODO: one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
+      "We followed the trail all the way here. El Paso's first Hat Bar opens its doors September 5 at The Solana. Come tip one with us.",
     cta: { label: "Book the bar", href: "#events" },
     featured: true,
     media: {
