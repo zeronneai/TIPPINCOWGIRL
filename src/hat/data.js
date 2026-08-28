@@ -43,12 +43,14 @@ export const EVENTS = [
   {
     id: "grand-opening",
     title: "Grand Opening",
-    date: "TODO: confirm date", // e.g. "Sat · Sep 14 · 11am to 6pm"
+    date: "September 5",
     blurb:
       "TODO: one line about the opening at The Shoppes at Solana. Come build the first hats at the bar.",
     cta: { label: "Book the bar", href: "#events" },
     featured: true,
-    // media pending: drop a file in src/assets/events/grand-opening/
+    media: {
+      main: cldVid("v1787955985/Tippin_Solana_Horse_-_5_2_okxm4r.mp4"),
+    },
   },
   {
     id: "stride-swim-elmont",
