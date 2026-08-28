@@ -20,17 +20,31 @@ export const REMOTE_MEDIA = {
   heroVideo: cldVid(HERO_CLIP),
   heroPoster: cldPoster(HERO_CLIP),
   deborah: cldImg("v1787954497/26072026-NZR_8425_yxijsp.jpg"),
+  // photos only, shown uncropped in the masonry gallery (w_800)
   gallery: {
-    "01": { video: cldVid("v1787954343/UTEP_Hat_-_Tippin_cshbzm.mp4"), caption: "Custom UTEP build" },
-    "02": {
-      video: cldVid("v1787954349/Dallas_Cowboys_Hat_1_iovxcw.mp4"),
-      caption: "Custom Cowboys build",
-    },
-    "03": { image: cldImg("v1787954494/NZR_8627_ravngt.jpg", 800) },
-    "04": { image: cldImg("v1787954514/26072026-NZR_8159_ii0xav.jpg", 800) },
-    "05": { image: cldImg("v1787954495/NZR_7116_n4j27w.jpg", 800) },
+    "01": { image: cldImg("v1787954494/NZR_8627_ravngt.jpg", 800) },
+    "02": { image: cldImg("v1787954514/26072026-NZR_8159_ii0xav.jpg", 800) },
+    "03": { image: cldImg("v1787954495/NZR_7116_n4j27w.jpg", 800) },
+    "04": { image: cldImg("v1787954495/NZR_8790_dhxe1i.jpg", 800) },
+    "05": { image: cldImg("v1787954534/26072026-NZR_8384_itu1k9.jpg", 800) },
+    "06": { image: cldImg("v1787954495/NZR_7232_tfx0w6.jpg", 800) },
   },
 };
+
+// "Born at the bar" — the two build clips, side by side on desktop, a
+// swipeable pair on mobile. Loop muted lazy via LazyVideo.
+export const PROCESS_VIDEOS = [
+  {
+    id: "utep",
+    video: cldVid("v1787954343/UTEP_Hat_-_Tippin_cshbzm.mp4"),
+    caption: "Custom UTEP build",
+  },
+  {
+    id: "cowboys",
+    video: cldVid("v1787954349/Dallas_Cowboys_Hat_1_iovxcw.mp4"),
+    caption: "Custom Cowboys build",
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Events & pop-ups — add an entry here and drop its media (one .mp4/.webp/

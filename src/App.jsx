@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Configurator from "./components/Configurator.jsx";
-import { EVENTS, REMOTE_MEDIA } from "./hat/data.js";
+import { EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -23,7 +23,7 @@ const MAPS_DIRECTIONS = `https://www.google.com/maps/dir/?api=1&destination=${en
 //   src/assets/video/hero-poster.(webp|jpg) hero poster / fallback frame
 //   src/assets/events/<event-id>/01.*       media per event (mp4/webp/jpg/png)
 //   src/assets/deborah.webp                 Meet-Deborah portrait
-//   src/assets/gallery/01…05.*              gallery photos and mp4 loops
+//   src/assets/gallery/01…06.*              gallery photos (masonry, uncropped)
 // ---------------------------------------------------------------------------
 const HERO_VIDEO = import.meta.glob("./assets/video/hero-loop.{mp4,webm}", {
   eager: true,
@@ -672,6 +672,50 @@ function HowItWorks() {
   );
 }
 
+// --- Born at the bar: the build clips, the 4 steps made visible --------------
+function TheProcess() {
+  return (
+    <section id="process" className="tc-px" style={{ position: "relative", padding: "68px 36px" }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 42 }}>
+          <div
+            style={{
+              fontSize: 11.5,
+              fontWeight: 800,
+              letterSpacing: ".24em",
+              textTransform: "uppercase",
+              color: "var(--teal)",
+              marginBottom: 12,
+            }}
+          >
+            The process, on tape
+          </div>
+          <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(32px,4.8vw,54px)" }}>
+            Born at the bar
+          </h2>
+        </div>
+        <div className="tc-process-grid">
+          {PROCESS_VIDEOS.map((v) => (
+            <div
+              key={v.id}
+              className="tc-process-slide"
+              style={{
+                borderRadius: 18,
+                overflow: "hidden",
+                border: "2px solid var(--ink)",
+                boxShadow: "0 5px 0 var(--ink)",
+                background: "#e9d9bf",
+              }}
+            >
+              <LazyVideo src={v.video} caption={v.caption} ariaLabel={v.caption} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // --- Events & Pop-Ups: vertical chapters, data-driven from data.js ----------
 function EventsSection() {
   const chapters = EVENTS.filter((e) => !e.featured);
@@ -743,57 +787,55 @@ function gallerySrc(name) {
   return { video, webp, fallback: fallback || webp };
 }
 
-function GalleryTile({ name, alt, label, style }) {
+// Masonry piece: comic frame, natural proportions, NO crop (gallery only —
+// events and the rest of the site keep their fixed-aspect cover frames).
+const pieceFrame = {
+  borderRadius: 16,
+  overflow: "hidden",
+  border: "2px solid var(--ink)",
+  boxShadow: "0 5px 0 var(--ink)",
+  background: "#e9d9bf",
+  breakInside: "avoid",
+  marginBottom: 12,
+};
+const naturalImg = { width: "100%", height: "auto", display: "block" };
+
+function GalleryPiece({ name, alt, label }) {
   const local = name ? gallerySrc(name) : null;
   const remote = name ? REMOTE_MEDIA.gallery[name] : null;
-  const frame = {
-    borderRadius: 16,
-    overflow: "hidden",
-    border: "2px solid var(--ink)",
-    ...style,
-  };
   // local file overrides the Cloudinary manifest
   if (local?.video)
     return (
-      <div style={frame}>
+      <div style={{ ...pieceFrame, aspectRatio: "4 / 5" }}>
         <LazyVideo src={local.video} ariaLabel={alt} />
       </div>
     );
   if (local)
     return (
-      <figure style={{ ...frame, margin: 0 }}>
+      <figure style={{ ...pieceFrame, margin: "0 0 12px" }}>
         <picture>
           {local.webp && <source srcSet={local.webp} type="image/webp" />}
-          <img
-            src={local.fallback}
-            alt={alt}
-            loading="lazy"
-            decoding="async"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
+          <img src={local.fallback} alt={alt} loading="lazy" decoding="async" style={naturalImg} />
         </picture>
       </figure>
     );
-  if (remote?.video)
-    return (
-      <div style={frame}>
-        <LazyVideo src={remote.video} caption={remote.caption} ariaLabel={alt} />
-      </div>
-    );
   if (remote?.image)
     return (
-      <figure style={{ ...frame, margin: 0 }}>
-        <img
-          src={remote.image}
-          alt={alt}
-          loading="lazy"
-          decoding="async"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
+      <figure style={{ ...pieceFrame, margin: "0 0 12px" }}>
+        <img src={remote.image} alt={alt} loading="lazy" decoding="async" style={naturalImg} />
       </figure>
     );
   return (
-    <div style={{ ...frame, background: HATCH, display: "flex", alignItems: "flex-end", padding: 14 }}>
+    <div
+      style={{
+        ...pieceFrame,
+        background: HATCH,
+        aspectRatio: "4 / 5",
+        display: "flex",
+        alignItems: "flex-end",
+        padding: 14,
+      }}
+    >
       <span style={{ fontFamily: "ui-monospace,monospace", fontSize: 11, color: "#6f5b48" }}>{label}</span>
     </div>
   );
@@ -825,41 +867,28 @@ function Gallery() {
             @_tippincowgirl on Instagram →
           </a>
         </div>
-        <div
-          className="tc-gallery-grid"
-          style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gridAutoRows: "165px", gap: 10 }}
-        >
-          <GalleryTile
-            name="01"
-            alt="Guests building custom hats at a Tippin Cowgirl pop-up"
-            label="[ 01 · vertical ]"
-            style={{ gridRow: "span 2" }}
-          />
-          <GalleryTile name="02" alt="A finished custom hat with band and charm" label="[ 02 ]" />
+        {/* CSS-columns masonry: every photo at its natural ratio, uncropped */}
+        <div className="tc-masonry">
+          <GalleryPiece name="01" alt="Custom hat built at the bar" label="[ 01 ]" />
+          <GalleryPiece name="02" alt="Guest wearing their custom hat" label="[ 02 ]" />
           <div
             style={{
-              borderRadius: 16,
-              overflow: "hidden",
+              ...pieceFrame,
               background: "var(--coral)",
-              border: "2px solid var(--ink)",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              padding: 18,
+              padding: "38px 22px",
             }}
           >
             <span style={{ fontWeight: 800, fontSize: 18, color: "#fff", lineHeight: 1.3 }}>
               “Best part of the whole party.”
             </span>
           </div>
-          <GalleryTile name="03" alt="The mobile hat bar set up at an event" label="[ 03 ]" />
-          <GalleryTile name="04" alt="A guest styling their hat at the bar" label="[ 04 ]" />
-          <GalleryTile
-            name="05"
-            alt="Wide shot of the Tippin Cowgirl hat bar at an event"
-            label="[ 05 · wide / mp4 ok ]"
-            style={{ gridColumn: "span 2" }}
-          />
+          <GalleryPiece name="03" alt="Hat bar guests at a pop-up" label="[ 03 ]" />
+          <GalleryPiece name="04" alt="Hat details: band and charms" label="[ 04 ]" />
+          <GalleryPiece name="05" alt="Styling a custom hat at the bar" label="[ 05 ]" />
+          <GalleryPiece name="06" alt="Finished custom hat, ready to wear" label="[ 06 ]" />
         </div>
       </div>
     </section>
@@ -1047,6 +1076,7 @@ export default function App() {
       {featured && <EventFeature event={featured} featured />}
       <MeetDeborah />
       <HowItWorks />
+      <TheProcess />
       <Configurator />
       <EventsSection />
       <Gallery />

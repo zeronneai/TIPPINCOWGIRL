@@ -279,13 +279,50 @@ body {
   .tc-config-grid {
     grid-template-columns: 1fr !important;
   }
-  .tc-gallery-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+/* ---- gallery masonry: natural ratios, no crop (gallery only) ---- */
+.tc-masonry {
+  columns: 3;
+  column-gap: 12px;
+}
+@media (max-width: 900px) {
+  .tc-masonry {
+    columns: 2;
   }
 }
 @media (max-width: 560px) {
-  .tc-gallery-grid {
-    grid-template-columns: 1fr !important;
+  .tc-masonry {
+    columns: 1;
+  }
+}
+
+/* ---- Born at the bar: two build clips. Desktop side by side, mobile a
+   swipeable pair using the same snap pattern as event carousels. ---- */
+.tc-process-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.tc-process-slide {
+  aspect-ratio: 4 / 5;
+}
+@media (max-width: 700px) {
+  .tc-process-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 10px;
+    padding-bottom: 6px;
+  }
+  .tc-process-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .tc-process-grid > * {
+    flex: 0 0 78%;
+    scroll-snap-align: center;
   }
 }
 
