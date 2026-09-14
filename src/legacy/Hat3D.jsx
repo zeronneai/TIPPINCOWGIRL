@@ -2,7 +2,7 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { FELTS, shade } from "./data.js";
+import { FELTS, shade } from "../hat/data.js";
 
 // ---------------------------------------------------------------------------
 // GLB pipeline (drop-in). Point this at a realistic model whose meshes are

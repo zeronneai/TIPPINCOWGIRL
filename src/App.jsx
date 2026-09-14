@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import Configurator from "./components/Configurator.jsx";
+import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
+import Builder from "./shop/Builder.jsx";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -369,11 +370,11 @@ function Nav({ onBook }) {
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="tc-nav-desktop" style={{ display: "flex", alignItems: "center", gap: 26, marginRight: 8 }}>
+            <a href="#builder" style={link}>
+              Build your hat
+            </a>
             <a href="#events" style={link}>
               Events
-            </a>
-            <a href="#build" style={link}>
-              Hat Bar
             </a>
             <a href="#gallery" style={link}>
               Gallery
@@ -395,14 +396,11 @@ function Nav({ onBook }) {
       </div>
       {open && (
         <div className="tc-nav-mobile">
-          <a href="#grand-opening" style={link} onClick={() => setOpen(false)}>
-            Grand Opening
+          <a href="#builder" style={link} onClick={() => setOpen(false)}>
+            Build your hat
           </a>
           <a href="#deborah" style={link} onClick={() => setOpen(false)}>
             Meet Deborah
-          </a>
-          <a href="#build" style={link} onClick={() => setOpen(false)}>
-            The Hat Bar
           </a>
           <a href="#events" style={link} onClick={() => setOpen(false)}>
             Events & Pop-Ups
@@ -479,14 +477,12 @@ function Hero({ onBook }) {
             marginBottom: 22,
           }}
         >
-          Mobile hat bar · El Paso, TX
+          El Paso&apos;s first hat bar
         </div>
         <h1 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(44px,8.2vw,104px)" }}>
-          El Paso&apos;s
+          Build
           <br />
-          first
-          <br />
-          hat bar
+          your hat
         </h1>
         <p
           style={{
@@ -501,12 +497,12 @@ function Hero({ onBook }) {
           Pick your felt, shape the brim, pin your charm. Walk away with a hat nobody else has.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 34 }}>
-          <button type="button" className="tc-btn" onClick={onBook}>
+          <a href="#builder" className="tc-btn">
+            Build your hat
+          </a>
+          <button type="button" className="tc-btn tc-btn--ghost" onClick={onBook}>
             Book the bar
           </button>
-          <a href="#build" className="tc-btn tc-btn--ghost">
-            Build a hat →
-          </a>
         </div>
       </div>
     </header>
@@ -1179,7 +1175,7 @@ function Solana() {
 }
 
 // --- Sticky mobile booking CTA: appears after the hero, hides at the footer --
-function StickyCTA({ onBook }) {
+function StickyCTA() {
   const [heroGone, setHeroGone] = useState(false);
   const [footerSeen, setFooterSeen] = useState(false);
   useEffect(() => {
@@ -1197,50 +1193,79 @@ function StickyCTA({ onBook }) {
   }, []);
   return (
     <div className={`tc-sticky-cta${heroGone && !footerSeen ? " on" : ""}`}>
-      <button type="button" className="tc-btn" style={{ width: "100%" }} onClick={onBook}>
-        🤠 Book the bar
-      </button>
+      <a href="#builder" className="tc-btn" style={{ width: "100%" }}>
+        🤠 Build your hat
+      </a>
     </div>
   );
 }
 
-function Footer() {
+function Footer({ onBook }) {
+  const trustLink = {
+    fontWeight: 700,
+    fontSize: 13.5,
+    color: "#6f5b48",
+    textDecoration: "none",
+  };
   return (
     <footer
       id="site-footer"
       className="tc-px"
       style={{ position: "relative", borderTop: "2px solid rgba(43,26,16,.14)", padding: "40px 36px 96px" }}
     >
-      <div
-        style={{
-          maxWidth: 1080,
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 20,
-          flexWrap: "wrap",
-        }}
-      >
-        <Brand size={28} fontSize={16} />
-        <div style={{ fontSize: 13.5, color: "#6f5b48", fontWeight: 600 }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto", display: "grid", gap: 22 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 20,
+            flexWrap: "wrap",
+          }}
+        >
+          <Brand size={28} fontSize={16} />
+          <button type="button" className="tc-book-nav" onClick={onBook}>
+            Book the bar
+          </button>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px 20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", gap: "10px 20px", flexWrap: "wrap" }}>
+            <a href="#/shipping-returns" style={trustLink}>
+              Shipping &amp; Returns
+            </a>
+            <a href="#/privacy" style={trustLink}>
+              Privacy
+            </a>
+            <a href="#/faq" style={trustLink}>
+              FAQ
+            </a>
+          </div>
+          <a
+            href={IG}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontWeight: 800, fontSize: 13.5, color: "var(--coral-deep)", textDecoration: "none" }}
+          >
+            @_tippincowgirl
+          </a>
+        </div>
+        <div style={{ fontSize: 13, color: "#8a7460", fontWeight: 600 }}>
           Custom Hat Bar · The Shoppes at Solana · El Paso, TX
         </div>
-        <a
-          href={IG}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontWeight: 800, fontSize: 13.5, color: "var(--coral-deep)", textDecoration: "none" }}
-        >
-          @_tippincowgirl
-        </a>
       </div>
     </footer>
   );
 }
 
 export default function App() {
-  const featured = EVENTS.find((e) => e.featured);
   const [bookingOpen, setBookingOpen] = useState(false);
   const bookingReturnRef = useRef(null);
   const openBooking = (e) => {
@@ -1248,6 +1273,20 @@ export default function App() {
     setBookingOpen(true);
   };
   const closeBooking = () => setBookingOpen(false);
+
+  // Tiny hash router: #/shipping-returns, #/privacy and #/faq swap the
+  // landing for a trust page; every other hash is a plain anchor.
+  const [route, setRoute] = useState(() => (typeof window !== "undefined" ? window.location.hash : ""));
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const trustRoute = TRUST_ROUTES[route] ? route : null;
+  useEffect(() => {
+    if (trustRoute) window.scrollTo(0, 0);
+  }, [trustRoute]);
+
   return (
     <div
       style={{
@@ -1255,7 +1294,9 @@ export default function App() {
         fontFamily: "'Satoshi',sans-serif",
         background: "var(--cream)",
         color: "var(--ink)",
-        overflow: "hidden",
+        // clip, not hidden: hidden turns this div into a scroll container,
+        // which silently disables every position:sticky inside (nav, stage)
+        overflow: "clip",
       }}
     >
       {/* grain overlay */}
@@ -1271,19 +1312,24 @@ export default function App() {
         }}
       />
       <Nav onBook={openBooking} />
-      <Hero onBook={openBooking} />
-      <Marquee />
-      {featured && <EventFeature event={featured} featured onBook={openBooking} />}
-      <MeetDeborah />
-      <HowItWorks />
-      <TheProcess />
-      <Configurator onBook={openBooking} />
-      <EventsSection />
-      <Gallery />
-      <Solana />
-      <StickyCTA onBook={openBooking} />
+      {trustRoute ? (
+        <TrustPage route={trustRoute} />
+      ) : (
+        <>
+          <Hero onBook={openBooking} />
+          <Marquee />
+          <Builder />
+          <HowItWorks />
+          <TheProcess />
+          <MeetDeborah />
+          <EventsSection />
+          <Gallery />
+          <Solana />
+          <StickyCTA />
+        </>
+      )}
       <BookingDrawer open={bookingOpen} onClose={closeBooking} returnRef={bookingReturnRef} />
-      <Footer />
+      <Footer onBook={openBooking} />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { FELTS, BRIMS, BANDS, CHARMS, nameOf } from "../hat/data.js";
 
 // The 3D stack (three + react-three) is ~1MB minified — lazy-load it so the
 // landing paints from a small initial chunk (see manualChunks in vite.config).
-const Hat3D = lazy(() => import("../hat/Hat3D.jsx"));
+const Hat3D = lazy(() => import("./Hat3D.jsx"));
 
 const STEPS = ["Felt", "Brim", "Band", "Charm", "Initials"];
 const TITLES = [

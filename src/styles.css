@@ -292,10 +292,49 @@ body {
   }
 }
 
-/* ---- responsive: keep desktop identical, gracefully collapse below ---- */
+/* ---- hat builder: stage + steps. Desktop: two columns, stage sticky so it
+   follows the option scroll. Mobile: one column with the stage sticky under
+   the nav while the steps scroll beneath it. ---- */
+.tc-builder-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 32px;
+  align-items: start;
+}
+.tc-builder-stage-wrap {
+  position: sticky;
+  top: 84px;
+}
+.tc-opt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+}
+.tc-opt:hover {
+  border-color: #c89a6a !important;
+}
 @media (max-width: 900px) {
-  .tc-config-grid {
-    grid-template-columns: 1fr !important;
+  /* block, not grid: a grid item's sticky range is only its own row, a block
+     child sticks all the way to the end of the section */
+  .tc-builder-grid {
+    display: block;
+  }
+  /* the stage shrinks and sticks under the nav; solid ground + z so the
+     steps scroll underneath it, coexisting with the bottom sticky CTA */
+  .tc-builder-stage-wrap {
+    top: 64px;
+    z-index: var(--z-ui);
+    width: min(100%, 54vh);
+    margin-inline: auto;
+    background: var(--cream);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .tc-stage-hint {
+    display: none;
+  }
+  .tc-opt-grid {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
   }
 }
 

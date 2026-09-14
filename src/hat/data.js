@@ -58,8 +58,8 @@ export const PROCESS_VIDEOS = [
 // Events & pop-ups — add an entry here and drop its media (one .mp4/.webp/
 // .jpg/.png) into src/assets/events/<id>/ ; the section renders it with no
 // component changes. `featured: true` promotes ONE event to the big
-// Grand-Opening slot at the top of the page; remove the flag when the moment
-// passes and it flows back into the chapter list automatically.
+// hero-adjacent slot; with no flag set, every event renders as a chapter in
+// the Events section, first entry first.
 // ---------------------------------------------------------------------------
 export const EVENTS = [
   {
@@ -68,8 +68,6 @@ export const EVENTS = [
     date: "September 5",
     blurb:
       "We followed the trail all the way here. El Paso's first Hat Bar opens its doors September 5 at The Solana. Come tip one with us.",
-    cta: { label: "Book the bar", href: "#events" },
-    featured: true,
     media: {
       main: cldVid("v1787955985/Tippin_Solana_Horse_-_5_2_okxm4r.mp4"),
     },
