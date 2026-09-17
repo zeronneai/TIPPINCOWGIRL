@@ -1,14 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CATEGORIES, CURRENCY, SHIPPING, SIZES, SIZE_GUIDE, Z_INDEX, findIn } from "./catalog.js";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  BASES,
+  BLEND,
+  BRAND_TEXT,
+  CATEGORIES,
+  CURRENCY,
+  SHIPPING,
+  SIZES,
+  SIZE_GUIDE,
+  Z_INDEX,
+  findIn,
+} from "./catalog.js";
 
 // ---------------------------------------------------------------------------
 // The hat builder: layered 2D product configurator driven entirely by
 // catalog.js. Stage = square canvas with one absolutely-positioned full-size
-// image per selected layer, stacked by Z_INDEX. Zoom is a CSS transform
-// (wheel / pinch, 1x to 2.5x) with drag-to-pan while zoomed. The current
-// configuration lives in the URL query (?b=&bd=&ch=&br=&sz=) so any build is
-// shareable. Checkout is a summary drawer only for now; the serializable
-// order object below is the contract for the upcoming Stripe phase.
+// Cloudinary PNG per selected layer, stacked and blended per the catalog
+// contract (base normal, brand multiply UNDER the band). The stack lives in
+// an isolation:isolate element so the brand's multiply never bleeds into the
+// stage background. Zoom is a CSS transform (wheel / pinch, 1x to 2.5x) with
+// drag-to-pan while zoomed. The configuration lives in the URL query
+// (?b=&bd=&br=&bt=&sz=) so any build is shareable. Checkout is a summary
+// drawer only for now; the serializable order object below (including
+// brandText) is the contract for the upcoming Stripe phase.
 // ---------------------------------------------------------------------------
 
 const fmt = (n) =>
@@ -23,14 +37,18 @@ const ZOOM_MIN = 1;
 const ZOOM_MAX = 2.5;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// URL param per category (+ sz for size). Short keys keep permalinks tidy.
-const PARAM_KEYS = { base: "b", band: "bd", charm: "ch", brand: "br" };
+// URL param per category (+ bt for the custom brand text, sz for size).
+const PARAM_KEYS = { base: "b", band: "bd", brand: "br" };
 
-const defaultSelection = () => ({ base: "terracotta", band: "none", charm: "none", brand: "none" });
+const sanitizeBrandText = (v) =>
+  (v || "").replace(/[^A-Za-z0-9 '&.!-]/g, "").slice(0, BRAND_TEXT.maxLen);
+
+const defaultSelection = () => ({ base: "ivory", band: "none", brand: "none" });
 
 function readUrl() {
   const sel = defaultSelection();
   let size = null;
+  let brandText = "";
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) {
@@ -39,18 +57,21 @@ function readUrl() {
     }
     const sz = q.get("sz");
     if (sz && SIZES.some((s) => s.id === sz)) size = sz;
+    brandText = sanitizeBrandText(q.get("bt"));
   } catch {
     /* no window / malformed URL: fall through to defaults */
   }
-  return { sel, size };
+  return { sel, size, brandText };
 }
 
-function writeUrl(sel, size) {
+function writeUrl(sel, size, brandText) {
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) q.set(PARAM_KEYS[cat.key], sel[cat.key]);
     if (size) q.set("sz", size);
     else q.delete("sz");
+    if (sel.brand === "custom" && brandText) q.set("bt", brandText);
+    else q.delete("bt");
     const url = `${window.location.pathname}?${q.toString()}${window.location.hash}`;
     window.history.replaceState(null, "", url);
   } catch {
@@ -95,49 +116,161 @@ function useDialog(open, onClose, panelRef, returnRef) {
   }, [open, onClose, panelRef, returnRef]);
 }
 
-// The composed hat: every selected layer as a full-canvas image. Reused at
-// full size on the stage and small in the order summary.
-function HatLayers({ sel, alt }) {
+// One layer image with a ~150ms crossfade: the previous image stays mounted
+// underneath until the incoming one has actually loaded, so switching pieces
+// never flashes white while the network catches up.
+function FadeImg({ src }) {
+  const [prev, setPrev] = useState(null);
+  const [cur, setCur] = useState(src || null);
+  const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
+  loadedRef.current = loaded;
+  const curRef = useRef(cur);
+  curRef.current = cur;
+
+  useEffect(() => {
+    if (src === curRef.current) return;
+    if (!src) {
+      setPrev(null);
+      setCur(null);
+      setLoaded(false);
+      return;
+    }
+    if (loadedRef.current) setPrev(curRef.current);
+    setCur(src);
+    setLoaded(false);
+  }, [src]);
+
+  useEffect(() => {
+    if (!loaded || !prev) return undefined;
+    const t = setTimeout(() => setPrev(null), 220);
+    return () => clearTimeout(t);
+  }, [loaded, prev]);
+
+  const st = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    userSelect: "none",
+    pointerEvents: "none",
+  };
   return (
-    <div role="img" aria-label={alt} style={{ position: "absolute", inset: 0 }}>
+    <>
+      {prev && <img src={prev} alt="" draggable={false} style={st} />}
+      {cur && (
+        <img
+          key={cur}
+          src={cur}
+          alt=""
+          draggable={false}
+          ref={(el) => {
+            if (el && el.complete && el.naturalWidth > 0) setLoaded(true);
+          }}
+          onLoad={() => setLoaded(true)}
+          style={{ ...st, opacity: loaded ? 1 : 0, transition: "opacity .15s ease" }}
+        />
+      )}
+    </>
+  );
+}
+
+// Browser-drawn custom brand text: same spot, blend and burn look as the
+// branded marks. Dark brown glyphs in multiply over a blurred lighter-brown
+// halo (the scorch), slight rotate/skew to follow the crown's curve. All
+// placement numbers live in catalog.js (BRAND_TEXT).
+function BrandTextLayer({ text, z }) {
+  const fid = useId();
+  const chars = (text || "").trim().toUpperCase();
+  if (!chars) return null;
+  const size = Math.min(BRAND_TEXT.fontSize, BRAND_TEXT.maxWidth / (0.62 * chars.length));
+  return (
+    <svg
+      viewBox="0 0 1600 1600"
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: z,
+        mixBlendMode: "multiply",
+        pointerEvents: "none",
+      }}
+    >
+      <defs>
+        <filter id={fid} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="13" />
+        </filter>
+      </defs>
+      <g
+        transform={`translate(${BRAND_TEXT.cx} ${BRAND_TEXT.cy}) rotate(${BRAND_TEXT.rotate}) skewX(${BRAND_TEXT.skewX})`}
+        fontFamily="'Alfa Slab One','Satoshi',serif"
+        fontSize={size}
+        textAnchor="middle"
+      >
+        <text
+          y={size * 0.35}
+          fill={BRAND_TEXT.haloColor}
+          opacity="0.85"
+          stroke={BRAND_TEXT.haloColor}
+          strokeWidth="14"
+          filter={`url(#${fid})`}
+        >
+          {chars}
+        </text>
+        <text y={size * 0.35} fill={BRAND_TEXT.color}>
+          {chars}
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+// The composed hat: every selected layer at its catalog z and blend, inside
+// its own isolated stacking context so multiply blends against the felt
+// only, never against whatever sits behind the stack. Reused at full size on
+// the stage and small in the order summary.
+function HatLayers({ sel, brandText, alt }) {
+  return (
+    <div role="img" aria-label={alt} style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
       {CATEGORIES.map((cat) => {
         const it = findIn(cat.options, sel[cat.key]);
+        if (cat.key === "brand" && it?.custom)
+          return <BrandTextLayer key="brand-text" text={brandText} z={Z_INDEX.brand} />;
         if (!it?.layerImg) return null;
         return (
-          <img
+          <div
             key={cat.key}
-            src={it.layerImg}
-            alt=""
-            draggable={false}
             style={{
               position: "absolute",
               inset: 0,
-              width: "100%",
-              height: "100%",
               zIndex: Z_INDEX[cat.key],
-              userSelect: "none",
-              pointerEvents: "none",
+              mixBlendMode: BLEND[cat.key],
             }}
-          />
+          >
+            <FadeImg src={it.layerImg} />
+          </div>
         );
       })}
     </div>
   );
 }
 
-// Thumbnails share the layer image; bands/charms/brands zoom into their spot
-// on the canvas so the tiny detail reads at swatch size. transform-origin is
-// the detail's position in canvas coordinates, so the crop follows the real
-// PNGs when they replace the placeholder SVGs.
+// Thumbnails are real mini-stacks (ivory base + the piece, same blend as the
+// stage) cropped by CSS to the piece's zone, so they always match what the
+// stage renders. transform-origin is the piece's spot in canvas coordinates.
 const THUMB_CROP = {
   base: null,
   band: { origin: "50% 58%", scale: 2.3 },
-  charm: { origin: "40% 58%", scale: 2.5 },
-  brand: { origin: "50% 46%", scale: 2.5 },
+  brand: { origin: `${(BRAND_TEXT.cx / 1600) * 100}% ${(BRAND_TEXT.cy / 1600) * 100}%`, scale: 2.5 },
 };
+const THUMB_BASE = BASES[0].layerImg; // ivory: the burn and bands read best on it
 
-function OptionThumb({ catKey, item, selected, onPick }) {
+function OptionThumb({ catKey, item, selected, onPick, brandText }) {
   const crop = THUMB_CROP[catKey];
+  const imgSt = { position: "absolute", inset: 0, width: "100%", height: "100%" };
+  const empty = !item.layerImg && !item.custom;
   return (
     <button
       type="button"
@@ -169,21 +302,7 @@ function OptionThumb({ catKey, item, selected, onPick }) {
           position: "relative",
         }}
       >
-        {item.layerImg ? (
-          <img
-            src={item.layerImg}
-            alt=""
-            draggable={false}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              transform: crop ? `scale(${crop.scale})` : "none",
-              transformOrigin: crop ? crop.origin : "center",
-            }}
-          />
-        ) : (
+        {empty ? (
           <span
             style={{
               position: "absolute",
@@ -195,6 +314,23 @@ function OptionThumb({ catKey, item, selected, onPick }) {
             }}
           >
             ø
+          </span>
+        ) : (
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              isolation: "isolate",
+              transform: crop ? `scale(${crop.scale})` : undefined,
+              transformOrigin: crop ? crop.origin : undefined,
+            }}
+          >
+            {catKey !== "base" && <img src={THUMB_BASE} alt="" draggable={false} style={imgSt} />}
+            {item.custom ? (
+              <BrandTextLayer text={brandText || "ABC"} z={2} />
+            ) : (
+              <img src={item.layerImg} alt="" draggable={false} style={{ ...imgSt, mixBlendMode: BLEND[catKey] }} />
+            )}
           </span>
         )}
       </span>
@@ -322,7 +458,7 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
 // --- Order summary drawer ----------------------------------------------------
 // Same drawer system as booking. Submit stays a disabled placeholder until
 // the Stripe phase; `order` is the serializable payload that phase will send.
-function OrderDrawer({ open, onClose, sel, size, order, returnRef }) {
+function OrderDrawer({ open, onClose, sel, brandText, size, order, returnRef }) {
   const panelRef = useRef(null);
   useDialog(open, onClose, panelRef, returnRef);
   useEffect(() => {
@@ -371,7 +507,7 @@ function OrderDrawer({ open, onClose, sel, size, order, returnRef }) {
             background: "var(--cream-2)",
           }}
         >
-          <HatLayers sel={sel} alt="Preview of your custom hat" />
+          <HatLayers sel={sel} brandText={brandText} alt="Preview of your custom hat" />
         </div>
 
         <div>
@@ -438,9 +574,11 @@ export default function Builder() {
   const initial = useMemo(readUrl, []);
   const [sel, setSel] = useState(initial.sel);
   const [size, setSize] = useState(initial.size);
+  const [brandText, setBrandText] = useState(initial.brandText);
   const [sizeModal, setSizeModal] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
+  const [textHint, setTextHint] = useState(false);
 
   // zoom / pan
   const [zoom, setZoom] = useState(1);
@@ -452,21 +590,40 @@ export default function Builder() {
   const sizeBtnRef = useRef(null);
   const checkoutBtnRef = useRef(null);
   const sizeRowRef = useRef(null);
+  const brandRowRef = useRef(null);
 
   useEffect(() => {
-    writeUrl(sel, size);
-  }, [sel, size]);
+    writeUrl(sel, size, brandText);
+  }, [sel, size, brandText]);
+
+  // Warm the selected base right away and the rest of the bases shortly
+  // after: base swaps are the most common tap and should feel instant.
+  useEffect(() => {
+    const warm = (u) => {
+      if (!u) return;
+      const im = new Image();
+      im.src = u;
+    };
+    warm(findIn(BASES, sel.base)?.layerImg);
+    const t = setTimeout(() => BASES.forEach((b) => warm(b.layerImg)), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pick = (key, id) => setSel((s) => ({ ...s, [key]: id }));
 
+  const isCustomBrand = sel.brand === "custom";
   const subtotal = CATEGORIES.reduce((sum, cat) => sum + (findIn(cat.options, sel[cat.key])?.price || 0), 0);
   const shipping = subtotal >= SHIPPING.freeOver ? 0 : SHIPPING.flat;
   const order = {
     items: CATEGORIES.map((cat) => {
       const it = findIn(cat.options, sel[cat.key]);
-      return it && it.id !== "none" ? { category: cat.key, id: it.id, name: it.name, price: it.price } : null;
+      if (!it || it.id === "none") return null;
+      const name = it.custom ? `Your word "${brandText.trim().toUpperCase()}"` : it.name;
+      return { category: cat.key, id: it.id, name, price: it.price };
     }).filter(Boolean),
     size,
+    brandText: isCustomBrand ? brandText.trim() : null,
     subtotal,
     shipping,
     total: subtotal + shipping,
@@ -538,6 +695,11 @@ export default function Builder() {
   };
 
   const tryCheckout = () => {
+    if (isCustomBrand && !brandText.trim()) {
+      setTextHint(true);
+      brandRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (!size) {
       setSizeHint(true);
       sizeRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -584,7 +746,7 @@ export default function Builder() {
             Build your hat
           </h2>
           <p style={{ maxWidth: 520, margin: "18px auto 0", fontSize: 16, lineHeight: 1.6, color: "#4a3a2c" }}>
-            Stack your base, band, charm and brand. Every piece updates the price as you go.
+            Stack your base, band and brand. Every piece updates the price as you go.
           </p>
         </div>
 
@@ -619,7 +781,7 @@ export default function Builder() {
                   transition: pointers.current.size ? "none" : "transform .12s ease-out",
                 }}
               >
-                <HatLayers sel={sel} alt={`Custom hat preview: ${selNames}`} />
+                <HatLayers sel={sel} brandText={brandText} alt={`Custom hat preview: ${selNames}`} />
               </div>
               {/* live total, always on top of the stage */}
               <div
@@ -664,7 +826,11 @@ export default function Builder() {
             {CATEGORIES.map((cat, i) => {
               const current = findIn(cat.options, sel[cat.key]);
               return (
-                <fieldset key={cat.key} style={{ border: 0, margin: "0 0 26px", padding: 0 }}>
+                <fieldset
+                  key={cat.key}
+                  ref={cat.key === "brand" ? brandRowRef : undefined}
+                  style={{ border: 0, margin: "0 0 26px", padding: 0 }}
+                >
                   <legend
                     style={{
                       display: "flex",
@@ -696,10 +862,57 @@ export default function Builder() {
                         catKey={cat.key}
                         item={it}
                         selected={sel[cat.key] === it.id}
+                        brandText={brandText}
                         onPick={() => pick(cat.key, it.id)}
                       />
                     ))}
                   </div>
+                  {cat.key === "brand" && isCustomBrand && (
+                    <div style={{ marginTop: 12 }}>
+                      <label
+                        htmlFor="brand-text"
+                        style={{
+                          display: "block",
+                          fontWeight: 800,
+                          fontSize: 11.5,
+                          letterSpacing: ".1em",
+                          textTransform: "uppercase",
+                          margin: "0 0 6px",
+                          color: "#6f4526",
+                        }}
+                      >
+                        Your word ({BRAND_TEXT.maxLen} characters max)
+                      </label>
+                      <input
+                        id="brand-text"
+                        type="text"
+                        value={brandText}
+                        maxLength={BRAND_TEXT.maxLen}
+                        placeholder="e.g. RODEO"
+                        onChange={(e) => {
+                          setBrandText(sanitizeBrandText(e.target.value));
+                          setTextHint(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "11px 12px",
+                          borderRadius: 8,
+                          border: "1.5px solid rgba(43,26,16,.55)",
+                          background: "#fffaf0",
+                          fontFamily: "'Satoshi',sans-serif",
+                          fontSize: 15,
+                          letterSpacing: ".08em",
+                          textTransform: "uppercase",
+                          color: "var(--ink)",
+                        }}
+                      />
+                      {textHint && !brandText.trim() && (
+                        <p role="alert" style={{ margin: "8px 0 0", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+                          Type your word to continue.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </fieldset>
               );
             })}
@@ -707,7 +920,7 @@ export default function Builder() {
             {/* --- size (required) --- */}
             <fieldset ref={sizeRowRef} style={{ border: 0, margin: "0 0 22px", padding: 0 }}>
               <legend style={{ display: "flex", alignItems: "baseline", gap: 10, width: "100%", padding: 0, marginBottom: 12 }}>
-                <span style={{ fontWeight: 800, fontSize: 15, color: "var(--coral)" }}>05</span>
+                <span style={{ fontWeight: 800, fontSize: 15, color: "var(--coral)" }}>04</span>
                 <span style={{ fontWeight: 800, fontSize: 13.5, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--ink)" }}>
                   Size
                 </span>
@@ -820,7 +1033,15 @@ export default function Builder() {
         }}
         returnRef={sizeBtnRef}
       />
-      <OrderDrawer open={orderOpen} onClose={() => setOrderOpen(false)} sel={sel} size={size} order={order} returnRef={checkoutBtnRef} />
+      <OrderDrawer
+        open={orderOpen}
+        onClose={() => setOrderOpen(false)}
+        sel={sel}
+        brandText={brandText}
+        size={size}
+        order={order}
+        returnRef={checkoutBtnRef}
+      />
     </section>
   );
 }
