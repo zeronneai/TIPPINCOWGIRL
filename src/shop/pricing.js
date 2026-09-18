@@ -98,6 +98,39 @@ export const findBand = (id) => byId(BAND_OPTIONS, id);
 export const findBrand = (id) => byId(BRAND_OPTIONS, id);
 export const findSize = (id) => byId(SIZE_OPTIONS, id);
 
+// --- permalinks -----------------------------------------------------------
+// Query keys the builder reads and writes. They live here, next to the
+// config shape, because the checkout function builds the same permalink
+// server-side for the cancel URL and for Stripe metadata; if the two
+// drifted, a cancelled checkout would drop the customer on an empty
+// builder. One definition, both callers.
+export const PARAM_KEYS = {
+  base: "b",
+  band: "bd",
+  brand: "br",
+  customText: "bt",
+  size: "sz",
+  quantity: "q",
+};
+
+/**
+ * Serialize a config into the builder's query string (no leading "?").
+ * Mirrors the builder's own rules: the custom text only rides along when
+ * the custom brand is selected, and quantity only when it is above one.
+ */
+export function buildPermalinkQuery(config) {
+  const c = config || {};
+  const q = new URLSearchParams();
+  if (c.baseId) q.set(PARAM_KEYS.base, c.baseId);
+  if (c.bandId) q.set(PARAM_KEYS.band, c.bandId);
+  if (c.brandId) q.set(PARAM_KEYS.brand, c.brandId);
+  if (findBrand(c.brandId)?.custom && c.customText) q.set(PARAM_KEYS.customText, c.customText);
+  if (c.size) q.set(PARAM_KEYS.size, c.size);
+  const qty = Number(c.quantity);
+  if (Number.isInteger(qty) && qty > MIN_QUANTITY) q.set(PARAM_KEYS.quantity, String(qty));
+  return q.toString();
+}
+
 /** Format integer cents for display, e.g. 9800 -> "$98". */
 export function formatCents(cents) {
   return new Intl.NumberFormat("en-US", {

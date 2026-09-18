@@ -455,18 +455,48 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
 // the Stripe phase; `order` is the serializable payload that phase will send.
 function OrderDrawer({ open, onClose, sel, brandText, size, order, quantity, onQuantity, returnRef }) {
   const panelRef = useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | sending | error
+  const [errorMsg, setErrorMsg] = useState("");
   useDialog(open, onClose, panelRef, returnRef);
   useEffect(() => {
-    if (open) console.debug("[order] ready for checkout phase:", JSON.stringify(order));
-  }, [open, order]);
+    if (open) {
+      setStatus("idle");
+      setErrorMsg("");
+    }
+  }, [open]);
   if (!open) return null;
   const sizeInfo = SIZES.find((s) => s.id === size);
   const line = { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14.5, padding: "8px 0", borderBottom: "1px solid rgba(43,26,16,.12)" };
 
-  // TODO(phase 1B): POST `order.config` to the checkout endpoint, which
-  // revalidates with validateConfig() and recomputes with buildOrder()
-  // before creating the Stripe session. Intentionally inert for now.
-  const onCheckout = () => {};
+  // Send the configuration only. The server revalidates it and recomputes
+  // every amount before creating the Stripe session, so nothing about the
+  // price travels from this browser.
+  const onCheckout = async () => {
+    if (status === "sending") return;
+    setStatus("sending");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(order.config),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return; // leave the button in its sending state during the redirect
+      }
+      setErrorMsg(
+        res.status === 400
+          ? "Something is off with this build. Try picking your pieces again."
+          : "We could not open checkout just now. Please try again in a moment."
+      );
+      setStatus("error");
+    } catch {
+      setErrorMsg("Check your connection and try again.");
+      setStatus("error");
+    }
+  };
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)" }}>
       <div onClick={onClose} aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(43,26,16,.5)" }} />
@@ -591,12 +621,23 @@ function OrderDrawer({ open, onClose, sel, brandText, size, order, quantity, onQ
           </div>
         </div>
 
-        <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 20 }} onClick={onCheckout}>
-          Checkout
+        <button
+          type="button"
+          className="tc-btn"
+          style={{ width: "100%", marginTop: 20 }}
+          onClick={onCheckout}
+          disabled={status === "sending"}
+        >
+          {status === "sending" ? "Taking you to checkout..." : "Checkout"}
         </button>
-        <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 13, fontWeight: 700, color: "var(--coral-deep)" }}>
-          Checkout opens this week. Your build is saved in this page&apos;s link.
-        </p>
+        {status === "error" && (
+          <p
+            role="alert"
+            style={{ margin: "10px 0 0", textAlign: "center", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}
+          >
+            {errorMsg}
+          </p>
+        )}
       </div>
     </div>
   );

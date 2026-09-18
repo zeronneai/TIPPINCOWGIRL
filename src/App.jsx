@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import Builder from "./shop/Builder.jsx";
@@ -1333,9 +1334,15 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   const trustRoute = TRUST_ROUTES[route] ? route : null;
+
+  // Stripe returns to real paths, not hashes, so those are read from the
+  // pathname (vercel.json rewrites them to index.html).
+  const pathname = typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") : "";
+  const checkoutRoute = CHECKOUT_ROUTES.includes(pathname) ? pathname : null;
+
   useEffect(() => {
-    if (trustRoute) window.scrollTo(0, 0);
-  }, [trustRoute]);
+    if (trustRoute || checkoutRoute) window.scrollTo(0, 0);
+  }, [trustRoute, checkoutRoute]);
 
   return (
     <div
@@ -1362,7 +1369,9 @@ export default function App() {
         }}
       />
       <Nav onBook={openBooking} />
-      {trustRoute ? (
+      {checkoutRoute ? (
+        <CheckoutResult path={checkoutRoute} />
+      ) : trustRoute ? (
         <TrustPage route={trustRoute} />
       ) : (
         <>

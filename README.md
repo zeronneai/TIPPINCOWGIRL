@@ -18,6 +18,31 @@ npm run build    # production build to dist/
 npm run preview  # preview the production build
 ```
 
+## Checkout and environment variables
+
+Payments run through Stripe Checkout. The browser never sends prices: it
+posts only the chosen configuration to `api/create-checkout-session.js`,
+which revalidates it and recomputes every amount with `src/shop/pricing.js`
+(the single, pure source of truth for the price list, shared by the site and
+the serverless function).
+
+Set these in Vercel under **Project > Settings > Environment Variables**,
+ticking Production, Preview and Development, then redeploy so the running
+functions pick them up. Locally, put them in a `.env` file that is never
+committed and run with `vercel dev` (plain `vite` does not serve `/api`).
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` | yes | Secret key from Stripe, Developers > API keys. Use the test key (`sk_test_...`) until you are ready to take real money. Never commit it, never expose it to the browser, and never give it a `VITE_` prefix: anything with that prefix is bundled into the client. |
+| `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs, e.g. `https://tippincowgirl.vercel.app`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
+
+Stripe returns customers to two real paths, which `vercel.json` rewrites to
+the single page app: `/order-confirmed` and `/checkout-cancelled`. The
+cancel URL carries the builder's own query string, so leaving checkout puts
+the customer back on the exact hat she configured.
+
+The webhook and the owner notification email are phase 2 and not built yet.
+
 ## Structure
 
 - `src/App.jsx` — page shell + all static sections (nav, marquee, hero,

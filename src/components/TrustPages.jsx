@@ -46,7 +46,11 @@ export const TRUST_ROUTES = {
           Every hat is built to order at the bar in El Paso, then packed in a box that can take a road trip.
           Once your hat ships you get a tracking number by email.
         </p>
-        <Todo>confirm carriers, shipping times, flat rate and the free-shipping threshold once checkout goes live.</Todo>
+        <p style={P}>
+          Flat-rate shipping anywhere in the United States, and shipping is free on orders of two hats or
+          more.
+        </p>
+        <Todo>confirm carriers and shipping times, and the flat rate itself, once checkout goes live.</Todo>
         <h3 style={H3}>Returns & exchanges</h3>
         <p style={P}>
           Custom means yours: every build is made for you, so we handle issues case by case. If your hat
@@ -100,8 +104,10 @@ export const TRUST_ROUTES = {
           centimeters to the size chart in the builder. Between two sizes? Go with the larger one.
         </p>
         <h3 style={H3}>How does shipping work?</h3>
-        <p style={P}>Flat-rate shipping across the US, free over the threshold shown at checkout.</p>
-        <Todo>confirm carriers, rates and whether we ship outside the US.</Todo>
+        <p style={P}>
+          Flat-rate shipping across the US. Order two hats or more and shipping is on us.
+        </p>
+        <Todo>confirm carriers, the flat rate itself, and whether we ship outside the US.</Todo>
         <h3 style={H3}>Can I exchange it?</h3>
         <p style={P}>
           If the size is off or something arrived wrong, write us within 7 days and we will fix it. Custom
