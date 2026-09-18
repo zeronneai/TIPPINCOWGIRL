@@ -1,5 +1,10 @@
 // ---------------------------------------------------------------------------
-// Shop catalog: the single source of truth for the hat builder.
+// Shop catalog: the PRESENTATION layer of the hat builder.
+//
+// Ids, human labels and every price live in pricing.js (a pure module the
+// server can import too). This file attaches the artwork to them: one layer
+// image per option, plus the stacking contract below. Never redeclare a
+// price here.
 //
 // Layers are real product PNGs on Cloudinary: 1600x1600, transparent, all
 // aligned to the same canvas. They stack at the same position with no
@@ -14,69 +19,66 @@
 // the felt like a real scorch and works across all 6 colors.
 // ---------------------------------------------------------------------------
 
-export const CURRENCY = "USD";
+import {
+  BAND_OPTIONS,
+  BASE_OPTIONS,
+  BRAND_OPTIONS,
+  BRAND_TEXT_MAX_LEN,
+  SIZE_OPTIONS,
+} from "./pricing.js";
+
 export const CANVAS = { w: 1600, h: 1600 };
 
 // Stacking order + blend per category on the stage (see contract above).
 export const Z_INDEX = { base: 10, brand: 20, band: 30 };
 export const BLEND = { base: "normal", brand: "multiply", band: "normal" };
 
-// Flat-rate shipping; free above the threshold. Amounts in whole USD.
-export const SHIPPING = { flat: 12, freeOver: 250 };
-
 const CLD = "https://res.cloudinary.com/dsprn0ew4/image/upload";
 const layer = (file) => `${CLD}/f_auto,q_auto,w_1600/${file}`;
 
-const item = (id, name, price, file) => ({
-  id,
-  name,
-  price,
-  layerImg: file ? layer(file) : null,
+// Attach artwork to the priced options, matched by id. Prices and labels
+// come straight from pricing.js; this only adds layerImg.
+const withArt = (options, art) =>
+  options.map((o) => ({ ...o, layerImg: art[o.id] ? layer(art[o.id]) : null }));
+
+export const BASES = withArt(BASE_OPTIONS, {
+  ivory: "v1789658517/base-ivory_bcsh3a.png",
+  black: "v1789658517/base-black_rfptm8.png",
+  chocolate: "v1789658517/base-chocolate_osknft.png",
+  pink: "v1789658517/base-pink_jqkfio.png",
+  wine: "v1789658517/base-wine_zssnd7.png",
+  turquoise: "v1789658518/base-turquoise_x0zmnn.png",
 });
 
-// TODO: prices below carry over the previous placeholder tiers; swap in the
-// real price list when the owner sends it.
-export const BASES = [
-  item("ivory", "Ivory", 98, "v1789658517/base-ivory_bcsh3a.png"),
-  item("black", "Black", 105, "v1789658517/base-black_rfptm8.png"),
-  item("chocolate", "Chocolate", 98, "v1789658517/base-chocolate_osknft.png"),
-  item("pink", "Dusty Pink", 105, "v1789658517/base-pink_jqkfio.png"),
-  item("wine", "Wine", 105, "v1789658517/base-wine_zssnd7.png"),
-  item("turquoise", "Turquoise", 98, "v1789658518/base-turquoise_x0zmnn.png"),
-];
+export const BANDS = withArt(BAND_OPTIONS, {
+  "lace-pearls": "v1789658518/band-lace-pearls_ngwbo7.png",
+  ribbons: "v1789658519/band-ribbons_abqrdi.png",
+  leather: "v1789658518/band-leather_ts7jie.png",
+  feathers: "v1789658518/band-feathers_tkxmk9.png",
+  turquoise: "v1789658518/band-turquoise_neaits.png",
+});
 
-export const BANDS = [
-  item("none", "No band", 0, null),
-  item("lace-pearls", "Lace & Pearls", 16, "v1789658518/band-lace-pearls_ngwbo7.png"),
-  item("ribbons", "Braided Ribbons", 14, "v1789658519/band-ribbons_abqrdi.png"),
-  item("leather", "Leather & Buckle", 12, "v1789658518/band-leather_ts7jie.png"),
-  item("feathers", "Feather", 14, "v1789658518/band-feathers_tkxmk9.png"),
-  item("turquoise", "Turquoise Stone", 18, "v1789658518/band-turquoise_neaits.png"),
-];
-
-// Fire-branded marks on the crown. `custom: true` marks the type-your-own
-// option: it has no layer image, the text is drawn in the browser at the
-// same spot and blend as the branded marks (see BRAND_TEXT).
+// Fire-branded marks on the crown. The `custom` option (flagged in
+// pricing.js) has no layer image on purpose: its text is drawn in the
+// browser at the same spot and blend as the branded marks (see BRAND_TEXT).
 //
 // TODO(product): on base-black and base-wine the burn reads very subtle.
 // That is faithful to a real brown scorch on dark felt, but it may confuse
 // buyers. Pending confirmation from the owner on whether she brands dark
 // hats at all; if not, disable the brand step for those two bases.
-export const BRANDS = [
-  item("none", "No brand", 0, null),
-  item("star", "Star", 12, "v1789658518/brand-star_kr0hkr.png"),
-  item("longhorn", "Longhorn", 12, "v1789658518/brand-longhorn_vuz5du.png"),
-  item("cactus", "Cactus", 12, "v1789658516/brand-cactus_j5grph.png"),
-  item("heart", "Heart", 12, "v1789658517/brand-heart_ya1it4.png"),
-  { ...item("custom", "Your word", 12, null), custom: true },
-];
+export const BRANDS = withArt(BRAND_OPTIONS, {
+  star: "v1789658518/brand-star_kr0hkr.png",
+  longhorn: "v1789658518/brand-longhorn_vuz5du.png",
+  cactus: "v1789658516/brand-cactus_j5grph.png",
+  heart: "v1789658517/brand-heart_ya1it4.png",
+});
 
 // Placement of the browser-drawn custom text, in canvas (1600) coordinates.
 // Calibrated against the brand-text-sample reference render; tweak here, not
 // in the component. maxWidth caps the run so 6 characters still sit on the
 // crown; rotate/skew follow the crown's curve.
 export const BRAND_TEXT = {
-  maxLen: 6,
+  maxLen: BRAND_TEXT_MAX_LEN,
   cx: 800,
   cy: 745,
   rotate: -5,
@@ -87,12 +89,7 @@ export const BRAND_TEXT = {
   haloColor: "#8a5a30", // lighter scorch halo, blurred
 };
 
-export const SIZES = [
-  { id: "s", name: "S", cm: "54 to 55 cm" },
-  { id: "m", name: "M", cm: "56 to 57 cm" },
-  { id: "l", name: "L", cm: "58 to 59 cm" },
-  { id: "xl", name: "XL", cm: "60 to 61 cm" },
-];
+export const SIZES = SIZE_OPTIONS;
 
 export const SIZE_GUIDE = {
   title: "Find your size",

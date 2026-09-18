@@ -1,16 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { BASES, BLEND, BRAND_TEXT, CATEGORIES, SIZES, SIZE_GUIDE, Z_INDEX, findIn } from "./catalog.js";
 import {
-  BASES,
-  BLEND,
-  BRAND_TEXT,
-  CATEGORIES,
-  CURRENCY,
-  SHIPPING,
-  SIZES,
-  SIZE_GUIDE,
-  Z_INDEX,
-  findIn,
-} from "./catalog.js";
+  FREE_SHIPPING_MIN_QTY,
+  MAX_QUANTITY,
+  MIN_QUANTITY,
+  buildOrder,
+  formatCents,
+  sanitizeBrandText,
+} from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // The hat builder: layered 2D product configurator driven entirely by
@@ -20,28 +17,21 @@ import {
 // an isolation:isolate element so the brand's multiply never bleeds into the
 // stage background. Zoom is a CSS transform (wheel / pinch, 1x to 2.5x) with
 // drag-to-pan while zoomed. The configuration lives in the URL query
-// (?b=&bd=&br=&bt=&sz=) so any build is shareable. Checkout is a summary
-// drawer only for now; the serializable order object below (including
-// brandText) is the contract for the upcoming Stripe phase.
+// (?b=&bd=&br=&bt=&sz=&q=) so any build is shareable.
+//
+// NOTHING here does money arithmetic: every amount on screen comes from
+// buildOrder() in pricing.js, the same pure module the server will use to
+// recompute the order before charging.
 // ---------------------------------------------------------------------------
 
-const fmt = (n) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: CURRENCY,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
+const fmt = formatCents;
 
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 2.5;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// URL param per category (+ bt for the custom brand text, sz for size).
+// URL param per category (+ bt custom text, sz size, q quantity).
 const PARAM_KEYS = { base: "b", band: "bd", brand: "br" };
-
-const sanitizeBrandText = (v) =>
-  (v || "").replace(/[^A-Za-z0-9 '&.!-]/g, "").slice(0, BRAND_TEXT.maxLen);
 
 const defaultSelection = () => ({ base: "ivory", band: "none", brand: "none" });
 
@@ -49,6 +39,7 @@ function readUrl() {
   const sel = defaultSelection();
   let size = null;
   let brandText = "";
+  let quantity = MIN_QUANTITY;
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) {
@@ -58,13 +49,15 @@ function readUrl() {
     const sz = q.get("sz");
     if (sz && SIZES.some((s) => s.id === sz)) size = sz;
     brandText = sanitizeBrandText(q.get("bt"));
+    const qty = Number(q.get("q"));
+    if (Number.isInteger(qty) && qty >= MIN_QUANTITY && qty <= MAX_QUANTITY) quantity = qty;
   } catch {
     /* no window / malformed URL: fall through to defaults */
   }
-  return { sel, size, brandText };
+  return { sel, size, brandText, quantity };
 }
 
-function writeUrl(sel, size, brandText) {
+function writeUrl(sel, size, brandText, quantity) {
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) q.set(PARAM_KEYS[cat.key], sel[cat.key]);
@@ -72,6 +65,8 @@ function writeUrl(sel, size, brandText) {
     else q.delete("sz");
     if (sel.brand === "custom" && brandText) q.set("bt", brandText);
     else q.delete("bt");
+    if (quantity > MIN_QUANTITY) q.set("q", String(quantity));
+    else q.delete("q");
     const url = `${window.location.pathname}?${q.toString()}${window.location.hash}`;
     window.history.replaceState(null, "", url);
   } catch {
@@ -458,7 +453,7 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
 // --- Order summary drawer ----------------------------------------------------
 // Same drawer system as booking. Submit stays a disabled placeholder until
 // the Stripe phase; `order` is the serializable payload that phase will send.
-function OrderDrawer({ open, onClose, sel, brandText, size, order, returnRef }) {
+function OrderDrawer({ open, onClose, sel, brandText, size, order, quantity, onQuantity, returnRef }) {
   const panelRef = useRef(null);
   useDialog(open, onClose, panelRef, returnRef);
   useEffect(() => {
@@ -467,6 +462,11 @@ function OrderDrawer({ open, onClose, sel, brandText, size, order, returnRef }) 
   if (!open) return null;
   const sizeInfo = SIZES.find((s) => s.id === size);
   const line = { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14.5, padding: "8px 0", borderBottom: "1px solid rgba(43,26,16,.12)" };
+
+  // TODO(phase 1B): POST `order.config` to the checkout endpoint, which
+  // revalidates with validateConfig() and recomputes with buildOrder()
+  // before creating the Stripe session. Intentionally inert for now.
+  const onCheckout = () => {};
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)" }}>
       <div onClick={onClose} aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(43,26,16,.5)" }} />
@@ -511,37 +511,75 @@ function OrderDrawer({ open, onClose, sel, brandText, size, order, returnRef }) 
         </div>
 
         <div>
+          {/* every line, every amount: straight from buildOrder() */}
           {order.items.map((it) => (
-            <div key={`${it.category}-${it.id}`} style={line}>
+            <div key={it.label} style={line}>
               <span style={{ color: "#4a3a2c" }}>
-                <strong style={{ color: "var(--ink)" }}>{it.name}</strong>
-                <span style={{ fontSize: 12, marginLeft: 8, textTransform: "capitalize", color: "#8a7460" }}>{it.category}</span>
+                <strong style={{ color: "var(--ink)" }}>{it.label}</strong>
+                {it.quantity > 1 && (
+                  <span style={{ fontSize: 12, marginLeft: 8, color: "#8a7460" }}>
+                    {fmt(it.unitPrice)} x {it.quantity}
+                  </span>
+                )}
               </span>
-              <span style={{ fontWeight: 700 }}>{fmt(it.price)}</span>
+              <span style={{ fontWeight: 700 }}>{fmt(it.unitPrice * it.quantity)}</span>
             </div>
           ))}
           <div style={line}>
             <span style={{ color: "#4a3a2c" }}>
               <strong style={{ color: "var(--ink)" }}>Size</strong>
             </span>
-            <span style={{ fontWeight: 700 }}>
-              {sizeInfo ? `${sizeInfo.name} (${sizeInfo.cm})` : "?"}
-            </span>
+            <span style={{ fontWeight: 700 }}>{sizeInfo ? `${sizeInfo.name} (${sizeInfo.cm})` : "?"}</span>
           </div>
+
+          <div style={{ ...line, alignItems: "center" }}>
+            <label htmlFor="order-qty" style={{ color: "var(--ink)", fontWeight: 700 }}>
+              How many hats
+            </label>
+            <select
+              id="order-qty"
+              value={quantity}
+              onChange={(e) => onQuantity(Number(e.target.value))}
+              style={{
+                padding: "7px 10px",
+                borderRadius: 8,
+                border: "1.5px solid rgba(43,26,16,.55)",
+                background: "#fffaf0",
+                fontFamily: "'Satoshi',sans-serif",
+                fontWeight: 700,
+                fontSize: 14.5,
+                color: "var(--ink)",
+              }}
+            >
+              {Array.from({ length: MAX_QUANTITY - MIN_QUANTITY + 1 }, (_, i) => MIN_QUANTITY + i).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ ...line, borderBottom: "none", paddingTop: 12 }}>
             <span style={{ color: "#4a3a2c" }}>Subtotal</span>
             <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
           </div>
           <div style={{ ...line, borderBottom: "none", paddingTop: 0 }}>
             <span style={{ color: "#4a3a2c" }}>Shipping</span>
-            <span style={{ fontWeight: 700 }}>{order.shipping === 0 ? "Free" : fmt(order.shipping)}</span>
+            <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
+              {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
+            </span>
           </div>
+          {order.config.quantity < FREE_SHIPPING_MIN_QTY && (
+            <p style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "#6f5b48" }}>
+              Add one more hat and shipping is on us.
+            </p>
+          )}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               gap: 12,
-              marginTop: 8,
+              marginTop: 10,
               paddingTop: 12,
               borderTop: "2px solid var(--ink)",
               fontWeight: 800,
@@ -551,18 +589,13 @@ function OrderDrawer({ open, onClose, sel, brandText, size, order, returnRef }) 
             <span>Total</span>
             <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
           </div>
-          {order.shipping > 0 && (
-            <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "#6f5b48" }}>
-              Free shipping on orders over {fmt(SHIPPING.freeOver)}.
-            </p>
-          )}
         </div>
 
-        <button type="button" className="tc-btn" disabled style={{ width: "100%", marginTop: 20 }}>
-          Place order
+        <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 20 }} onClick={onCheckout}>
+          Checkout
         </button>
         <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 13, fontWeight: 700, color: "var(--coral-deep)" }}>
-          Checkout coming this week. Your build is saved in this page&apos;s link.
+          Checkout opens this week. Your build is saved in this page&apos;s link.
         </p>
       </div>
     </div>
@@ -575,6 +608,7 @@ export default function Builder() {
   const [sel, setSel] = useState(initial.sel);
   const [size, setSize] = useState(initial.size);
   const [brandText, setBrandText] = useState(initial.brandText);
+  const [quantity, setQuantity] = useState(initial.quantity);
   const [sizeModal, setSizeModal] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
@@ -593,8 +627,8 @@ export default function Builder() {
   const brandRowRef = useRef(null);
 
   useEffect(() => {
-    writeUrl(sel, size, brandText);
-  }, [sel, size, brandText]);
+    writeUrl(sel, size, brandText, quantity);
+  }, [sel, size, brandText, quantity]);
 
   // Warm the selected base right away and the rest of the bases shortly
   // after: base swaps are the most common tap and should feel instant.
@@ -613,23 +647,17 @@ export default function Builder() {
   const pick = (key, id) => setSel((s) => ({ ...s, [key]: id }));
 
   const isCustomBrand = sel.brand === "custom";
-  const subtotal = CATEGORIES.reduce((sum, cat) => sum + (findIn(cat.options, sel[cat.key])?.price || 0), 0);
-  const shipping = subtotal >= SHIPPING.freeOver ? 0 : SHIPPING.flat;
-  const order = {
-    items: CATEGORIES.map((cat) => {
-      const it = findIn(cat.options, sel[cat.key]);
-      if (!it || it.id === "none") return null;
-      const name = it.custom ? `Your word "${brandText.trim().toUpperCase()}"` : it.name;
-      return { category: cat.key, id: it.id, name, price: it.price };
-    }).filter(Boolean),
+
+  // The single source of every amount rendered below. No component in this
+  // file adds prices together; it only reads fields off this object.
+  const order = buildOrder({
+    baseId: sel.base,
+    bandId: sel.band,
+    brandId: sel.brand,
+    customText: brandText,
     size,
-    brandText: isCustomBrand ? brandText.trim() : null,
-    subtotal,
-    shipping,
-    total: subtotal + shipping,
-    currency: CURRENCY,
-    timestamp: new Date().toISOString(),
-  };
+    quantity,
+  });
 
   const clampPan = (p, z, rect) => {
     const limit = ((z - 1) * (rect?.width || 0)) / 2;
@@ -800,7 +828,7 @@ export default function Builder() {
                 }}
                 aria-live="polite"
               >
-                {fmt(subtotal)}
+                {fmt(order.unitSubtotal)}
               </div>
               <div style={{ position: "absolute", right: 12, bottom: 12, zIndex: "var(--z-ui)", display: "flex", gap: 6 }}>
                 <button type="button" style={zoomBtn} aria-label="Zoom out" onClick={() => setZoomClamped(zoom / 1.25)}>
@@ -991,11 +1019,13 @@ export default function Builder() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#4a3a2c", padding: "3px 0" }}>
                 <span>Subtotal</span>
-                <span style={{ fontWeight: 700 }}>{fmt(subtotal)}</span>
+                <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#4a3a2c", padding: "3px 0" }}>
                 <span>Shipping</span>
-                <span style={{ fontWeight: 700 }}>{shipping === 0 ? "Free" : fmt(shipping)}</span>
+                <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
+                  {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
+                </span>
               </div>
               <div
                 style={{
@@ -1009,7 +1039,7 @@ export default function Builder() {
                 }}
               >
                 <span>Total</span>
-                <span style={{ color: "var(--coral-deep)" }}>{fmt(subtotal + shipping)}</span>
+                <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
               </div>
               <button ref={checkoutBtnRef} type="button" className="tc-btn" style={{ width: "100%", marginTop: 14 }} onClick={tryCheckout}>
                 Continue to checkout
@@ -1040,6 +1070,8 @@ export default function Builder() {
         brandText={brandText}
         size={size}
         order={order}
+        quantity={quantity}
+        onQuantity={setQuantity}
         returnRef={checkoutBtnRef}
       />
     </section>
