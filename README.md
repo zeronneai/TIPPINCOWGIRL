@@ -34,14 +34,33 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | Variable | Required | What it is |
 | --- | --- | --- |
 | `STRIPE_SECRET_KEY` | yes | Secret key from Stripe, Developers > API keys. Use the test key (`sk_test_...`) until you are ready to take real money. Never commit it, never expose it to the browser, and never give it a `VITE_` prefix: anything with that prefix is bundled into the client. |
-| `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs, e.g. `https://tippincowgirl.vercel.app`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
+| `STRIPE_WEBHOOK_SECRET` | yes | Signing secret for the webhook endpoint, shown by Stripe under Developers > Webhooks when you add the endpoint. It starts with `whsec_` and is NOT the API key. Every endpoint has its own, and `stripe listen` for local testing prints a different one again. |
+| `RESEND_API_KEY` | yes | From resend.com, API Keys. Used only to send the order notification. |
+| `ORDER_NOTIFICATION_EMAIL` | yes | Where the order emails land. While the sender is still `onboarding@resend.dev`, Resend will only deliver to the address that owns the Resend account. |
+| `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs and for the "See this hat" links in the order email, e.g. `https://tippincowgirl.vercel.app`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
 
 Stripe returns customers to two real paths, which `vercel.json` rewrites to
-the single page app: `/order-confirmed` and `/checkout-cancelled`. The
-cancel URL carries the builder's own query string, so leaving checkout puts
-the customer back on the exact hat she configured.
+the single page app: `/order-confirmed` and `/checkout-cancelled`. The cart
+lives in the browser, so cancelling loses nothing, and the success page
+empties the cart only when Stripe's `session_id` is on the URL.
 
-The webhook and the owner notification email are phase 2 and not built yet.
+## Order notifications
+
+`api/stripe-webhook.js` listens for `checkout.session.completed`, verifies
+the Stripe signature against the raw request body, and emails Deborah the
+full build of every hat through Resend. Stripe's own receipt only says how
+much was paid, which is not enough to make a hat.
+
+Point Stripe at `https://<your domain>/api/stripe-webhook` under
+Developers > Webhooks, subscribed to `checkout.session.completed`, and copy
+the signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+Two things worth knowing about that function: its body parser is switched
+off on purpose (a parsed body breaks signature verification, and that is the
+most common way Stripe webhooks fail), and it does not deduplicate. If
+Stripe retries a delivery, the same order email arrives twice. That is the
+deliberate trade for having no database: a duplicate email is cheaper than a
+lost order.
 
 ## Structure
 
