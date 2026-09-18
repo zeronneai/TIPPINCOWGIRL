@@ -180,27 +180,9 @@ body {
   margin-left: 9px;
   opacity: 1;
 }
-/* how many hats are waiting in the cart. Rides on the corner of the circle
-   instead of inside it, so 56px stays 56px and two digits still fit. */
-.tc-fab-count {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--coral);
-  color: #fff;
-  border: 2px solid var(--ink);
-  font-family: "Satoshi", system-ui, sans-serif;
-  font-weight: 900;
-  font-size: 12.5px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+/* The FAB carries no cart count on purpose: the number lives on the nav
+   cart button, where people look for it, and two identical counters on
+   screen at once read as a mistake. */
 @media (max-width: 767px) {
   .tc-fab {
     display: inline-flex;

@@ -1220,7 +1220,6 @@ function Solana() {
 // On its very first appearance it shows a side label for 2.5s, then
 // collapses to icon only (once per session, via sessionStorage). ------------
 function BuildFab() {
-  const { totalQuantity } = useCart();
   const [pastHero, setPastHero] = useState(false);
   const [builderOnScreen, setBuilderOnScreen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1274,7 +1273,7 @@ function BuildFab() {
     <a
       href="#builder"
       className={`tc-fab${shown ? " on" : ""}${labelOn ? " tc-fab--intro" : ""}`}
-      aria-label={totalQuantity ? `Build Your Hat, ${totalQuantity} in your cart` : "Build Your Hat"}
+      aria-label="Build Your Hat"
       title="Build Your Hat"
       aria-hidden={!shown}
       tabIndex={shown ? 0 : -1}
@@ -1285,11 +1284,6 @@ function BuildFab() {
       <span className="tc-fab-label" aria-hidden>
         Build Your Hat
       </span>
-      {totalQuantity > 0 && (
-        <span className="tc-fab-count" aria-hidden>
-          {totalQuantity}
-        </span>
-      )}
     </a>
   );
 }
