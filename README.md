@@ -38,6 +38,7 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | `RESEND_API_KEY` | yes | From resend.com, API Keys. Used only to send the order notification. |
 | `ORDER_NOTIFICATION_EMAIL` | yes | Where the order emails land. While the sender is still `onboarding@resend.dev`, Resend will only deliver to the address that owns the Resend account. |
 | `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs and for the "See this hat" links in the order email, e.g. `https://tippincowgirl.vercel.app`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
+| `VITE_BOOKING_ENDPOINT` | yes, for the events form | The Google Apps Script web app URL the private events form posts to, ending in `/exec`. Unlike every other variable here this one is read at BUILD time and baked into the client bundle, which the `VITE_` prefix makes explicit. That is fine: an Apps Script web app URL is not a secret, anyone can read it in the network tab. Without it the form refuses to send and tells the visitor to DM instead of failing quietly. Changing it needs a rebuild, not just a restart. |
 
 Stripe returns customers to two real paths, which `vercel.json` rewrites to
 the single page app: `/order-confirmed` and `/checkout-cancelled`. The cart

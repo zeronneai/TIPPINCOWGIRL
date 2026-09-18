@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
-import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
+import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
@@ -126,13 +126,61 @@ function LazyVideo({ src, caption, ariaLabel, style }) {
 }
 
 // ---------------------------------------------------------------------------
-// Booking drawer: opens from every "Book the bar" on the site. POSTs
-// URL-encoded fields to the Google Apps Script endpoint via no-cors (the
-// standard doPost(e) pattern); since no-cors hides the response, success is
-// optimistic when the fetch does not throw. Focus-trapped, Escape/backdrop
-// close, focus returns to the opener.
+// Booking drawer: opens from every "Book the bar" on the site. It POSTs the
+// request to the Google Apps Script web app as JSON, and every field name
+// below becomes a column heading in Deborah's spreadsheet, so they are named
+// for a reader and not for the code.
+//
+// CONTENT TYPE, deliberately text/plain. An Apps Script web app does not
+// answer the CORS preflight that application/json triggers, so the browser
+// would block the request before it left the page even with a perfect
+// script on the other side. text/plain keeps it a simple request; doPost
+// parses e.postData.contents as JSON either way. And no no-cors here: that
+// would hide the response and leave us unable to tell success from failure.
+//
+// Apps Script validates nothing, so the checks below are the only ones there
+// are. Focus-trapped, Escape/backdrop close, focus returns to the opener.
 // ---------------------------------------------------------------------------
 const EVENT_TYPES = ["Birthday", "Bachelorette", "Corporate", "Wedding", "Pop-up / Market", "Other"];
+
+// Caps so nobody can paste a novel into a spreadsheet cell. The inputs carry
+// maxLength too; this is the check that actually decides.
+const FIELD_LIMITS = { name: 80, email: 120, phone: 40, eventType: 40, eventDate: 20, notes: 1000 };
+
+// Permissive on purpose: real addresses are stranger than most patterns
+// allow, and the only job here is to catch a typo before it costs a reply.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const EMPTY_BOOKING = { name: "", email: "", phone: "", eventType: "", eventDate: "", notes: "", company: "" };
+
+/** @returns an object of field name to message; empty means valid. */
+export function validateBooking(values) {
+  const v = values || {};
+  const errors = {};
+  const get = (k) => String(v[k] ?? "").trim();
+  const tooLong = (k) => String(v[k] ?? "").length > FIELD_LIMITS[k];
+
+  const name = get("name");
+  if (!name) errors.name = "Tell us who you are.";
+  else if (tooLong("name")) errors.name = `Keep this under ${FIELD_LIMITS.name} characters.`;
+
+  const email = get("email");
+  const phone = get("phone");
+  if (!email) errors.email = "We need an email to write back to.";
+  else if (tooLong("email")) errors.email = `Keep this under ${FIELD_LIMITS.email} characters.`;
+  else if (!EMAIL_PATTERN.test(email)) errors.email = "That email does not look right.";
+
+  if (phone && tooLong("phone")) errors.phone = `Keep this under ${FIELD_LIMITS.phone} characters.`;
+
+  // Belt and braces: email is required above, so this only ever fires if
+  // that rule is ever relaxed. It keeps the promise that we can reach them.
+  if (!email && !phone) errors.email = "Leave us an email or a phone number.";
+
+  if (!get("eventType")) errors.eventType = "Pick the kind of event.";
+  if (tooLong("notes")) errors.notes = `Keep this under ${FIELD_LIMITS.notes} characters.`;
+
+  return errors;
+}
 
 const fieldStyle = {
   width: "100%",
@@ -154,7 +202,7 @@ const labelStyle = {
   color: "#6f4526",
 };
 
-function Field({ id, label, optional, children }) {
+function Field({ id, label, optional, error, children }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <label htmlFor={id} style={labelStyle}>
@@ -162,6 +210,16 @@ function Field({ id, label, optional, children }) {
         {optional && <span style={{ opacity: 0.6, textTransform: "none", letterSpacing: 0 }}> (optional)</span>}
       </label>
       {children}
+      {/* the message sits with its own field, not in a pile at the top */}
+      {error && (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          style={{ margin: "6px 0 0", fontSize: 12.5, fontWeight: 700, color: "var(--coral-deep)" }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -169,11 +227,22 @@ function Field({ id, label, optional, children }) {
 function BookingDrawer({ open, onClose, returnRef }) {
   const panelRef = useRef(null);
   const firstFieldRef = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | sending | done | error
+  // idle | sending | done | error | unconfigured
+  const [status, setStatus] = useState("idle");
+  const [values, setValues] = useState(EMPTY_BOOKING);
+  const [errors, setErrors] = useState({});
+
+  const setField = (key) => (e) => {
+    const { value } = e.target;
+    setValues((v) => ({ ...v, [key]: value }));
+    // clear a complaint as soon as they start fixing it
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
 
   useEffect(() => {
     if (!open) return undefined;
     setStatus("idle");
+    setErrors({});
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const t = setTimeout(() => firstFieldRef.current?.focus(), 80);
@@ -205,24 +274,53 @@ function BookingDrawer({ open, onClose, returnRef }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const params = new URLSearchParams(new FormData(form));
+    if (status === "sending") return;
+
+    const found = validateBooking(values);
+    setErrors(found);
+    const firstBad = Object.keys(found)[0];
+    if (firstBad) {
+      panelRef.current?.querySelector(`#bk-${firstBad === "eventType" ? "type" : firstBad}`)?.focus();
+      return;
+    }
+
+    if (!BOOKING_ENDPOINT_READY) {
+      console.error(
+        "[booking] VITE_BOOKING_ENDPOINT is not set, so this request was not sent. Add it and rebuild."
+      );
+      setStatus("unconfigured");
+      return;
+    }
+
     setStatus("sending");
     try {
-      if (BOOKING_ENDPOINT.startsWith("PASTE_")) {
-        console.warn("[booking] BOOKING_ENDPOINT is still the placeholder; simulating success.");
-        await new Promise((r) => setTimeout(r, 500));
-      } else {
-        await fetch(BOOKING_ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: params.toString(),
-        });
-      }
-      form.reset();
+      const res = await fetch(BOOKING_ENDPOINT, {
+        method: "POST",
+        // text/plain keeps this a simple request: see the note above the
+        // component. Do NOT switch this to application/json.
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          name: values.name.trim(),
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+          eventType: values.eventType,
+          eventDate: values.eventDate,
+          notes: values.notes.trim(),
+          // honeypot: a real person leaves this empty, and the Apps Script
+          // drops anything that arrives with it filled
+          company: values.company,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // The response is readable because this is not a no-cors request, so
+      // an explicit failure from the script is treated as one.
+      const body = await res.clone().json().catch(() => null);
+      if (body && (body.ok === false || body.result === "error")) throw new Error(body.message || "script error");
+      setValues(EMPTY_BOOKING);
+      setErrors({});
       setStatus("done");
-    } catch {
+    } catch (err) {
+      console.error("[booking] request failed:", err);
       setStatus("error");
     }
   };
@@ -263,25 +361,68 @@ function BookingDrawer({ open, onClose, returnRef }) {
         {status === "done" ? (
           <div>
             <p style={{ fontSize: 16.5, lineHeight: 1.6, fontWeight: 600, color: "#4a3a2c" }}>
-              You&apos;re on the list. We&apos;ll get back to you within a day.
+              Got it, your request is in. Deborah reaches out personally, usually within a day, to talk
+              dates and details.
             </p>
             <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 10 }} onClick={onClose}>
               Done
             </button>
           </div>
         ) : (
-          <form onSubmit={submit}>
-            <Field id="bk-name" label="Name">
-              <input ref={firstFieldRef} id="bk-name" name="name" type="text" required autoComplete="name" style={fieldStyle} />
+          <form onSubmit={submit} noValidate>
+            <Field id="bk-name" label="Name" error={errors.name}>
+              <input
+                ref={firstFieldRef}
+                id="bk-name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                maxLength={FIELD_LIMITS.name}
+                value={values.name}
+                onChange={setField("name")}
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? "bk-name-error" : undefined}
+                style={fieldStyle}
+              />
             </Field>
-            <Field id="bk-email" label="Email">
-              <input id="bk-email" name="email" type="email" required autoComplete="email" style={fieldStyle} />
+            <Field id="bk-email" label="Email" error={errors.email}>
+              <input
+                id="bk-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                maxLength={FIELD_LIMITS.email}
+                value={values.email}
+                onChange={setField("email")}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "bk-email-error" : undefined}
+                style={fieldStyle}
+              />
             </Field>
-            <Field id="bk-phone" label="Phone">
-              <input id="bk-phone" name="phone" type="tel" required autoComplete="tel" style={fieldStyle} />
+            <Field id="bk-phone" label="Phone" optional error={errors.phone}>
+              <input
+                id="bk-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                maxLength={FIELD_LIMITS.phone}
+                value={values.phone}
+                onChange={setField("phone")}
+                aria-invalid={!!errors.phone}
+                aria-describedby={errors.phone ? "bk-phone-error" : undefined}
+                style={fieldStyle}
+              />
             </Field>
-            <Field id="bk-type" label="Event type">
-              <select id="bk-type" name="eventType" required defaultValue="" style={fieldStyle}>
+            <Field id="bk-type" label="Event type" error={errors.eventType}>
+              <select
+                id="bk-type"
+                name="eventType"
+                value={values.eventType}
+                onChange={setField("eventType")}
+                aria-invalid={!!errors.eventType}
+                aria-describedby={errors.eventType ? "bk-type-error" : undefined}
+                style={fieldStyle}
+              >
                 <option value="" disabled>
                   Pick one
                 </option>
@@ -293,14 +434,54 @@ function BookingDrawer({ open, onClose, returnRef }) {
               </select>
             </Field>
             <Field id="bk-date" label="Tentative date" optional>
-              <input id="bk-date" name="date" type="date" style={fieldStyle} />
+              <input
+                id="bk-date"
+                name="eventDate"
+                type="date"
+                value={values.eventDate}
+                onChange={setField("eventDate")}
+                style={fieldStyle}
+              />
             </Field>
-            <Field id="bk-notes" label="Notes" optional>
-              <textarea id="bk-notes" name="notes" rows={3} style={{ ...fieldStyle, resize: "vertical" }} />
+            <Field id="bk-notes" label="Notes" optional error={errors.notes}>
+              <textarea
+                id="bk-notes"
+                name="notes"
+                rows={3}
+                maxLength={FIELD_LIMITS.notes}
+                value={values.notes}
+                onChange={setField("notes")}
+                aria-invalid={!!errors.notes}
+                aria-describedby={errors.notes ? "bk-notes-error" : undefined}
+                style={{ ...fieldStyle, resize: "vertical" }}
+              />
             </Field>
+
+            {/* Honeypot. Hidden with CSS rather than type=hidden, which bots
+                skip, and hidden from assistive tech too so nobody who cannot
+                see it can fill it in by accident and have their request
+                silently binned. */}
+            <div className="tc-hp" aria-hidden="true">
+              <label htmlFor="bk-company">Company</label>
+              <input
+                id="bk-company"
+                name="company"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={values.company}
+                onChange={setField("company")}
+              />
+            </div>
+
             {status === "error" && (
-              <p style={{ margin: "0 0 12px", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+              <p role="alert" style={{ margin: "0 0 12px", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}>
                 Something hiccuped on the network. Give it another try?
+              </p>
+            )}
+            {status === "unconfigured" && (
+              <p role="alert" style={{ margin: "0 0 12px", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+                Our form is not hooked up yet. Please DM us on Instagram and we will get you booked.
               </p>
             )}
             <button type="submit" className="tc-btn" disabled={status === "sending"} style={{ width: "100%" }}>

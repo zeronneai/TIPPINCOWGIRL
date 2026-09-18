@@ -1,12 +1,26 @@
 // Configurator option data + site content data.
 
 // ---------------------------------------------------------------------------
-// Booking form endpoint: paste the Google Apps Script web-app URL here (the
-// drawer POSTs URL-encoded fields to it via no-cors, standard doPost(e)
-// pattern). While it still holds the placeholder the drawer logs a console
-// warning and simulates success so the flow can be tested end to end.
+// Booking form endpoint: the Google Apps Script web app URL, supplied at
+// build time through VITE_BOOKING_ENDPOINT so the URL never lives in the
+// repo. Anything with a VITE_ prefix is baked into the client bundle, which
+// is fine here: an Apps Script web app URL is not a secret, it is an
+// endpoint anyone can see in the network tab anyway.
+//
+// With the placeholder still in place the drawer refuses to send and says
+// so, rather than pretending the request went through.
+//
+// The drawer POSTs JSON with a text/plain content type on purpose. An Apps
+// Script web app does not answer the CORS preflight that application/json
+// would trigger, so the browser would kill the request before it ever left.
+// text/plain keeps it a simple request; doPost still reads the body from
+// e.postData.contents and parses it as JSON.
 // ---------------------------------------------------------------------------
-export const BOOKING_ENDPOINT = "PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+export const BOOKING_ENDPOINT =
+  import.meta.env?.VITE_BOOKING_ENDPOINT || "PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+/** False while the endpoint is still the placeholder. */
+export const BOOKING_ENDPOINT_READY = /^https:\/\/script\.google\.com\//.test(BOOKING_ENDPOINT);
 
 // ---------------------------------------------------------------------------
 // Remote media (Cloudinary). The real content lives on Cloudinary, NOT in the

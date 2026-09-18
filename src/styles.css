@@ -561,6 +561,36 @@ body {
   }
 }
 
+/* ---- honeypot: a field only a bot fills in. Parked off canvas to the
+   LEFT so it can never widen the page, with no size and nothing to click.
+   Not display:none and not type=hidden, because plenty of bots skip both.
+   Its wrapper also carries aria-hidden, so a screen reader never offers it
+   and nobody gets their request binned for filling in a field they were
+   told about. ---- */
+.tc-hp {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+/* The field itself is stripped to nothing as well, so it paints no box even
+   if the wrapper's clipping is ever overridden. It stays a real text input
+   in the DOM, which is exactly what a bot fills in. */
+.tc-hp input,
+.tc-hp label {
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 1px;
+}
+
 /* ---- booking drawer: slides from the right, full-width on mobile ---- */
 .tc-drawer {
   position: absolute;
