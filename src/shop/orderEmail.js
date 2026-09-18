@@ -18,9 +18,94 @@
 // "Leather & Buckle", never "leather".
 // ---------------------------------------------------------------------------
 
-// describeConfig is deliberately not used here: the email wants one labelled
-// row per piece ("Band: Leather & Buckle"), not its one line summary.
-import { buildPermalinkQuery, findBand, findBase, findBrand, findSize } from "./pricing.js";
+// The labelled rows are built from the find* helpers, one per piece
+// ("Band: Leather & Buckle"). describeConfig's one line summary is used for
+// the hat image's alt text, which is all a reader sees when their client
+// blocks remote images.
+import { BANDS, BASES, BRANDS, CLOUDINARY_CLOUD, findIn } from "./catalog.js";
+import {
+  buildPermalinkQuery,
+  describeConfig,
+  findBand,
+  findBase,
+  findBrand,
+  findSize,
+} from "./pricing.js";
+
+// ---------------------------------------------------------------------------
+// One flattened hat image, composed by Cloudinary.
+//
+// The site stacks the layers with CSS and mix-blend-mode. Email clients have
+// neither, so the compositing has to happen before the bytes arrive, which
+// Cloudinary does with chained overlays in the URL itself.
+//
+// The stacking contract is the SAME one catalog.js documents, and it has to
+// stay that way or the picture in the email stops matching what the customer
+// approved on screen:
+//
+//   base   root image
+//   brand  first overlay, e_multiply   (the burn, UNDER the band)
+//   band   second overlay, normal
+//
+// Sizing detail worth knowing: every layer is 1600x1600, so the overlays are
+// applied at full size onto the full size base and land 1:1. The resize to
+// the email width is the LAST transformation in the chain, after both
+// fl_layer_apply steps, so scaling can never knock a layer out of register.
+//
+// The custom branded word is deliberately NOT drawn here. On the site it is
+// rendered by the browser from BRAND_TEXT (position, rotation, skew, the
+// blurred scorch halo), and reproducing that with Cloudinary text overlays
+// would be a calibration we cannot check from here against the real
+// artwork. A wrong looking word is worse than no word, and the email
+// already carries a "Custom text: ZERO" row that says exactly what to burn.
+// ---------------------------------------------------------------------------
+
+const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload`;
+
+// Delivered at twice the displayed size so the picture stays sharp on the
+// phone screens this actually gets read on.
+const HAT_IMAGE_WIDTH = 240;
+const HAT_IMAGE_DISPLAY = 120;
+
+// Inside an overlay reference a public id cannot carry slashes: folder
+// separators are written as colons. Ours are flat today, but a foldered id
+// would silently produce a broken URL without this.
+const overlayRef = (publicId) => String(publicId).replace(/\//g, ":");
+
+/**
+ * Build a single URL for the composed hat, or null when it cannot be built.
+ * Never throws: the email must go out even if the picture cannot.
+ *
+ * @param config  { baseId, bandId, brandId }
+ * @param width   delivered pixel width, default 240
+ * @returns {string|null}
+ */
+export function buildHatImageUrl(config, { width = 240 } = {}) {
+  try {
+    const c = config || {};
+    const base = findIn(BASES, c.baseId);
+    // No base means no hat to show. The email still goes out without it.
+    if (!base?.publicId || !base?.layerFile) return null;
+
+    const w = Number.isInteger(width) && width > 0 ? width : 240;
+    const chain = [];
+
+    // z=20, multiply, under the band. A missing piece just is not chained.
+    const brand = findIn(BRANDS, c.brandId);
+    if (brand?.publicId) chain.push(`l_${overlayRef(brand.publicId)},e_multiply`, "fl_layer_apply");
+
+    // z=30, normal, on top.
+    const band = findIn(BANDS, c.bandId);
+    if (band?.publicId) chain.push(`l_${overlayRef(band.publicId)}`, "fl_layer_apply");
+
+    // Resize last, once the stack is flat.
+    chain.push(`w_${w},c_fit,f_auto,q_auto`);
+
+    return `${CLOUDINARY_BASE}/${chain.join("/")}/${base.layerFile}`;
+  } catch {
+    return null;
+  }
+}
 
 /** Escape anything that might carry customer text into HTML. */
 export const esc = (value) =>
@@ -183,6 +268,16 @@ export function buildOrderEmail({ session, baseUrl = "" }) {
         )
         .join("");
       const link = origin ? permalinkFor(line) : "";
+      const imageUrl = buildHatImageUrl(line, { width: HAT_IMAGE_WIDTH });
+      // Plenty of clients block remote images by default, so the alt text
+      // has to carry the build on its own. A hat with no composable image
+      // simply renders as it did before, never as a broken picture.
+      const imageCell = imageUrl
+        ? `
+                    <td width="${HAT_IMAGE_DISPLAY}" style="padding: 0 14px 0 0; vertical-align: top;">
+                      <img src="${esc(imageUrl)}" width="${HAT_IMAGE_DISPLAY}" alt="${esc(describeConfig(line))}" style="display: block; width: ${HAT_IMAGE_DISPLAY}px; max-width: ${HAT_IMAGE_DISPLAY}px; height: auto; border: 0; outline: none; text-decoration: none;">
+                    </td>`
+        : "";
       return `
           <tr>
             <td style="padding: 0 0 18px 0;">
@@ -190,7 +285,13 @@ export function buildOrderEmail({ session, baseUrl = "" }) {
                 <tr>
                   <td style="padding: 14px 16px;">
                     <p style="${FONT} font-size: 15px; font-weight: bold; color: ${INK}; margin: 0 0 10px 0;">Hat ${i + 1}</p>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">${rows}
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>${imageCell}
+                        <td style="vertical-align: top;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">${rows}
+                          </table>
+                        </td>
+                      </tr>
                     </table>
                     ${
                       link

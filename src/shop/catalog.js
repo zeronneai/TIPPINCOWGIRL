@@ -33,13 +33,32 @@ export const CANVAS = { w: 1600, h: 1600 };
 export const Z_INDEX = { base: 10, brand: 20, band: 30 };
 export const BLEND = { base: "normal", brand: "multiply", band: "normal" };
 
-const CLD = "https://res.cloudinary.com/dsprn0ew4/image/upload";
+export const CLOUDINARY_CLOUD = "dsprn0ew4";
+const CLD = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload`;
 const layer = (file) => `${CLD}/f_auto,q_auto,w_1600/${file}`;
 
+// The Cloudinary public id of a stored file: the version prefix and the
+// extension are addressing, not identity, and an overlay reference wants
+// neither. "v1789658517/base-ivory_bcsh3a.png" becomes "base-ivory_bcsh3a".
+export const publicIdOf = (file) =>
+  String(file || "")
+    .replace(/^v\d+\//, "")
+    .replace(/\.[a-z0-9]+$/i, "");
+
 // Attach artwork to the priced options, matched by id. Prices and labels
-// come straight from pricing.js; this only adds layerImg.
+// come straight from pricing.js; this only adds the image fields.
+//
+// `layerImg` is the plain delivery URL the builder stacks with CSS.
+// `layerFile` and `publicId` exist so the server can compose those same
+// layers into ONE flattened image for the order email, where there is no
+// CSS to stack anything. The builder never uses them.
 const withArt = (options, art) =>
-  options.map((o) => ({ ...o, layerImg: art[o.id] ? layer(art[o.id]) : null }));
+  options.map((o) => ({
+    ...o,
+    layerImg: art[o.id] ? layer(art[o.id]) : null,
+    layerFile: art[o.id] || null,
+    publicId: art[o.id] ? publicIdOf(art[o.id]) : null,
+  }));
 
 export const BASES = withArt(BASE_OPTIONS, {
   ivory: "v1789658517/base-ivory_bcsh3a.png",
