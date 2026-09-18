@@ -1174,29 +1174,79 @@ function Solana() {
   );
 }
 
-// --- Sticky mobile booking CTA: appears after the hero, hides at the footer --
-function StickyCTA() {
-  const [heroGone, setHeroGone] = useState(false);
-  const [footerSeen, setFooterSeen] = useState(false);
+// --- Mobile-only builder FAB: a corner button that fades in once the scroll
+// passes ~60vh (the hero has its own CTA), and stays out of the way when the
+// builder itself is on screen or any dialog (booking drawer, size guide,
+// order summary) is open. Dialog detection reads the body scroll-lock every
+// dialog on the site already sets, so the builder's logic stays untouched.
+// On its very first appearance it shows a side label for 2.5s, then
+// collapses to icon only (once per session, via sessionStorage). ------------
+function BuildFab() {
+  const [pastHero, setPastHero] = useState(false);
+  const [builderOnScreen, setBuilderOnScreen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [labelOn, setLabelOn] = useState(false);
+  const introduced = useRef(false);
+  const shown = pastHero && !builderOnScreen && !dialogOpen;
+
   useEffect(() => {
-    const hero = document.getElementById("top");
-    const footer = document.getElementById("site-footer");
-    if (typeof IntersectionObserver === "undefined" || !hero || !footer) return undefined;
-    const heroIO = new IntersectionObserver(([e]) => setHeroGone(!e.isIntersecting));
-    const footIO = new IntersectionObserver(([e]) => setFooterSeen(e.isIntersecting));
-    heroIO.observe(hero);
-    footIO.observe(footer);
-    return () => {
-      heroIO.disconnect();
-      footIO.disconnect();
-    };
+    const onScroll = () => setPastHero(window.scrollY > window.innerHeight * 0.6);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const builder = document.getElementById("builder");
+    if (typeof IntersectionObserver === "undefined" || !builder) return undefined;
+    const io = new IntersectionObserver(([e]) => setBuilderOnScreen(e.isIntersecting));
+    io.observe(builder);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof MutationObserver === "undefined") return undefined;
+    const mo = new MutationObserver(() => setDialogOpen(document.body.style.overflow === "hidden"));
+    mo.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+    return () => mo.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shown || introduced.current) return;
+    introduced.current = true;
+    try {
+      if (sessionStorage.getItem("tc-fab-intro") === "1") return;
+      sessionStorage.setItem("tc-fab-intro", "1");
+    } catch {
+      /* private mode etc: show the intro, just do not remember it */
+    }
+    setLabelOn(true);
+  }, [shown]);
+
+  // Own effect so the countdown is never restarted (or cancelled) by the FAB
+  // hiding and reappearing while the label is up.
+  useEffect(() => {
+    if (!labelOn) return undefined;
+    const t = setTimeout(() => setLabelOn(false), 2500);
+    return () => clearTimeout(t);
+  }, [labelOn]);
+
   return (
-    <div className={`tc-sticky-cta${heroGone && !footerSeen ? " on" : ""}`}>
-      <a href="#builder" className="tc-btn" style={{ width: "100%" }}>
-        🤠 Build your hat
-      </a>
-    </div>
+    <a
+      href="#builder"
+      className={`tc-fab${shown ? " on" : ""}${labelOn ? " tc-fab--intro" : ""}`}
+      aria-label="Build Your Hat"
+      title="Build Your Hat"
+      aria-hidden={!shown}
+      tabIndex={shown ? 0 : -1}
+    >
+      <span aria-hidden style={{ fontSize: 25, lineHeight: 1 }}>
+        🤠
+      </span>
+      <span className="tc-fab-label" aria-hidden>
+        Build Your Hat
+      </span>
+    </a>
   );
 }
 
@@ -1325,7 +1375,7 @@ export default function App() {
           <EventsSection />
           <Gallery />
           <Solana />
-          <StickyCTA />
+          <BuildFab />
         </>
       )}
       <BookingDrawer open={bookingOpen} onClose={closeBooking} returnRef={bookingReturnRef} />

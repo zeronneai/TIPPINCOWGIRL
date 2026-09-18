@@ -12,8 +12,9 @@
   --z-base: 0; /* decorative backdrops (glow, pedestal shadow) */
   --z-canvas: 10; /* the 3D stage */
   --z-ui: 20; /* labels/badges that sit near the canvas */
-  --z-nav: 100; /* sticky navigation + mobile CTA bar */
-  --z-overlay: 200; /* full-viewport overlays (grain) */
+  --z-nav: 100; /* sticky navigation */
+  --z-fab: 150; /* mobile builder FAB: over the page, under every dialog */
+  --z-overlay: 200; /* full-viewport overlays (grain) + dialogs */
 }
 
 /* ---- reset & base ---- */
@@ -108,27 +109,83 @@ body {
   filter: brightness(0.96);
 }
 
-/* sticky mobile booking bar — hidden on desktop, slides up after the hero */
-.tc-sticky-cta {
-  position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  z-index: var(--z-nav);
+/* ---- mobile builder FAB: a discreet corner button, phones only. Sits above
+   the page but below dialogs (--z-fab < --z-overlay), so the booking drawer,
+   size guide and order summary always cover it. ---- */
+.tc-fab {
   display: none;
-  transform: translateY(140%);
-  transition: transform 0.28s ease;
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-fab);
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  /* same wood sign as every other CTA on the site, just round */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.22' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.08 0 0 0 0 0.03 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='160' height='40' filter='url(%23w)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #8d5a33 0%, #7a4c2a 60%, #6f4526 100%);
+  color: #f6e7cf;
+  border: 2px solid var(--ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  text-decoration: none;
+  cursor: pointer;
+  /* hidden state: faded + shrunk, and click-through so it cannot swallow
+     taps meant for the content underneath */
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease-out,
+    transform 0.22s ease-out,
+    width 0.22s ease-out;
 }
-.tc-sticky-cta.on {
+.tc-fab.on {
+  opacity: 1;
   transform: none;
+  pointer-events: auto;
 }
-.tc-sticky-cta a,
-.tc-sticky-cta button {
-  flex: 1;
+/* first appearance of the session: widen to show the label, then collapse */
+.tc-fab--intro {
+  width: 186px;
+  border-radius: 28px;
+  justify-content: flex-start;
+  padding-left: 15px;
 }
-@media (max-width: 700px) {
-  .tc-sticky-cta {
-    display: flex;
+/* collapsed, the label must take NO layout width: inside the clipped circle
+   a zero-opacity label still centered as content and pushed the icon out */
+.tc-fab-label {
+  font-family: "Alfa Slab One", "Satoshi", serif;
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease-out,
+    max-width 0.22s ease-out,
+    margin-left 0.22s ease-out;
+}
+.tc-fab--intro .tc-fab-label {
+  max-width: 140px;
+  margin-left: 9px;
+  opacity: 1;
+}
+@media (max-width: 767px) {
+  .tc-fab {
+    display: inline-flex;
+  }
+  /* keep the last rows of the page clear of the button */
+  #site-footer {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
