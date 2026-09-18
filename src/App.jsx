@@ -3,6 +3,7 @@ import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import Builder from "./shop/Builder.jsx";
+import { CartProvider, useCart } from "./shop/cart.jsx";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -1183,6 +1184,7 @@ function Solana() {
 // On its very first appearance it shows a side label for 2.5s, then
 // collapses to icon only (once per session, via sessionStorage). ------------
 function BuildFab() {
+  const { totalQuantity } = useCart();
   const [pastHero, setPastHero] = useState(false);
   const [builderOnScreen, setBuilderOnScreen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1236,7 +1238,7 @@ function BuildFab() {
     <a
       href="#builder"
       className={`tc-fab${shown ? " on" : ""}${labelOn ? " tc-fab--intro" : ""}`}
-      aria-label="Build Your Hat"
+      aria-label={totalQuantity ? `Build Your Hat, ${totalQuantity} in your cart` : "Build Your Hat"}
       title="Build Your Hat"
       aria-hidden={!shown}
       tabIndex={shown ? 0 : -1}
@@ -1247,6 +1249,11 @@ function BuildFab() {
       <span className="tc-fab-label" aria-hidden>
         Build Your Hat
       </span>
+      {totalQuantity > 0 && (
+        <span className="tc-fab-count" aria-hidden>
+          {totalQuantity}
+        </span>
+      )}
     </a>
   );
 }
@@ -1317,6 +1324,14 @@ function Footer({ onBook }) {
 }
 
 export default function App() {
+  return (
+    <CartProvider>
+      <Site />
+    </CartProvider>
+  );
+}
+
+function Site() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const bookingReturnRef = useRef(null);
   const openBooking = (e) => {

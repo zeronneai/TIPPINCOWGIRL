@@ -1,7 +1,10 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { BASES, BLEND, BRAND_TEXT, CATEGORIES, SIZES, SIZE_GUIDE, Z_INDEX, findIn } from "./catalog.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BASES, BLEND, BRAND_TEXT, CATEGORIES, SIZES, SIZE_GUIDE, findIn } from "./catalog.js";
+import HatStack, { BrandTextLayer } from "./HatStack.jsx";
+import { useCart } from "./cart.jsx";
 import {
   FREE_SHIPPING_MIN_QTY,
+  MAX_CART_QUANTITY,
   MAX_QUANTITY,
   MIN_QUANTITY,
   buildOrder,
@@ -16,11 +19,15 @@ import {
 // contract (base normal, brand multiply UNDER the band). The stack lives in
 // an isolation:isolate element so the brand's multiply never bleeds into the
 // stage background. Zoom is a CSS transform (wheel / pinch, 1x to 2.5x) with
-// drag-to-pan while zoomed. The configuration lives in the URL query
-// (?b=&bd=&br=&bt=&sz=&q=) so any build is shareable.
+// drag-to-pan while zoomed.
+//
+// A design lives in the URL query (?b=&bd=&br=&bt=&sz=) so any single build
+// is shareable. That permalink is ONE hat, never the cart: opening it loads
+// the design ready to add, it never adds itself. Quantity is not in there,
+// because quantity belongs to a cart line rather than to a design.
 //
 // NOTHING here does money arithmetic: every amount on screen comes from
-// buildOrder() in pricing.js, the same pure module the server will use to
+// buildOrder() in pricing.js, the same pure module the server uses to
 // recompute the order before charging.
 // ---------------------------------------------------------------------------
 
@@ -30,7 +37,7 @@ const ZOOM_MIN = 1;
 const ZOOM_MAX = 2.5;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// URL param per category (+ bt custom text, sz size, q quantity).
+// URL param per category (+ bt custom text, sz size). No quantity: see above.
 const PARAM_KEYS = { base: "b", band: "bd", brand: "br" };
 
 const defaultSelection = () => ({ base: "ivory", band: "none", brand: "none" });
@@ -39,7 +46,6 @@ function readUrl() {
   const sel = defaultSelection();
   let size = null;
   let brandText = "";
-  let quantity = MIN_QUANTITY;
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) {
@@ -49,15 +55,13 @@ function readUrl() {
     const sz = q.get("sz");
     if (sz && SIZES.some((s) => s.id === sz)) size = sz;
     brandText = sanitizeBrandText(q.get("bt"));
-    const qty = Number(q.get("q"));
-    if (Number.isInteger(qty) && qty >= MIN_QUANTITY && qty <= MAX_QUANTITY) quantity = qty;
   } catch {
     /* no window / malformed URL: fall through to defaults */
   }
-  return { sel, size, brandText, quantity };
+  return { sel, size, brandText };
 }
 
-function writeUrl(sel, size, brandText, quantity) {
+function writeUrl(sel, size, brandText) {
   try {
     const q = new URLSearchParams(window.location.search);
     for (const cat of CATEGORIES) q.set(PARAM_KEYS[cat.key], sel[cat.key]);
@@ -65,14 +69,23 @@ function writeUrl(sel, size, brandText, quantity) {
     else q.delete("sz");
     if (sel.brand === "custom" && brandText) q.set("bt", brandText);
     else q.delete("bt");
-    if (quantity > MIN_QUANTITY) q.set("q", String(quantity));
-    else q.delete("q");
+    // A stale q= from an older shared link would be misleading now.
+    q.delete("q");
     const url = `${window.location.pathname}?${q.toString()}${window.location.hash}`;
     window.history.replaceState(null, "", url);
   } catch {
     /* ignore: permalink is a nice-to-have */
   }
 }
+
+// Turn the builder's own selection state into a catalog config.
+const toConfig = (sel, size, brandText) => ({
+  baseId: sel.base,
+  bandId: sel.band,
+  brandId: sel.brand,
+  customText: sel.brand === "custom" ? brandText : null,
+  size,
+});
 
 // Focus trap shared by the size modal and the order drawer (same behavior as
 // the booking drawer: Tab cycles inside, Escape closes, focus returns).
@@ -109,147 +122,6 @@ function useDialog(open, onClose, panelRef, returnRef) {
       returnRef?.current?.focus?.();
     };
   }, [open, onClose, panelRef, returnRef]);
-}
-
-// One layer image with a ~150ms crossfade: the previous image stays mounted
-// underneath until the incoming one has actually loaded, so switching pieces
-// never flashes white while the network catches up.
-function FadeImg({ src }) {
-  const [prev, setPrev] = useState(null);
-  const [cur, setCur] = useState(src || null);
-  const [loaded, setLoaded] = useState(false);
-  const loadedRef = useRef(false);
-  loadedRef.current = loaded;
-  const curRef = useRef(cur);
-  curRef.current = cur;
-
-  useEffect(() => {
-    if (src === curRef.current) return;
-    if (!src) {
-      setPrev(null);
-      setCur(null);
-      setLoaded(false);
-      return;
-    }
-    if (loadedRef.current) setPrev(curRef.current);
-    setCur(src);
-    setLoaded(false);
-  }, [src]);
-
-  useEffect(() => {
-    if (!loaded || !prev) return undefined;
-    const t = setTimeout(() => setPrev(null), 220);
-    return () => clearTimeout(t);
-  }, [loaded, prev]);
-
-  const st = {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    userSelect: "none",
-    pointerEvents: "none",
-  };
-  return (
-    <>
-      {prev && <img src={prev} alt="" draggable={false} style={st} />}
-      {cur && (
-        <img
-          key={cur}
-          src={cur}
-          alt=""
-          draggable={false}
-          ref={(el) => {
-            if (el && el.complete && el.naturalWidth > 0) setLoaded(true);
-          }}
-          onLoad={() => setLoaded(true)}
-          style={{ ...st, opacity: loaded ? 1 : 0, transition: "opacity .15s ease" }}
-        />
-      )}
-    </>
-  );
-}
-
-// Browser-drawn custom brand text: same spot, blend and burn look as the
-// branded marks. Dark brown glyphs in multiply over a blurred lighter-brown
-// halo (the scorch), slight rotate/skew to follow the crown's curve. All
-// placement numbers live in catalog.js (BRAND_TEXT).
-function BrandTextLayer({ text, z }) {
-  const fid = useId();
-  const chars = (text || "").trim().toUpperCase();
-  if (!chars) return null;
-  const size = Math.min(BRAND_TEXT.fontSize, BRAND_TEXT.maxWidth / (0.62 * chars.length));
-  return (
-    <svg
-      viewBox="0 0 1600 1600"
-      aria-hidden
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: z,
-        mixBlendMode: "multiply",
-        pointerEvents: "none",
-      }}
-    >
-      <defs>
-        <filter id={fid} x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="13" />
-        </filter>
-      </defs>
-      <g
-        transform={`translate(${BRAND_TEXT.cx} ${BRAND_TEXT.cy}) rotate(${BRAND_TEXT.rotate}) skewX(${BRAND_TEXT.skewX})`}
-        fontFamily="'Alfa Slab One','Satoshi',serif"
-        fontSize={size}
-        textAnchor="middle"
-      >
-        <text
-          y={size * 0.35}
-          fill={BRAND_TEXT.haloColor}
-          opacity="0.85"
-          stroke={BRAND_TEXT.haloColor}
-          strokeWidth="14"
-          filter={`url(#${fid})`}
-        >
-          {chars}
-        </text>
-        <text y={size * 0.35} fill={BRAND_TEXT.color}>
-          {chars}
-        </text>
-      </g>
-    </svg>
-  );
-}
-
-// The composed hat: every selected layer at its catalog z and blend, inside
-// its own isolated stacking context so multiply blends against the felt
-// only, never against whatever sits behind the stack. Reused at full size on
-// the stage and small in the order summary.
-function HatLayers({ sel, brandText, alt }) {
-  return (
-    <div role="img" aria-label={alt} style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
-      {CATEGORIES.map((cat) => {
-        const it = findIn(cat.options, sel[cat.key]);
-        if (cat.key === "brand" && it?.custom)
-          return <BrandTextLayer key="brand-text" text={brandText} z={Z_INDEX.brand} />;
-        if (!it?.layerImg) return null;
-        return (
-          <div
-            key={cat.key}
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: Z_INDEX[cat.key],
-              mixBlendMode: BLEND[cat.key],
-            }}
-          >
-            <FadeImg src={it.layerImg} />
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 // Thumbnails are real mini-stacks (ivory base + the piece, same blend as the
@@ -450,65 +322,124 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
   );
 }
 
-// --- Order summary drawer ----------------------------------------------------
-// Same drawer system as booking. Submit stays a disabled placeholder until
-// the Stripe phase; `order` is the serializable payload that phase will send.
-function OrderDrawer({ open, onClose, sel, brandText, size, order, quantity, onQuantity, returnRef }) {
-  const panelRef = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | sending | error
-  const [errorMsg, setErrorMsg] = useState("");
-  useDialog(open, onClose, panelRef, returnRef);
-  useEffect(() => {
-    if (open) {
-      setStatus("idle");
-      setErrorMsg("");
-    }
-  }, [open]);
-  if (!open) return null;
-  const sizeInfo = SIZES.find((s) => s.id === size);
-  const line = { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 14.5, padding: "8px 0", borderBottom: "1px solid rgba(43,26,16,.12)" };
+// --- Cart drawer -------------------------------------------------------------
+// Same drawer system as booking. Every amount here is read off the order
+// that buildOrder() computed for the whole cart; nothing is summed locally.
+function CartRow({ line, onQuantity, onEdit, onRemove }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        padding: "14px 0",
+        borderBottom: "1px solid rgba(43,26,16,.12)",
+      }}
+    >
+      {/* the very same layer stack as the builder stage, just small */}
+      <div
+        style={{
+          position: "relative",
+          flex: "none",
+          width: 74,
+          height: 74,
+          borderRadius: 10,
+          overflow: "hidden",
+          border: "2px solid var(--ink)",
+          background: "var(--cream-2)",
+        }}
+      >
+        <HatStack config={line.config} alt={line.description} />
+      </div>
 
-  // Send the configuration only. The server revalidates it and recomputes
-  // every amount before creating the Stripe session, so nothing about the
-  // price travels from this browser.
-  const onCheckout = async () => {
-    if (status === "sending") return;
-    setStatus("sending");
-    setErrorMsg("");
-    try {
-      const res = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(order.config),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.url) {
-        window.location.href = data.url;
-        return; // leave the button in its sending state during the redirect
-      }
-      setErrorMsg(
-        res.status === 400
-          ? "Something is off with this build. Try picking your pieces again."
-          : "We could not open checkout just now. Please try again in a moment."
-      );
-      setStatus("error");
-    } catch {
-      setErrorMsg("Check your connection and try again.");
-      setStatus("error");
-    }
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+          <strong style={{ fontSize: 14, lineHeight: 1.35, color: "var(--ink)" }}>{line.description}</strong>
+          <span style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap" }}>{fmt(line.lineSubtotal)}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+          <label htmlFor={`qty-${line.id}`} style={{ fontSize: 12, color: "#8a7460", fontWeight: 700 }}>
+            Qty
+          </label>
+          <select
+            id={`qty-${line.id}`}
+            value={line.quantity}
+            onChange={(e) => onQuantity(line.id, Number(e.target.value))}
+            style={{
+              padding: "4px 8px",
+              borderRadius: 7,
+              border: "1.5px solid rgba(43,26,16,.5)",
+              background: "#fffaf0",
+              fontFamily: "'Satoshi',sans-serif",
+              fontWeight: 700,
+              fontSize: 13.5,
+              color: "var(--ink)",
+            }}
+          >
+            {Array.from({ length: MAX_QUANTITY - MIN_QUANTITY + 1 }, (_, i) => MIN_QUANTITY + i).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={() => onEdit(line.id)} style={rowAction}>
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(line.id)}
+            style={{ ...rowAction, color: "#8a5a4a" }}
+            aria-label={`Remove ${line.description}`}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const rowAction = {
+  border: 0,
+  background: "none",
+  padding: 0,
+  color: "var(--coral-deep)",
+  fontWeight: 800,
+  fontSize: 12.5,
+  cursor: "pointer",
+  textDecoration: "underline",
+};
+
+function CartDrawer({ open, onClose, order, onQuantity, onEdit, onRemove, onAddAnother, returnRef }) {
+  const panelRef = useRef(null);
+  useDialog(open, onClose, panelRef, returnRef);
+  if (!open) return null;
+
+  const empty = order.lines.length === 0;
+  const totalLine = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    fontSize: 14.5,
+    padding: "6px 0",
   };
+
+  // TODO(phase 1D): POST the cart to the checkout endpoint, which revalidates
+  // with validateCart() and recomputes with buildOrder() before creating the
+  // Stripe session. Intentionally inert for now.
+  const onCheckout = () => {};
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)" }}>
       <div onClick={onClose} aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(43,26,16,.5)" }} />
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="order-title" className="tc-drawer">
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
-          <h2 id="order-title" className="tc-sticker" style={{ margin: 0, fontSize: "clamp(28px,6vw,36px)" }}>
-            Your hat
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="cart-title" className="tc-drawer">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+          <h2 id="cart-title" className="tc-sticker" style={{ margin: 0, fontSize: "clamp(28px,6vw,36px)" }}>
+            Your cart
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close order summary"
+            aria-label="Close cart"
             style={{
               flex: "none",
               width: 38,
@@ -525,118 +456,68 @@ function OrderDrawer({ open, onClose, sel, brandText, size, order, quantity, onQ
           </button>
         </div>
 
-        <div
-          style={{
-            position: "relative",
-            aspectRatio: "1 / 1",
-            maxWidth: 240,
-            margin: "0 auto 18px",
-            borderRadius: 14,
-            overflow: "hidden",
-            border: "2px solid var(--ink)",
-            background: "var(--cream-2)",
-          }}
-        >
-          <HatLayers sel={sel} brandText={brandText} alt="Preview of your custom hat" />
-        </div>
-
-        <div>
-          {/* every line, every amount: straight from buildOrder() */}
-          {order.items.map((it) => (
-            <div key={it.label} style={line}>
-              <span style={{ color: "#4a3a2c" }}>
-                <strong style={{ color: "var(--ink)" }}>{it.label}</strong>
-                {it.quantity > 1 && (
-                  <span style={{ fontSize: 12, marginLeft: 8, color: "#8a7460" }}>
-                    {fmt(it.unitPrice)} x {it.quantity}
-                  </span>
-                )}
-              </span>
-              <span style={{ fontWeight: 700 }}>{fmt(it.unitPrice * it.quantity)}</span>
-            </div>
-          ))}
-          <div style={line}>
-            <span style={{ color: "#4a3a2c" }}>
-              <strong style={{ color: "var(--ink)" }}>Size</strong>
-            </span>
-            <span style={{ fontWeight: 700 }}>{sizeInfo ? `${sizeInfo.name} (${sizeInfo.cm})` : "?"}</span>
-          </div>
-
-          <div style={{ ...line, alignItems: "center" }}>
-            <label htmlFor="order-qty" style={{ color: "var(--ink)", fontWeight: 700 }}>
-              How many hats
-            </label>
-            <select
-              id="order-qty"
-              value={quantity}
-              onChange={(e) => onQuantity(Number(e.target.value))}
-              style={{
-                padding: "7px 10px",
-                borderRadius: 8,
-                border: "1.5px solid rgba(43,26,16,.55)",
-                background: "#fffaf0",
-                fontFamily: "'Satoshi',sans-serif",
-                fontWeight: 700,
-                fontSize: 14.5,
-                color: "var(--ink)",
-              }}
-            >
-              {Array.from({ length: MAX_QUANTITY - MIN_QUANTITY + 1 }, (_, i) => MIN_QUANTITY + i).map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ ...line, borderBottom: "none", paddingTop: 12 }}>
-            <span style={{ color: "#4a3a2c" }}>Subtotal</span>
-            <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
-          </div>
-          <div style={{ ...line, borderBottom: "none", paddingTop: 0 }}>
-            <span style={{ color: "#4a3a2c" }}>Shipping</span>
-            <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
-              {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
-            </span>
-          </div>
-          {order.config.quantity < FREE_SHIPPING_MIN_QTY && (
-            <p style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "#6f5b48" }}>
-              Add one more hat and shipping is on us.
+        {empty ? (
+          <div>
+            <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "#4a3a2c" }}>
+              Nothing in here yet. Build a hat and it lands in your cart.
             </p>
-          )}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 12,
-              marginTop: 10,
-              paddingTop: 12,
-              borderTop: "2px solid var(--ink)",
-              fontWeight: 800,
-              fontSize: 18,
-            }}
-          >
-            <span>Total</span>
-            <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
+            <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 8 }} onClick={onAddAnother}>
+              Start building
+            </button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div>
+              {order.lines.map((line) => (
+                <CartRow key={line.id} line={line} onQuantity={onQuantity} onEdit={onEdit} onRemove={onRemove} />
+              ))}
+            </div>
 
-        <button
-          type="button"
-          className="tc-btn"
-          style={{ width: "100%", marginTop: 20 }}
-          onClick={onCheckout}
-          disabled={status === "sending"}
-        >
-          {status === "sending" ? "Taking you to checkout..." : "Checkout"}
-        </button>
-        {status === "error" && (
-          <p
-            role="alert"
-            style={{ margin: "10px 0 0", textAlign: "center", fontSize: 13.5, fontWeight: 700, color: "var(--coral-deep)" }}
-          >
-            {errorMsg}
-          </p>
+            <div style={{ marginTop: 14 }}>
+              <div style={totalLine}>
+                <span style={{ color: "#4a3a2c" }}>Subtotal</span>
+                <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
+              </div>
+              <div style={totalLine}>
+                <span style={{ color: "#4a3a2c" }}>Shipping</span>
+                <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
+                  {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
+                </span>
+              </div>
+              {order.totalQuantity < FREE_SHIPPING_MIN_QTY && (
+                <p style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "#6f5b48" }}>
+                  Add one more hat and shipping is on us.
+                </p>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  marginTop: 10,
+                  paddingTop: 12,
+                  borderTop: "2px solid var(--ink)",
+                  fontWeight: 800,
+                  fontSize: 18,
+                }}
+              >
+                <span>Total</span>
+                <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
+              </div>
+            </div>
+
+            <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 18 }} onClick={onCheckout}>
+              Checkout
+            </button>
+            <button
+              type="button"
+              className="tc-btn tc-btn--ghost"
+              style={{ width: "100%", marginTop: 10 }}
+              onClick={onAddAnother}
+            >
+              Add another hat
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -649,11 +530,15 @@ export default function Builder() {
   const [sel, setSel] = useState(initial.sel);
   const [size, setSize] = useState(initial.size);
   const [brandText, setBrandText] = useState(initial.brandText);
-  const [quantity, setQuantity] = useState(initial.quantity);
   const [sizeModal, setSizeModal] = useState(false);
-  const [orderOpen, setOrderOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
   const [textHint, setTextHint] = useState(false);
+  // null while building a new hat; a cart line id while editing that row
+  const [editingId, setEditingId] = useState(null);
+  const [added, setAdded] = useState("");
+
+  const { cart, addLine, updateLine, setLineQuantity, removeLine, isFull } = useCart();
 
   // zoom / pan
   const [zoom, setZoom] = useState(1);
@@ -663,13 +548,22 @@ export default function Builder() {
   const pinchDist = useRef(0);
 
   const sizeBtnRef = useRef(null);
-  const checkoutBtnRef = useRef(null);
+  const cartBtnRef = useRef(null);
   const sizeRowRef = useRef(null);
   const brandRowRef = useRef(null);
+  const sectionRef = useRef(null);
 
   useEffect(() => {
-    writeUrl(sel, size, brandText, quantity);
-  }, [sel, size, brandText, quantity]);
+    writeUrl(sel, size, brandText);
+  }, [sel, size, brandText]);
+
+  // The "added to cart" confirmation is a quiet line, not a modal: it clears
+  // itself so she can keep building straight away.
+  useEffect(() => {
+    if (!added) return undefined;
+    const t = setTimeout(() => setAdded(""), 2600);
+    return () => clearTimeout(t);
+  }, [added]);
 
   // Warm the selected base right away and the rest of the bases shortly
   // after: base swaps are the most common tap and should feel instant.
@@ -688,17 +582,14 @@ export default function Builder() {
   const pick = (key, id) => setSel((s) => ({ ...s, [key]: id }));
 
   const isCustomBrand = sel.brand === "custom";
+  const design = toConfig(sel, size, brandText);
 
-  // The single source of every amount rendered below. No component in this
-  // file adds prices together; it only reads fields off this object.
-  const order = buildOrder({
-    baseId: sel.base,
-    bandId: sel.band,
-    brandId: sel.brand,
-    customText: brandText,
-    size,
-    quantity,
-  });
+  // Two calls, one engine: the cart order drives the drawer, and the design
+  // on its own gives the stage its per hat price. No component in this file
+  // adds prices together; they only read fields off these objects.
+  const order = buildOrder(cart);
+  const designOrder = buildOrder([{ ...design, quantity: 1 }]);
+  const unitPrice = designOrder.lines[0].unitSubtotal;
 
   const clampPan = (p, z, rect) => {
     const limit = ((z - 1) * (rect?.width || 0)) / 2;
@@ -763,19 +654,55 @@ export default function Builder() {
     setPan((p) => (nz === 1 ? { x: 0, y: 0 } : clampPan(p, nz, rect)));
   };
 
-  const tryCheckout = () => {
+  // Both the add and the update path need the design to be complete first.
+  const designReady = () => {
     if (isCustomBrand && !brandText.trim()) {
       setTextHint(true);
       brandRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
+      return false;
     }
     if (!size) {
       setSizeHint(true);
       sizeRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return false;
+    }
+    return true;
+  };
+
+  const submitDesign = () => {
+    if (!designReady()) return;
+    if (editingId) {
+      updateLine(editingId, design);
+      setEditingId(null);
+      setCartOpen(true);
       return;
     }
-    setOrderOpen(true);
+    if (isFull) {
+      setAdded(`Your cart already holds ${MAX_CART_QUANTITY} hats.`);
+      return;
+    }
+    addLine({ ...design, quantity: 1 });
+    setAdded("Added to your cart.");
   };
+
+  const startEditing = (id) => {
+    const line = cart.find((l) => l.id === id);
+    if (!line) return;
+    setSel({ base: line.baseId, band: line.bandId, brand: line.brandId });
+    setSize(line.size);
+    setBrandText(line.customText || "");
+    setEditingId(id);
+    setCartOpen(false);
+    setAdded("");
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setAdded("");
+  };
+
+  const editingIndex = editingId ? cart.findIndex((l) => l.id === editingId) : -1;
 
   const selNames = CATEGORIES.map((c) => findIn(c.options, sel[c.key]))
     .filter((it) => it && it.id !== "none")
@@ -796,7 +723,7 @@ export default function Builder() {
   };
 
   return (
-    <section id="builder" className="tc-px tc-halftone" style={{ position: "relative", padding: "72px 36px" }}>
+    <section ref={sectionRef} id="builder" className="tc-px tc-halftone" style={{ position: "relative", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 38 }}>
           <div
@@ -818,6 +745,47 @@ export default function Builder() {
             Stack your base, band and brand. Every piece updates the price as you go.
           </p>
         </div>
+
+        {editingIndex >= 0 && (
+          <div
+            role="status"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px 14px",
+              maxWidth: 560,
+              margin: "0 auto 26px",
+              padding: "12px 18px",
+              background: "var(--teal)",
+              color: "#fff",
+              border: "2px solid var(--ink)",
+              boxShadow: "0 4px 0 var(--ink)",
+              borderRadius: 14,
+              fontWeight: 800,
+              fontSize: 14,
+            }}
+          >
+            <span>Editing hat {editingIndex + 1} in your cart</span>
+            <button
+              type="button"
+              onClick={cancelEditing}
+              style={{
+                border: 0,
+                background: "none",
+                padding: 0,
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 13,
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Cancel and keep it as it was
+            </button>
+          </div>
+        )}
 
         <div className="tc-builder-grid">
           {/* --- stage --- */}
@@ -850,7 +818,7 @@ export default function Builder() {
                   transition: pointers.current.size ? "none" : "transform .12s ease-out",
                 }}
               >
-                <HatLayers sel={sel} brandText={brandText} alt={`Custom hat preview: ${selNames}`} />
+                <HatStack config={design} alt={`Custom hat preview: ${selNames}`} />
               </div>
               {/* live total, always on top of the stage */}
               <div
@@ -869,7 +837,7 @@ export default function Builder() {
                 }}
                 aria-live="polite"
               >
-                {fmt(order.unitSubtotal)}
+                {fmt(unitPrice)}
               </div>
               <div style={{ position: "absolute", right: 12, bottom: 12, zIndex: "var(--z-ui)", display: "flex", gap: 6 }}>
                 <button type="button" style={zoomBtn} aria-label="Zoom out" onClick={() => setZoomClamped(zoom / 1.25)}>
@@ -1058,37 +1026,44 @@ export default function Builder() {
                 padding: "16px 18px",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#4a3a2c", padding: "3px 0" }}>
-                <span>Subtotal</span>
-                <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#4a3a2c", padding: "3px 0" }}>
-                <span>Shipping</span>
-                <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
-                  {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
-                </span>
-              </div>
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
+                  alignItems: "baseline",
                   fontWeight: 800,
                   fontSize: 19,
-                  padding: "10px 0 2px",
-                  marginTop: 8,
-                  borderTop: "2px solid rgba(43,26,16,.2)",
+                  padding: "2px 0 10px",
                 }}
               >
-                <span>Total</span>
-                <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
+                <span>This hat</span>
+                <span style={{ color: "var(--coral-deep)" }}>{fmt(unitPrice)}</span>
               </div>
-              <button ref={checkoutBtnRef} type="button" className="tc-btn" style={{ width: "100%", marginTop: 14 }} onClick={tryCheckout}>
-                Continue to checkout
+              <button ref={cartBtnRef} type="button" className="tc-btn" style={{ width: "100%" }} onClick={submitDesign}>
+                {editingId ? "Update this hat" : "Add to cart"}
               </button>
               {!size && (
                 <p style={{ margin: "9px 0 0", textAlign: "center", fontSize: 12.5, color: "#8a7460", fontWeight: 600 }}>
                   Pick your size to continue.
                 </p>
+              )}
+              {added && (
+                <p
+                  role="status"
+                  style={{ margin: "9px 0 0", textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--teal)" }}
+                >
+                  {added}
+                </p>
+              )}
+              {order.lines.length > 0 && (
+                <button
+                  type="button"
+                  className="tc-btn tc-btn--ghost"
+                  style={{ width: "100%", marginTop: 10 }}
+                  onClick={() => setCartOpen(true)}
+                >
+                  View cart ({order.totalQuantity}) &nbsp;{fmt(order.total)}
+                </button>
               )}
             </div>
           </div>
@@ -1104,16 +1079,18 @@ export default function Builder() {
         }}
         returnRef={sizeBtnRef}
       />
-      <OrderDrawer
-        open={orderOpen}
-        onClose={() => setOrderOpen(false)}
-        sel={sel}
-        brandText={brandText}
-        size={size}
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
         order={order}
-        quantity={quantity}
-        onQuantity={setQuantity}
-        returnRef={checkoutBtnRef}
+        onQuantity={setLineQuantity}
+        onEdit={startEditing}
+        onRemove={removeLine}
+        onAddAnother={() => {
+          setCartOpen(false);
+          sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+        returnRef={cartBtnRef}
       />
     </section>
   );

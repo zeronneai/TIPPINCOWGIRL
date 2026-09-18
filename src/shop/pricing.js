@@ -63,9 +63,11 @@ export const SHIPPING_FLAT = 1200;
 export const FREE_SHIPPING_MIN_QTY = 2;
 
 /**
- * The one and only shipping rule. Today it is quantity based; `subtotal` is
- * accepted (and deliberately unused) so switching back to a money threshold
- * later is a change inside this function and nowhere else.
+ * The one and only shipping rule. `quantity` is the TOTAL number of hats in
+ * the cart, so two different hats of one each earn free shipping exactly
+ * like one hat of two. `subtotal` is accepted (and deliberately unused) so
+ * switching back to a money threshold later is a change inside this
+ * function and nowhere else.
  */
 export function calculateShipping(quantity, subtotal) {
   void subtotal;
@@ -88,7 +90,10 @@ export function sanitizeBrandText(value) {
 
 // --- order limits ---------------------------------------------------------
 export const MIN_QUANTITY = 1;
+// Per cart line.
 export const MAX_QUANTITY = 10;
+// Across the whole cart.
+export const MAX_CART_QUANTITY = 10;
 
 // --- lookup helpers -------------------------------------------------------
 const byId = (options, id) => options.find((o) => o.id === id) || null;
@@ -104,19 +109,20 @@ export const findSize = (id) => byId(SIZE_OPTIONS, id);
 // server-side for the cancel URL and for Stripe metadata; if the two
 // drifted, a cancelled checkout would drop the customer on an empty
 // builder. One definition, both callers.
+// A permalink describes ONE hat design, never a cart: it is for sharing a
+// build. Quantity is deliberately absent, because quantity now belongs to a
+// cart line and not to the design itself.
 export const PARAM_KEYS = {
   base: "b",
   band: "bd",
   brand: "br",
   customText: "bt",
   size: "sz",
-  quantity: "q",
 };
 
 /**
  * Serialize a config into the builder's query string (no leading "?").
- * Mirrors the builder's own rules: the custom text only rides along when
- * the custom brand is selected, and quantity only when it is above one.
+ * The custom text only rides along when the custom brand is selected.
  */
 export function buildPermalinkQuery(config) {
   const c = config || {};
@@ -126,8 +132,6 @@ export function buildPermalinkQuery(config) {
   if (c.brandId) q.set(PARAM_KEYS.brand, c.brandId);
   if (findBrand(c.brandId)?.custom && c.customText) q.set(PARAM_KEYS.customText, c.customText);
   if (c.size) q.set(PARAM_KEYS.size, c.size);
-  const qty = Number(c.quantity);
-  if (Number.isInteger(qty) && qty > MIN_QUANTITY) q.set(PARAM_KEYS.quantity, String(qty));
   return q.toString();
 }
 
@@ -179,64 +183,152 @@ export function validateConfig(config) {
   return { valid: errors.length === 0, errors };
 }
 
+/**
+ * Validate a whole cart: every line against the catalog, the cart not empty,
+ * and the hats across all lines within MAX_CART_QUANTITY. Errors carry the
+ * index of the offending line (null for cart-wide problems).
+ *
+ * @returns {{valid: boolean, errors: Array<{index: number|null, field: string, message: string}>}}
+ */
+export function validateCart(cart) {
+  const errors = [];
+  if (!Array.isArray(cart) || cart.length === 0)
+    return { valid: false, errors: [{ index: null, field: "cart", message: "Your cart is empty" }] };
+
+  cart.forEach((line, index) => {
+    for (const err of validateConfig(line).errors) errors.push({ index, ...err });
+  });
+
+  const totalQuantity = countHats(cart);
+  if (totalQuantity > MAX_CART_QUANTITY)
+    errors.push({
+      index: null,
+      field: "cart",
+      message: `A single order can hold up to ${MAX_CART_QUANTITY} hats`,
+    });
+
+  return { valid: errors.length === 0, errors };
+}
+
+/** Total hats across every cart line. Safe on any input. */
+export function countHats(cart) {
+  if (!Array.isArray(cart)) return 0;
+  return cart.reduce((sum, line) => sum + normalizeQuantity(line?.quantity), 0);
+}
+
+function normalizeQuantity(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= MIN_QUANTITY ? n : MIN_QUANTITY;
+}
+
+/** Short human description of one hat, for cart rows and emails. */
+export function describeConfig(config) {
+  const c = config || {};
+  const brand = findBrand(c.brandId);
+  const parts = [];
+  const base = findBase(c.baseId);
+  if (base) parts.push(base.name);
+  const band = findBand(c.bandId);
+  if (band && band.id !== "none") parts.push(band.name);
+  if (brand && brand.id !== "none") {
+    const text = brand.custom ? sanitizeBrandText(c.customText).trim().toUpperCase() : "";
+    parts.push(brand.custom && text ? `"${text}"` : brand.name);
+  }
+  const size = findSize(c.size);
+  if (size) parts.push(`size ${size.name}`);
+  return parts.join(", ");
+}
+
 // --- the canonical order --------------------------------------------------
 /**
- * Build the canonical order for a configuration. Pure arithmetic: it assumes
- * validateConfig already passed, and degrades safely otherwise (an unknown
- * id simply contributes no line and no money, an unusable quantity counts as
- * one), so it can never throw on hostile input. Labels are the human strings
- * that go to Stripe and to the owner's email.
+ * Build the canonical order for a CART: an array of lines, each line one hat
+ * design with its own quantity.
+ *
+ *   line = { id, baseId, bandId, brandId, customText, size, quantity }
+ *
+ * Pure arithmetic: it assumes validateCart already passed and degrades
+ * safely otherwise (an unknown id contributes no line and no money, an
+ * unusable quantity counts as one), so it can never throw on hostile input.
+ * `items` labels are the human strings that go to Stripe and to the owner's
+ * email; with more than one hat in the cart each label is prefixed "Hat N - "
+ * so a single hat order never reads "Hat 1".
+ *
+ * A bare config object is also accepted and treated as a one line cart. That
+ * shim keeps api/create-checkout-session.js working unchanged until phase 1D
+ * rewires it to post a cart; delete it then.
  *
  * @returns {{
  *   items: Array<{label: string, unitPrice: number, quantity: number}>,
- *   unitSubtotal: number, subtotal: number, shipping: number, total: number,
+ *   lines: Array<{id: string|null, quantity: number, unitSubtotal: number,
+ *                 lineSubtotal: number, description: string, config: object}>,
+ *   totalQuantity: number, subtotal: number, shipping: number, total: number,
  *   freeShippingApplied: boolean, currency: string,
- *   config: {baseId: string, bandId: string, brandId: string,
- *            customText: string|null, size: string|null, quantity: number}
+ *   config?: object
  * }}
  */
-export function buildOrder(config) {
-  const c = config || {};
-  const rawQty = Number(c.quantity);
-  const quantity = Number.isInteger(rawQty) && rawQty >= MIN_QUANTITY ? rawQty : MIN_QUANTITY;
-
-  const base = findBase(c.baseId);
-  const band = findBand(c.bandId);
-  const brand = findBrand(c.brandId);
-  const customText = brand?.custom ? sanitizeBrandText(c.customText).trim() : null;
+export function buildOrder(cart) {
+  const singleInput = cart && !Array.isArray(cart) && typeof cart === "object";
+  const input = Array.isArray(cart) ? cart : singleInput ? [cart] : [];
+  const prefixed = input.length > 1;
 
   const items = [];
-  const addLine = (categoryLabel, option, nameOverride) => {
-    if (!option || option.id === "none") return;
-    items.push({
-      label: `${categoryLabel}: ${nameOverride || option.name}`,
-      unitPrice: option.price,
-      quantity,
-    });
-  };
-  addLine("Base", base);
-  addLine("Band", band);
-  addLine("Brand", brand, brand?.custom && customText ? `Your word "${customText.toUpperCase()}"` : null);
+  const lines = input.map((rawLine, index) => {
+    const c = rawLine || {};
+    const quantity = normalizeQuantity(c.quantity);
+    const base = findBase(c.baseId);
+    const band = findBand(c.bandId);
+    const brand = findBrand(c.brandId);
+    const customText = brand?.custom ? sanitizeBrandText(c.customText).trim() : null;
+    const prefix = prefixed ? `Hat ${index + 1} - ` : "";
 
-  const unitSubtotal = items.reduce((sum, it) => sum + it.unitPrice, 0);
-  const subtotal = items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-  const shipping = calculateShipping(quantity, subtotal);
+    const lineItems = [];
+    const addLine = (categoryLabel, option, nameOverride) => {
+      if (!option || option.id === "none") return;
+      lineItems.push({
+        label: `${prefix}${categoryLabel}: ${nameOverride || option.name}`,
+        unitPrice: option.price,
+        quantity,
+      });
+    };
+    addLine("Base", base);
+    addLine("Band", band);
+    addLine("Brand", brand, brand?.custom && customText ? `Your word "${customText.toUpperCase()}"` : null);
+    items.push(...lineItems);
 
-  return {
-    items,
-    unitSubtotal,
-    subtotal,
-    shipping,
-    total: subtotal + shipping,
-    freeShippingApplied: shipping === 0,
-    currency: CURRENCY,
-    config: {
+    const unitSubtotal = lineItems.reduce((sum, it) => sum + it.unitPrice, 0);
+    const config = {
       baseId: base?.id ?? null,
       bandId: band?.id ?? null,
       brandId: brand?.id ?? null,
       customText,
       size: findSize(c.size)?.id ?? null,
       quantity,
-    },
+    };
+    return {
+      id: c.id ?? null,
+      quantity,
+      unitSubtotal,
+      lineSubtotal: unitSubtotal * quantity,
+      description: describeConfig(config),
+      config,
+    };
+  });
+
+  const subtotal = lines.reduce((sum, line) => sum + line.lineSubtotal, 0);
+  const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
+  const shipping = lines.length ? calculateShipping(totalQuantity, subtotal) : 0;
+
+  const order = {
+    items,
+    lines,
+    totalQuantity,
+    subtotal,
+    shipping,
+    total: subtotal + shipping,
+    freeShippingApplied: lines.length > 0 && shipping === 0,
+    currency: CURRENCY,
   };
+  // Back compatible field for the single config shim described above.
+  if (singleInput) order.config = lines[0].config;
+  return order;
 }
