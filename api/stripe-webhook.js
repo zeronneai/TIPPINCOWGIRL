@@ -6,12 +6,18 @@
 // which is useless for something made to order.
 //
 // RAW BODY, NOT PARSED JSON. Signature verification hashes the request body
-// byte for byte, so the `config` export below turns Vercel's body parser off
-// and readRawBody() pulls the bytes off the stream. A parsed and
-// re-serialized body produces a different hash and every delivery fails
-// verification. This is the single most common way a Stripe webhook breaks,
-// so readRawBody also refuses loudly if it is ever handed an already parsed
-// object instead of quietly computing a wrong signature.
+// byte for byte. The `config` export below asks Vercel to leave the body
+// alone, but readRawBody() does not depend on that directive being honoured:
+// it reads the request stream itself whenever the stream is still unread,
+// and only falls back to req.body. A parsed and re-serialized body produces
+// a different hash and every delivery fails verification, so readRawBody
+// refuses loudly when it is handed an already parsed object rather than
+// quietly computing a wrong signature.
+//
+// TEMPORARY: this function currently logs a [webhook][diag] block on every
+// delivery while we chase a production 400. Server log only, and the signing
+// secret is never printed in full. Remove that block once the cause is
+// confirmed.
 //
 // NO DEDUPLICATION. Stripe retries a delivery it considers failed, and it
 // can send the same event more than once. With no database to record
@@ -54,20 +60,46 @@ export const config = { api: { bodyParser: false } };
 // the address that owns the Resend account.
 const FROM = "Tippin Cowgirl Orders <onboarding@resend.dev>";
 
-/** Collect the untouched request bytes. */
+/**
+ * Collect the untouched request bytes, without trusting the config export
+ * above to have been honoured. Order matters: the still unread stream is the
+ * only source guaranteed to hold the original bytes, so it is tried first
+ * and req.body is only a fallback.
+ *
+ * @returns {{raw: Buffer, source: string}}
+ */
 async function readRawBody(req) {
-  if (Buffer.isBuffer(req.body)) return req.body;
-  if (typeof req.body === "string") return Buffer.from(req.body, "utf8");
+  // Some platforms hand the untouched bytes over on the side.
+  if (Buffer.isBuffer(req.rawBody)) return { raw: req.rawBody, source: "req.rawBody buffer" };
+  if (typeof req.rawBody === "string") return { raw: Buffer.from(req.rawBody, "utf8"), source: "req.rawBody string" };
+
+  // Nothing has drained the stream, so read it ourselves. This is the path
+  // that works whether or not the bodyParser directive took effect.
+  if (req.readable) {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk);
+    return { raw: Buffer.concat(chunks), source: "request stream" };
+  }
+
+  if (Buffer.isBuffer(req.body)) return { raw: req.body, source: "req.body buffer" };
+  if (typeof req.body === "string") return { raw: Buffer.from(req.body, "utf8"), source: "req.body string" };
+
   if (req.body && typeof req.body === "object") {
-    // The parser ran and the original bytes are gone. Any signature computed
-    // from a re-serialized body would be wrong, so say so instead.
+    // The parser ran and the original bytes are gone. A signature computed
+    // from a re-serialized body would be wrong, so say so instead of
+    // quietly failing verification.
     throw new Error(
-      "Request body was already parsed. The bodyParser config export is not taking effect, so Stripe signatures cannot be verified."
+      "Request body arrived already parsed into an object and the stream was drained, so the original bytes are gone. The bodyParser:false directive is not taking effect in this runtime."
     );
   }
-  const chunks = [];
-  for await (const chunk of req) chunks.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk);
-  return Buffer.concat(chunks);
+  throw new Error("Request body was empty and the stream was not readable.");
+}
+
+/** Seconds between the signature's timestamp and this server's clock. */
+function signatureSkewSeconds(header) {
+  const t = /(^|,)\s*t=(\d+)/.exec(String(header || ""));
+  if (!t) return null;
+  return Math.round(Date.now() / 1000) - Number(t[2]);
 }
 
 function resolveOrigin(req) {
@@ -95,15 +127,101 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Webhook is not configured" });
   }
 
+  // -------------------------------------------------------------------------
+  // TEMPORARY DIAGNOSTICS, added while chasing a production 400. Everything
+  // here goes to the server log only, never into the response. The secret is
+  // never printed in full: only its length and its first 8 characters, which
+  // are enough to spot a stray space or newline (a clean whsec_ is about 38
+  // characters) without exposing anything usable.
+  // TODO(diagnostics): delete this block once the cause is confirmed.
+  // -------------------------------------------------------------------------
+  const signature = req.headers["stripe-signature"];
+  try {
+    console.log("[webhook][diag] --- incoming delivery ---");
+    console.log(
+      "[webhook][diag] secret: length",
+      webhookSecret.length,
+      "| prefix",
+      JSON.stringify(webhookSecret.slice(0, 8)),
+      "| length after trim",
+      webhookSecret.trim().length,
+      webhookSecret.length === webhookSecret.trim().length ? "(no stray whitespace)" : "(WHITESPACE ON THE ENDS, that is the bug)"
+    );
+    console.log(
+      "[webhook][diag] body: typeof",
+      typeof req.body,
+      "| isBuffer",
+      Buffer.isBuffer(req.body),
+      "| byteLength",
+      Buffer.isBuffer(req.body) ? req.body.byteLength : typeof req.body === "string" ? Buffer.byteLength(req.body) : "n/a",
+      "| req.readable",
+      req.readable,
+      "| req.rawBody",
+      typeof req.rawBody
+    );
+    if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body))
+      console.log(
+        "[webhook][diag] BODY IS AN OBJECT. Something parsed it before the function ran, so the signature can never match. Keys:",
+        Object.keys(req.body).slice(0, 10).join(", ")
+      );
+    console.log("[webhook][diag] stripe-signature header:", signature ?? "MISSING");
+    console.log(
+      "[webhook][diag] content-type",
+      req.headers["content-type"],
+      "| content-length",
+      req.headers["content-length"],
+      "| user-agent",
+      req.headers["user-agent"]
+    );
+    const skew = signatureSkewSeconds(signature);
+    console.log(
+      "[webhook][diag] signature timestamp skew:",
+      skew === null ? "no t= in the header" : `${skew}s`,
+      skew !== null && Math.abs(skew) > 240 ? "(OVER STRIPE'S 5 MINUTE TOLERANCE, the server clock or a slow retry is the bug)" : ""
+    );
+  } catch (diagErr) {
+    console.log("[webhook][diag] diagnostics themselves failed:", diagErr.message);
+  }
+
   let event;
   try {
-    const raw = await readRawBody(req);
-    const signature = req.headers["stripe-signature"];
-    // Throws on a bad or missing signature, a replayed timestamp, or a body
-    // that does not hash to the signature we were sent.
+    const { raw, source } = await readRawBody(req);
+    console.log(
+      "[webhook][diag] raw body read from",
+      source,
+      "| byteLength",
+      raw.byteLength,
+      "| starts",
+      JSON.stringify(raw.subarray(0, 48).toString("utf8")),
+      "| ends",
+      JSON.stringify(raw.subarray(Math.max(0, raw.byteLength - 24)).toString("utf8"))
+    );
+    if (Number(req.headers["content-length"]) && Number(req.headers["content-length"]) !== raw.byteLength)
+      console.log(
+        "[webhook][diag] SIZE MISMATCH: content-length says",
+        req.headers["content-length"],
+        "but we read",
+        raw.byteLength,
+        "bytes. The body was altered in transit."
+      );
+    // Throws on a bad or missing signature, a body that does not hash to the
+    // signature we were sent, or a timestamp outside the tolerance window.
     event = new Stripe(secretKey).webhooks.constructEvent(raw, signature, webhookSecret);
+    console.log("[webhook][diag] signature OK, event", event.id, event.type, "livemode", event.livemode);
   } catch (err) {
-    console.error("[webhook] signature verification failed:", err.message);
+    console.error("[webhook] signature verification failed");
+    console.error("[webhook][diag] error type:", err.type || err.name, "| message:", err.message);
+    const m = String(err.message || "");
+    if (m.includes("already parsed") || m.includes("stream was not readable"))
+      console.error("[webhook][diag] HINT: the raw body never reached this function intact. See the body line above.");
+    else if (m.includes("No signatures found"))
+      console.error(
+        "[webhook][diag] HINT: the body bytes and the secret disagree. Either the secret belongs to a different endpoint or a different Stripe mode (test endpoints and live endpoints each have their own whsec_), or the bytes changed on the way in."
+      );
+    else if (m.includes("Unable to extract timestamp"))
+      console.error("[webhook][diag] HINT: the stripe-signature header is malformed or missing. See the header line above.");
+    else if (m.includes("tolerance"))
+      console.error("[webhook][diag] HINT: the timestamp is outside the tolerance window. Check the skew line above.");
     return res.status(400).json({ error: "Invalid signature" });
   }
 
