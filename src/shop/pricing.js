@@ -253,22 +253,16 @@ export function describeConfig(config) {
  * email; with more than one hat in the cart each label is prefixed "Hat N - "
  * so a single hat order never reads "Hat 1".
  *
- * A bare config object is also accepted and treated as a one line cart. That
- * shim keeps api/create-checkout-session.js working unchanged until phase 1D
- * rewires it to post a cart; delete it then.
- *
  * @returns {{
  *   items: Array<{label: string, unitPrice: number, quantity: number}>,
  *   lines: Array<{id: string|null, quantity: number, unitSubtotal: number,
  *                 lineSubtotal: number, description: string, config: object}>,
  *   totalQuantity: number, subtotal: number, shipping: number, total: number,
- *   freeShippingApplied: boolean, currency: string,
- *   config?: object
+ *   freeShippingApplied: boolean, currency: string
  * }}
  */
 export function buildOrder(cart) {
-  const singleInput = cart && !Array.isArray(cart) && typeof cart === "object";
-  const input = Array.isArray(cart) ? cart : singleInput ? [cart] : [];
+  const input = Array.isArray(cart) ? cart : [];
   const prefixed = input.length > 1;
 
   const items = [];
@@ -318,7 +312,7 @@ export function buildOrder(cart) {
   const totalQuantity = lines.reduce((sum, line) => sum + line.quantity, 0);
   const shipping = lines.length ? calculateShipping(totalQuantity, subtotal) : 0;
 
-  const order = {
+  return {
     items,
     lines,
     totalQuantity,
@@ -328,7 +322,4 @@ export function buildOrder(cart) {
     freeShippingApplied: lines.length > 0 && shipping === 0,
     currency: CURRENCY,
   };
-  // Back compatible field for the single config shim described above.
-  if (singleInput) order.config = lines[0].config;
-  return order;
 }

@@ -1,17 +1,20 @@
 // ---------------------------------------------------------------------------
 // POST /api/create-checkout-session
 //
-// Creates a Stripe Checkout session for one hat build. Vercel serverless
+// Creates a Stripe Checkout session for a cart of hats. Vercel serverless
 // function (Node runtime); the repo is "type": "module", so the ESM import
 // of the shared pricing module below resolves natively and @vercel/node
 // bundles that file into the deployed function. There is exactly one price
 // list in this project and it lives in src/shop/pricing.js.
 //
-// THE RULE: the browser never sends money. The request body carries only the
-// chosen configuration (ids, custom text, size, quantity). This function
-// revalidates it against the catalog and recomputes every amount with
-// buildOrder() before talking to Stripe. Tampering with the front end
-// changes nothing about what gets charged.
+// Request body: { cart: [ { baseId, bandId, brandId, customText, size,
+// quantity }, ... ] }
+//
+// THE RULE: the browser never sends money. The body carries only the chosen
+// configuration. This function revalidates every line against the catalog
+// with validateCart() and recomputes every amount with buildOrder() before
+// talking to Stripe. Tampering with the front end changes nothing about
+// what gets charged.
 //
 // ENVIRONMENT VARIABLES (Vercel dashboard: Project > Settings >
 // Environment Variables; add to Production, Preview and Development, then
@@ -34,15 +37,34 @@
 // ---------------------------------------------------------------------------
 
 import Stripe from "stripe";
-import { buildOrder, buildPermalinkQuery, validateConfig } from "../src/shop/pricing.js";
+import { buildOrder, validateCart } from "../src/shop/pricing.js";
 
-// Stripe caps metadata at 50 keys and 500 characters per value; everything
-// written below is a short scalar, well inside both limits.
+// ---------------------------------------------------------------------------
+// SESSION METADATA FORMAT (phase 2 parses this, do not change it casually)
+//
+// One key per hat, hat_1 .. hat_N, each a pipe separated record:
+//
+//   hat_1 = "chocolate|leather|star||M|1"
+//   hat_2 = "ivory|feathers|custom|ZERO|L|2"
+//
+// Fields in order: base id, band id, brand id, custom text, size, quantity.
+// A field is empty when it does not apply (custom text on a non custom
+// brand). The pipe is safe as a separator because the custom text charset
+// (see BRAND_TEXT_ALLOWED in pricing.js) cannot contain one.
+//
+// Plus the order wide keys: hat_count, total_quantity, subtotal, shipping,
+// order_total. Amounts are integer cents, as strings.
+//
+// Permalinks are deliberately NOT stored: phase 2 can rebuild any of them
+// from the ids with buildPermalinkQuery, and keys are a scarce resource
+// here. Stripe allows 50 keys and 500 characters per value; a full cart of
+// ten hats uses 15 keys and values well under 60 characters.
+// ---------------------------------------------------------------------------
 const METADATA_VALUE_MAX = 500;
 
-// A configuration payload is a handful of short ids. Anything bigger is not
-// a customer.
-const MAX_BODY_BYTES = 4096;
+// A cart is a list of short id records. Ten hats fit in a couple of KB;
+// anything past this is not a customer.
+const MAX_BODY_BYTES = 8192;
 
 const json = (res, status, payload) => res.status(status).json(payload);
 
@@ -94,22 +116,30 @@ export default async function handler(req, res) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
     return json(res, 400, { error: "Invalid request body" });
 
-  // Only these fields are read. Any price, total or currency the client
-  // tries to send is simply never looked at.
-  const config = {
-    baseId: payload.baseId,
-    bandId: payload.bandId,
-    brandId: payload.brandId,
-    customText: payload.customText,
-    size: payload.size,
-    quantity: payload.quantity,
-  };
+  // Only these fields are read, per line. Any price, total or currency the
+  // client tries to send is simply never looked at, and neither is the
+  // line's `id`: that is the browser's own row handle and must not touch
+  // anything about the charge.
+  // Not truncated on purpose: an oversized cart must be rejected by
+  // validateCart, never silently trimmed into something chargeable.
+  const cart = Array.isArray(payload.cart)
+    ? payload.cart.map((line) => ({
+        baseId: line?.baseId,
+        bandId: line?.bandId,
+        brandId: line?.brandId,
+        customText: line?.customText,
+        size: line?.size,
+        quantity: line?.quantity,
+      }))
+    : null;
 
-  const { valid, errors } = validateConfig(config);
-  if (!valid) return json(res, 400, { error: "Invalid hat configuration", errors });
+  if (!cart) return json(res, 400, { error: "Invalid cart" });
+
+  const { valid, errors } = validateCart(cart);
+  if (!valid) return json(res, 400, { error: "Invalid cart", errors });
 
   // Server side numbers, computed from the catalog, not from the request.
-  const order = buildOrder(config);
+  const order = buildOrder(cart);
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -126,8 +156,28 @@ export default async function handler(req, res) {
   }
 
   const currency = order.currency.toLowerCase();
-  const permalinkQuery = buildPermalinkQuery(order.config);
-  const permalink = `${origin}/?${permalinkQuery}#builder`;
+
+  // See the metadata format block at the top of this file.
+  const metadata = {
+    hat_count: String(order.lines.length),
+    total_quantity: String(order.totalQuantity),
+    subtotal: String(order.subtotal),
+    shipping: String(order.shipping),
+    order_total: String(order.total),
+  };
+  order.lines.forEach((line, index) => {
+    const c = line.config;
+    metadata[`hat_${index + 1}`] = trim(
+      [
+        c.baseId ?? "",
+        c.bandId ?? "",
+        c.brandId ?? "",
+        (c.customText ?? "").toUpperCase(),
+        (c.size ?? "").toUpperCase(),
+        line.quantity,
+      ].join("|")
+    );
+  });
 
   try {
     const stripe = new Stripe(secretKey);
@@ -156,18 +206,10 @@ export default async function handler(req, res) {
       // for Texas is done, and add the origin address in the dashboard.
       // automatic_tax: { enabled: true },
       success_url: `${origin}/order-confirmed?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/checkout-cancelled?${permalinkQuery}`,
-      // Short scalars, one per field, so phase 2 can rebuild the hat
-      // without parsing a blob.
-      metadata: {
-        base_id: trim(order.config.baseId),
-        band_id: trim(order.config.bandId),
-        brand_id: trim(order.config.brandId),
-        custom_text: trim(order.config.customText ?? ""),
-        size: trim(order.config.size),
-        quantity: trim(order.config.quantity),
-        permalink: trim(permalink),
-      },
+      // The cart survives in the browser, so cancelling needs no state
+      // carried on the URL.
+      cancel_url: `${origin}/checkout-cancelled`,
+      metadata,
     });
 
     if (!session?.url) {

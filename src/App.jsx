@@ -3,6 +3,7 @@ import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import Builder from "./shop/Builder.jsx";
+import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
 import logo from "/logo.png";
 
@@ -336,6 +337,30 @@ function Brand({ size = 30, fontSize = 19 }) {
   );
 }
 
+// Cart button for the nav: always reachable, on every section and route.
+// The count only appears once there is something in the cart.
+function NavCart() {
+  const { totalQuantity, openCart } = useCart();
+  return (
+    <button
+      type="button"
+      className="tc-nav-cart"
+      onClick={openCart}
+      aria-label={totalQuantity ? `Open cart, ${totalQuantity} hats` : "Open cart"}
+      title="Your cart"
+    >
+      <span aria-hidden style={{ fontSize: 17, lineHeight: 1 }}>
+        🛒
+      </span>
+      {totalQuantity > 0 && (
+        <span className="tc-nav-cart-count" aria-hidden>
+          {totalQuantity}
+        </span>
+      )}
+    </button>
+  );
+}
+
 function Nav({ onBook }) {
   const [open, setOpen] = useState(false);
   const link = {
@@ -385,6 +410,7 @@ function Nav({ onBook }) {
           <button type="button" className="tc-book-nav" onClick={onBook}>
             Book the bar
           </button>
+          <NavCart />
           <button
             type="button"
             className="tc-burger"
@@ -413,6 +439,16 @@ function Nav({ onBook }) {
           <a href="#solana" style={{ ...link, color: "var(--coral-deep)" }} onClick={() => setOpen(false)}>
             Find us at Solana
           </a>
+          <button
+            type="button"
+            className="tc-book-nav"
+            onClick={(e) => {
+              setOpen(false);
+              onBook(e);
+            }}
+          >
+            Book the bar
+          </button>
         </div>
       )}
     </nav>
@@ -1349,6 +1385,7 @@ function Site() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   const trustRoute = TRUST_ROUTES[route] ? route : null;
+  const { closeCart } = useCart();
 
   // Stripe returns to real paths, not hashes, so those are read from the
   // pathname (vercel.json rewrites them to index.html).
@@ -1358,6 +1395,10 @@ function Site() {
   useEffect(() => {
     if (trustRoute || checkoutRoute) window.scrollTo(0, 0);
   }, [trustRoute, checkoutRoute]);
+
+  // Editing a cart line needs the builder mounted, which only the landing
+  // has; elsewhere the row still shows with quantity and remove.
+  const isLanding = !trustRoute && !checkoutRoute;
 
   return (
     <div
@@ -1403,6 +1444,15 @@ function Site() {
         </>
       )}
       <BookingDrawer open={bookingOpen} onClose={closeBooking} returnRef={bookingReturnRef} />
+      {/* one cart drawer for the whole app, so the nav can open it anywhere */}
+      <CartDrawer
+        canEdit={isLanding}
+        onAddAnother={() => {
+          closeCart();
+          if (isLanding) document.getElementById("builder")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          else window.location.href = "/#builder";
+        }}
+      />
       <Footer onBook={openBooking} />
     </div>
   );

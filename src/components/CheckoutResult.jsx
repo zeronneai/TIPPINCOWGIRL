@@ -3,12 +3,15 @@
 //
 //   /order-confirmed     Stripe's success_url. It appends session_id, which
 //                        we deliberately do not look up yet; reading the
-//                        session and emailing the owner is phase 2.
-//   /checkout-cancelled  Stripe's cancel_url. The server puts the builder's
-//                        own query string on this URL, so the way back is a
-//                        link to the exact hat she was building, never an
-//                        empty builder.
+//                        session and emailing the owner is phase 2. Landing
+//                        here WITH that parameter is what empties the cart.
+//   /checkout-cancelled  Stripe's cancel_url. Nothing was charged and the
+//                        cart is still in localStorage, so this page just
+//                        opens it again.
 // ---------------------------------------------------------------------------
+
+import { useEffect, useRef } from "react";
+import { useCart } from "../shop/cart.jsx";
 
 export const CHECKOUT_ROUTES = ["/order-confirmed", "/checkout-cancelled"];
 
@@ -40,12 +43,33 @@ function Shell({ kicker, title, children }) {
 const P = { margin: "0 0 16px", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" };
 
 export default function CheckoutResult({ path }) {
-  if (path === "/order-confirmed")
+  const { clearCart, openCart } = useCart();
+  const confirmed = path === "/order-confirmed";
+  const cleared = useRef(false);
+
+  // Empty the cart ONLY when Stripe actually sent us here, which it marks
+  // with session_id. Someone who wanders onto this URL by hand keeps their
+  // cart, because they have not bought anything.
+  useEffect(() => {
+    if (!confirmed || cleared.current) return;
+    let paid = false;
+    try {
+      paid = new URLSearchParams(window.location.search).has("session_id");
+    } catch {
+      /* unreadable URL: treat it as not paid and leave the cart alone */
+    }
+    if (paid) {
+      cleared.current = true;
+      clearCart();
+    }
+  }, [confirmed, clearCart]);
+
+  if (confirmed)
     return (
       <Shell kicker="Your order is in" title="Thank you">
         <p style={P}>
-          We got it. Your hat is going on the bench, and every one of ours is built by hand, one at a
-          time, so it is worth the wait.
+          We got it. Your hats are going on the bench, and every one of ours is built by hand, one at a
+          time, so they are worth the wait.
         </p>
         <p style={P}>
           Deborah reaches out personally with your build details and a shipping update. Keep an eye on
@@ -57,24 +81,16 @@ export default function CheckoutResult({ path }) {
       </Shell>
     );
 
-  // Cancelled: carry whatever the server put on this URL straight back into
-  // the builder, so the hat she configured is still there.
-  let query = "";
-  try {
-    query = window.location.search || "";
-  } catch {
-    /* no window: fall back to a bare builder link */
-  }
+  // Cancelled: nothing was charged and the cart never left the browser.
   return (
-    <Shell kicker="Nothing was charged" title="Your hat is right where you left it">
+    <Shell kicker="Nothing was charged" title="Your cart is right where you left it">
       <p style={P}>
-        No payment went through. Your build is saved in the link below, ready to pick up whenever you
-        are.
+        No payment went through and nothing was lost. Every hat you built is still waiting for you.
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 10 }}>
-        <a href={`/${query}#builder`} className="tc-btn">
-          Back to my hat
-        </a>
+        <button type="button" className="tc-btn" onClick={openCart}>
+          Back to my cart
+        </button>
         <a href="/" className="tc-btn tc-btn--ghost">
           Back to the bar
         </a>

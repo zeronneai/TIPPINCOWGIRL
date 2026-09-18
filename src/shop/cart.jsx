@@ -88,10 +88,24 @@ const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState(loadCart);
+  // The drawer lives at the app root so the nav can open it from anywhere,
+  // which means its open state belongs here rather than inside the builder.
+  const [cartOpen, setCartOpen] = useState(false);
+  // "edit this line" travels through here: the drawer raises it, the builder
+  // picks it up and clears it. Keeps the two from having to know each other.
+  const [editRequest, setEditRequest] = useState(null);
 
   useEffect(() => {
     saveCart(cart);
   }, [cart]);
+
+  const openCart = useCallback(() => setCartOpen(true), []);
+  const closeCart = useCallback(() => setCartOpen(false), []);
+  const requestEdit = useCallback((id) => {
+    setEditRequest(id);
+    setCartOpen(false);
+  }, []);
+  const clearEditRequest = useCallback(() => setEditRequest(null), []);
 
   const addLine = useCallback((config) => {
     const line = reviveLine({ ...config, id: newLineId(), quantity: config?.quantity ?? MIN_QUANTITY });
@@ -130,8 +144,27 @@ export function CartProvider({ children }) {
       clearCart,
       totalQuantity: countHats(cart),
       isFull: countHats(cart) >= MAX_CART_QUANTITY,
+      cartOpen,
+      openCart,
+      closeCart,
+      editRequest,
+      requestEdit,
+      clearEditRequest,
     }),
-    [cart, addLine, updateLine, setLineQuantity, removeLine, clearCart]
+    [
+      cart,
+      addLine,
+      updateLine,
+      setLineQuantity,
+      removeLine,
+      clearCart,
+      cartOpen,
+      openCart,
+      closeCart,
+      editRequest,
+      requestEdit,
+      clearEditRequest,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

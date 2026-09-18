@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BASES, BLEND, BRAND_TEXT, CATEGORIES, SIZES, SIZE_GUIDE, findIn } from "./catalog.js";
 import HatStack, { BrandTextLayer } from "./HatStack.jsx";
 import { useCart } from "./cart.jsx";
+import { useDialog } from "./useDialog.js";
 import {
   FREE_SHIPPING_MIN_QTY,
   MAX_CART_QUANTITY,
@@ -86,43 +87,6 @@ const toConfig = (sel, size, brandText) => ({
   customText: sel.brand === "custom" ? brandText : null,
   size,
 });
-
-// Focus trap shared by the size modal and the order drawer (same behavior as
-// the booking drawer: Tab cycles inside, Escape closes, focus returns).
-function useDialog(open, onClose, panelRef, returnRef) {
-  useEffect(() => {
-    if (!open) return undefined;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const t = setTimeout(() => {
-      panelRef.current?.querySelector("button,a[href],input,select")?.focus();
-    }, 80);
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Tab") {
-        const els = panelRef.current?.querySelectorAll("input,select,textarea,button,a[href]");
-        if (!els?.length) return;
-        const list = Array.from(els).filter((el) => !el.disabled);
-        const first = list[0];
-        const last = list[list.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", onKey);
-      returnRef?.current?.focus?.();
-    };
-  }, [open, onClose, panelRef, returnRef]);
-}
 
 // Thumbnails are real mini-stacks (ivory base + the piece, same blend as the
 // stage) cropped by CSS to the piece's zone, so they always match what the
@@ -322,208 +286,6 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
   );
 }
 
-// --- Cart drawer -------------------------------------------------------------
-// Same drawer system as booking. Every amount here is read off the order
-// that buildOrder() computed for the whole cart; nothing is summed locally.
-function CartRow({ line, onQuantity, onEdit, onRemove }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        padding: "14px 0",
-        borderBottom: "1px solid rgba(43,26,16,.12)",
-      }}
-    >
-      {/* the very same layer stack as the builder stage, just small */}
-      <div
-        style={{
-          position: "relative",
-          flex: "none",
-          width: 74,
-          height: 74,
-          borderRadius: 10,
-          overflow: "hidden",
-          border: "2px solid var(--ink)",
-          background: "var(--cream-2)",
-        }}
-      >
-        <HatStack config={line.config} alt={line.description} />
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <strong style={{ fontSize: 14, lineHeight: 1.35, color: "var(--ink)" }}>{line.description}</strong>
-          <span style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap" }}>{fmt(line.lineSubtotal)}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-          <label htmlFor={`qty-${line.id}`} style={{ fontSize: 12, color: "#8a7460", fontWeight: 700 }}>
-            Qty
-          </label>
-          <select
-            id={`qty-${line.id}`}
-            value={line.quantity}
-            onChange={(e) => onQuantity(line.id, Number(e.target.value))}
-            style={{
-              padding: "4px 8px",
-              borderRadius: 7,
-              border: "1.5px solid rgba(43,26,16,.5)",
-              background: "#fffaf0",
-              fontFamily: "'Satoshi',sans-serif",
-              fontWeight: 700,
-              fontSize: 13.5,
-              color: "var(--ink)",
-            }}
-          >
-            {Array.from({ length: MAX_QUANTITY - MIN_QUANTITY + 1 }, (_, i) => MIN_QUANTITY + i).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-          <button type="button" onClick={() => onEdit(line.id)} style={rowAction}>
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onRemove(line.id)}
-            style={{ ...rowAction, color: "#8a5a4a" }}
-            aria-label={`Remove ${line.description}`}
-          >
-            Remove
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const rowAction = {
-  border: 0,
-  background: "none",
-  padding: 0,
-  color: "var(--coral-deep)",
-  fontWeight: 800,
-  fontSize: 12.5,
-  cursor: "pointer",
-  textDecoration: "underline",
-};
-
-function CartDrawer({ open, onClose, order, onQuantity, onEdit, onRemove, onAddAnother, returnRef }) {
-  const panelRef = useRef(null);
-  useDialog(open, onClose, panelRef, returnRef);
-  if (!open) return null;
-
-  const empty = order.lines.length === 0;
-  const totalLine = {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    fontSize: 14.5,
-    padding: "6px 0",
-  };
-
-  // TODO(phase 1D): POST the cart to the checkout endpoint, which revalidates
-  // with validateCart() and recomputes with buildOrder() before creating the
-  // Stripe session. Intentionally inert for now.
-  const onCheckout = () => {};
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)" }}>
-      <div onClick={onClose} aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(43,26,16,.5)" }} />
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="cart-title" className="tc-drawer">
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-          <h2 id="cart-title" className="tc-sticker" style={{ margin: 0, fontSize: "clamp(28px,6vw,36px)" }}>
-            Your cart
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close cart"
-            style={{
-              flex: "none",
-              width: 38,
-              height: 38,
-              border: "2px solid rgba(43,26,16,.4)",
-              borderRadius: 8,
-              background: "transparent",
-              color: "var(--ink)",
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {empty ? (
-          <div>
-            <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "#4a3a2c" }}>
-              Nothing in here yet. Build a hat and it lands in your cart.
-            </p>
-            <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 8 }} onClick={onAddAnother}>
-              Start building
-            </button>
-          </div>
-        ) : (
-          <>
-            <div>
-              {order.lines.map((line) => (
-                <CartRow key={line.id} line={line} onQuantity={onQuantity} onEdit={onEdit} onRemove={onRemove} />
-              ))}
-            </div>
-
-            <div style={{ marginTop: 14 }}>
-              <div style={totalLine}>
-                <span style={{ color: "#4a3a2c" }}>Subtotal</span>
-                <span style={{ fontWeight: 700 }}>{fmt(order.subtotal)}</span>
-              </div>
-              <div style={totalLine}>
-                <span style={{ color: "#4a3a2c" }}>Shipping</span>
-                <span style={{ fontWeight: 700, color: order.freeShippingApplied ? "var(--teal)" : undefined }}>
-                  {order.freeShippingApplied ? "FREE SHIPPING" : fmt(order.shipping)}
-                </span>
-              </div>
-              {order.totalQuantity < FREE_SHIPPING_MIN_QTY && (
-                <p style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "#6f5b48" }}>
-                  Add one more hat and shipping is on us.
-                </p>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  marginTop: 10,
-                  paddingTop: 12,
-                  borderTop: "2px solid var(--ink)",
-                  fontWeight: 800,
-                  fontSize: 18,
-                }}
-              >
-                <span>Total</span>
-                <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
-              </div>
-            </div>
-
-            <button type="button" className="tc-btn" style={{ width: "100%", marginTop: 18 }} onClick={onCheckout}>
-              Checkout
-            </button>
-            <button
-              type="button"
-              className="tc-btn tc-btn--ghost"
-              style={{ width: "100%", marginTop: 10 }}
-              onClick={onAddAnother}
-            >
-              Add another hat
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // --- The builder section ------------------------------------------------------
 export default function Builder() {
   const initial = useMemo(readUrl, []);
@@ -531,14 +293,13 @@ export default function Builder() {
   const [size, setSize] = useState(initial.size);
   const [brandText, setBrandText] = useState(initial.brandText);
   const [sizeModal, setSizeModal] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
   const [textHint, setTextHint] = useState(false);
   // null while building a new hat; a cart line id while editing that row
   const [editingId, setEditingId] = useState(null);
   const [added, setAdded] = useState("");
 
-  const { cart, addLine, updateLine, setLineQuantity, removeLine, isFull } = useCart();
+  const { cart, addLine, updateLine, isFull, openCart, editRequest, clearEditRequest } = useCart();
 
   // zoom / pan
   const [zoom, setZoom] = useState(1);
@@ -674,7 +435,7 @@ export default function Builder() {
     if (editingId) {
       updateLine(editingId, design);
       setEditingId(null);
-      setCartOpen(true);
+      openCart();
       return;
     }
     if (isFull) {
@@ -685,17 +446,18 @@ export default function Builder() {
     setAdded("Added to your cart.");
   };
 
-  const startEditing = (id) => {
-    const line = cart.find((l) => l.id === id);
+  useEffect(() => {
+    if (!editRequest) return;
+    const line = cart.find((l) => l.id === editRequest);
+    clearEditRequest();
     if (!line) return;
     setSel({ base: line.baseId, band: line.bandId, brand: line.brandId });
     setSize(line.size);
     setBrandText(line.customText || "");
-    setEditingId(id);
-    setCartOpen(false);
+    setEditingId(editRequest);
     setAdded("");
     sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  }, [editRequest, cart, clearEditRequest]);
 
   const cancelEditing = () => {
     setEditingId(null);
@@ -1060,7 +822,7 @@ export default function Builder() {
                   type="button"
                   className="tc-btn tc-btn--ghost"
                   style={{ width: "100%", marginTop: 10 }}
-                  onClick={() => setCartOpen(true)}
+                  onClick={openCart}
                 >
                   View cart ({order.totalQuantity}) &nbsp;{fmt(order.total)}
                 </button>
@@ -1078,19 +840,6 @@ export default function Builder() {
           setSizeHint(false);
         }}
         returnRef={sizeBtnRef}
-      />
-      <CartDrawer
-        open={cartOpen}
-        onClose={() => setCartOpen(false)}
-        order={order}
-        onQuantity={setLineQuantity}
-        onEdit={startEditing}
-        onRemove={removeLine}
-        onAddAnother={() => {
-          setCartOpen(false);
-          sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-        returnRef={cartBtnRef}
       />
     </section>
   );

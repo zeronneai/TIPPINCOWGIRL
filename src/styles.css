@@ -322,6 +322,44 @@ body {
 .tc-book-nav:hover {
   filter: brightness(0.87);
 }
+/* ---- nav cart: reachable from every section and every route ---- */
+.tc-nav-cart {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 2px solid rgba(43, 26, 16, 0.35);
+  border-radius: 10px;
+  background: #fdf6e8;
+  color: var(--ink);
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.tc-nav-cart:hover {
+  filter: brightness(0.95);
+}
+.tc-nav-cart-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #fff;
+  border: 2px solid var(--ink);
+  font-weight: 900;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tc-burger {
   display: none;
   align-items: center;
@@ -356,9 +394,19 @@ body {
   .tc-nav-mobile a {
     padding: 10px 2px;
   }
-  .tc-book-nav {
-    padding: 8px 12px;
-    font-size: 10.5px;
+  /* On phones the top bar holds brand, cart and menu. Booking moves into
+     the menu below: with the cart there too, all four would squeeze the
+     wordmark onto two lines. Scoped to the nav so the footer keeps its
+     own Book the bar button. */
+  nav .tc-book-nav {
+    display: none;
+  }
+  .tc-nav-mobile .tc-book-nav {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 9px 14px;
+    font-size: 11px;
   }
 }
 @media (max-width: 420px) {
