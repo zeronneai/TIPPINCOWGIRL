@@ -50,10 +50,10 @@ import { buildOrderEmail } from "../src/shop/orderEmail.js";
 // that, so it stays off for this function.
 export const config = { api: { bodyParser: false } };
 
-// TODO(sender): swap to an address on the verified domain once DNS is set up
-// in Resend. onboarding@resend.dev works out of the box but can only send to
-// the address that owns the Resend account.
-const FROM = "Tippin Cowgirl Orders <onboarding@resend.dev>";
+// Sends from the custom domain. This requires the domain to be verified in
+// Resend (DNS records for SPF and DKIM); until that verification finishes,
+// Resend refuses the send and the function logs it and still answers 200.
+const FROM = "Tippin' Cowgirl <orders@tippincowgirl.com>";
 
 /**
  * Collect the untouched request bytes, without trusting the config export

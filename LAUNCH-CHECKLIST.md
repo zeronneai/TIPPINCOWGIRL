@@ -30,9 +30,9 @@ Allow: /
 Sitemap: https://tippincowgirl.com/sitemap.xml
 ```
 
-Make sure that Sitemap line points at the real domain. `public/sitemap.xml`
-already exists and has been sitting there untouched; this is the line that
-puts it back in play.
+That Sitemap URL is already the live domain, so it is a straight copy and
+paste. `public/sitemap.xml` already exists and has been sitting there
+untouched; this is the line that puts it back in play.
 
 ### 2. `index.html`
 
@@ -146,19 +146,25 @@ and refund yourself from the Stripe dashboard.
 
 ### The domain in the metadata
 
-Several files still point at the old `tippincowgirl.vercel.app` address:
-`index.html` (the canonical link and the Open Graph and Twitter tags) and
-`public/sitemap.xml`. Update them all to `https://tippincowgirl.com`, and
-set `PUBLIC_BASE_URL` in Vercel to the same value so order emails and Stripe
-return links use the real domain.
+Done in the code. `index.html` (canonical, Open Graph, Twitter card and the
+structured data block) and `public/sitemap.xml` all point at
+`https://tippincowgirl.com`, with every image URL absolute.
+
+One thing is still a dashboard setting, not code: set `PUBLIC_BASE_URL` in
+Vercel to `https://tippincowgirl.com` for Production, so the Stripe return
+links and the "See this hat" links in the order email use the real domain.
+Leave it unset on Preview, where deriving the origin from the request is
+what you want.
 
 ### The order email sender
 
-Order notifications currently come from `onboarding@resend.dev`, which is
-Resend's shared test address. It only delivers to the address that owns the
-Resend account. Verify the domain in Resend and change the `FROM` constant
-at the top of `api/stripe-webhook.js` to something like
-`orders@tippincowgirl.com`.
+The code already sends as `Tippin' Cowgirl <orders@tippincowgirl.com>`. What
+is left is the Resend side: add tippincowgirl.com under Domains in Resend
+and publish the DNS records it gives you, for SPF and DKIM. Until that shows
+as verified, Resend refuses the send. The webhook logs the refusal and still
+answers Stripe with a 200, so the symptom is a silent missing email, not a
+failed payment. Place one test order after verifying and confirm the mail
+lands.
 
 ### The events form endpoint
 
@@ -180,6 +186,7 @@ Script web app URL. Unlike the others this one is read when the site is
 | Real prices in pricing.js | no |
 | Stripe live secret key in Vercel | no |
 | Live mode webhook with its own whsec | no |
-| Domain updated in canonical, OG and sitemap | no |
-| Order email sending from the real domain | no |
+| Domain updated in canonical, OG and sitemap | yes, in the code |
+| PUBLIC_BASE_URL set to the real domain in Vercel | no |
+| tippincowgirl.com verified in Resend | no |
 | VITE_BOOKING_ENDPOINT set | no |

@@ -8,14 +8,13 @@
 # no point pointing crawlers at a map of pages they are told not to fetch.
 # public/sitemap.xml still exists and is ready to be linked again.
 #
-# ORIGINAL CONTENTS, restore these four lines at launch:
+# RESTORE THESE FOUR LINES AT LAUNCH, exactly as written. The Sitemap URL
+# is already the live custom domain, so this is copy and paste:
 #
 #   User-agent: *
 #   Allow: /
 #
-#   Sitemap: https://tippincowgirl.vercel.app/sitemap.xml
-#
-# (and update that URL to the real domain when it is connected)
+#   Sitemap: https://tippincowgirl.com/sitemap.xml
 # -----------------------------------------------------------------------
 
 User-agent: *

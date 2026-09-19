@@ -50,8 +50,8 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | `STRIPE_SECRET_KEY` | yes | Secret key from Stripe, Developers > API keys. Use the test key (`sk_test_...`) until you are ready to take real money. Never commit it, never expose it to the browser, and never give it a `VITE_` prefix: anything with that prefix is bundled into the client. |
 | `STRIPE_WEBHOOK_SECRET` | yes | Signing secret for the webhook endpoint, shown by Stripe under Developers > Webhooks when you add the endpoint. It starts with `whsec_` and is NOT the API key. Every endpoint has its own, and `stripe listen` for local testing prints a different one again. |
 | `RESEND_API_KEY` | yes | From resend.com, API Keys. Used only to send the order notification. |
-| `ORDER_NOTIFICATION_EMAIL` | yes | Where the order emails land. While the sender is still `onboarding@resend.dev`, Resend will only deliver to the address that owns the Resend account. |
-| `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs and for the "See this hat" links in the order email, e.g. `https://tippincowgirl.vercel.app`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
+| `ORDER_NOTIFICATION_EMAIL` | yes | Where the order emails land. Orders send from `orders@tippincowgirl.com`, so this can be any address once the domain is verified in Resend. Until that verification finishes Resend refuses the send outright, which the webhook logs and survives. |
+| `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs and for the "See this hat" links in the order email, e.g. `https://tippincowgirl.com`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
 | `VITE_BOOKING_ENDPOINT` | yes, for the events form | The Google Apps Script web app URL the private events form posts to, ending in `/exec`. Unlike every other variable here this one is read at BUILD time and baked into the client bundle, which the `VITE_` prefix makes explicit. That is fine: an Apps Script web app URL is not a secret, anyone can read it in the network tab. Without it the form refuses to send and tells the visitor to DM instead of failing quietly. Changing it needs a rebuild, not just a restart. |
 
 Stripe returns customers to two real paths, which `vercel.json` rewrites to
@@ -66,9 +66,14 @@ the Stripe signature against the raw request body, and emails Deborah the
 full build of every hat through Resend. Stripe's own receipt only says how
 much was paid, which is not enough to make a hat.
 
-Point Stripe at `https://<your domain>/api/stripe-webhook` under
+Point Stripe at `https://tippincowgirl.com/api/stripe-webhook` under
 Developers > Webhooks, subscribed to `checkout.session.completed`, and copy
-the signing secret into `STRIPE_WEBHOOK_SECRET`.
+the signing secret into `STRIPE_WEBHOOK_SECRET`. Test mode and live mode are
+separate endpoints with separate signing secrets.
+
+Mail goes out as `Tippin' Cowgirl <orders@tippincowgirl.com>`, which only
+works once tippincowgirl.com is verified in Resend. If the order email stops
+arriving, check the Resend dashboard before suspecting this code.
 
 Two things worth knowing about that function: its body parser is switched
 off on purpose (a parsed body breaks signature verification, and that is the

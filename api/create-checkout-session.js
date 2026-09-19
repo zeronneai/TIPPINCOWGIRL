@@ -29,7 +29,7 @@
 //
 //   PUBLIC_BASE_URL    optional. Absolute site origin used to build the
 //                      success and cancel URLs, e.g.
-//                      https://tippincowgirl.vercel.app . When unset the
+//                      https://tippincowgirl.com . When unset the
 //                      origin is derived from the request headers, which is
 //                      what you want on preview deployments.
 //
