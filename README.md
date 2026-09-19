@@ -1,5 +1,19 @@
 # Tippin Cowgirl — interactive landing page
 
+> ### The site is on noindex on purpose
+>
+> Google and every other search engine are currently blocked from listing
+> this site, because the catalog prices are still provisional. The site
+> works normally for anyone you send the link to; it just will not turn up
+> in search results.
+>
+> The block has three layers that must come down together:
+> `public/robots.txt`, the `<meta name="robots">` tag in `index.html`, and
+> the `X-Robots-Tag` header in `vercel.json`. Do not remove one on its own.
+>
+> **See [LAUNCH-CHECKLIST.md](./LAUNCH-CHECKLIST.md)** for how to lift the
+> block and what else has to be true before launch.
+
 A premium, single-page landing site for **Tippin Cowgirl**, the custom mobile
 hat bar in El Paso, TX. The centerpiece is a "Mario-Kart"–style **hat
 configurator**: pick the felt, shape the brim, wrap a band, pin a charm and

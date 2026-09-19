@@ -1,4 +1,22 @@
-User-agent: *
-Allow: /
+# -----------------------------------------------------------------------
+# PRE LAUNCH BLOCK. The site is deliberately kept out of search while the
+# catalog prices are still provisional. Do not "fix" this file on its own:
+# the block has three layers that must come down together. See
+# LAUNCH-CHECKLIST.md in the repo root.
+#
+# The Sitemap line is intentionally absent while this block is up. There is
+# no point pointing crawlers at a map of pages they are told not to fetch.
+# public/sitemap.xml still exists and is ready to be linked again.
+#
+# ORIGINAL CONTENTS, restore these four lines at launch:
+#
+#   User-agent: *
+#   Allow: /
+#
+#   Sitemap: https://tippincowgirl.vercel.app/sitemap.xml
+#
+# (and update that URL to the real domain when it is connected)
+# -----------------------------------------------------------------------
 
-Sitemap: https://tippincowgirl.vercel.app/sitemap.xml
+User-agent: *
+Disallow: /
