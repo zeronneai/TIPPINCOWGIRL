@@ -1,9 +1,17 @@
 // ---------------------------------------------------------------------------
 // POST /api/stripe-webhook
 //
-// Stripe tells us a checkout was paid; we email Deborah the full build of
-// every hat in the order. Stripe's own receipt only says how much was paid,
-// which is useless for something made to order.
+// Stripe tells us a checkout was paid and two emails go out from here:
+//
+//   1. the work order to Deborah (orderEmail.js), the full build of every
+//      hat. Stripe's own receipt only says how much was paid, which is
+//      useless for something made to order.
+//   2. the confirmation to the customer (customerEmail.js), so a person who
+//      just paid three figures for a handmade hat hears from the brand
+//      instead of silence.
+//
+// They are sent independently, each one's failure logged and swallowed. The
+// work order goes first because it is the one the business cannot lose.
 //
 // RAW BODY, NOT PARSED JSON. Signature verification hashes the request body
 // byte for byte. The `config` export below asks Vercel to leave the body
@@ -36,7 +44,8 @@
 //                             API key. Each endpoint has its own, and the
 //                             local CLI has a different one again.
 //   RESEND_API_KEY            required. From resend.com, API Keys.
-//   ORDER_NOTIFICATION_EMAIL  required. Where order emails land.
+//   ORDER_NOTIFICATION_EMAIL  required. Where the work order lands, and the
+//                             Reply-To on the customer's confirmation.
 //   PUBLIC_BASE_URL           optional. Absolute site origin used to build
 //                             the "See this hat" links. Without it the links
 //                             are left out of the email.
@@ -44,6 +53,7 @@
 
 import { Resend } from "resend";
 import Stripe from "stripe";
+import { buildCustomerEmail } from "../src/shop/customerEmail.js";
 import { buildOrderEmail } from "../src/shop/orderEmail.js";
 
 // Vercel parses JSON bodies by default. Stripe signatures do not survive
@@ -149,6 +159,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ received: true, emailed: false });
     }
 
+    const resend = new Resend(resendKey);
+
+    // ---- 1. the work order, to Deborah. This one is the order. ------------
     const { subject, html, text, problems } = buildOrderEmail({
       session,
       baseUrl: resolveOrigin(req),
@@ -156,12 +169,43 @@ export default async function handler(req, res) {
     if (problems.length)
       console.warn(`[webhook] order ${session.id} had unreadable metadata:`, problems.join(" | "));
 
-    const { error } = await new Resend(resendKey).emails.send({ from: FROM, to, subject, html, text });
-    if (error) {
-      console.error(`[webhook] Resend refused the order email for ${session.id}:`, error);
-      return res.status(200).json({ received: true, emailed: false });
+    let emailed = false;
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html, text });
+    if (error) console.error(`[webhook] Resend refused the order email for ${session.id}:`, error);
+    else emailed = true;
+
+    // ---- 2. the confirmation, to the customer. A courtesy on top. --------
+    //
+    // Its own try/catch, on purpose. By this line the work order has already
+    // been attempted and, if it went out, the order cannot be lost. Nothing
+    // this block does is allowed to take that down, and a customer with no
+    // email on the session is not an error, just nothing to send.
+    let confirmed = false;
+    try {
+      const customerTo = session.customer_details?.email;
+      if (!customerTo) {
+        console.warn(`[webhook] no customer email on ${session.id}, skipping the confirmation.`);
+      } else {
+        const confirmation = buildCustomerEmail({ session });
+        // Replies go to Deborah, not to the no-reply sending address, so
+        // "wait, my address is wrong" lands somewhere a human reads.
+        const { error: confirmError } = await resend.emails.send({
+          from: FROM,
+          to: customerTo,
+          replyTo: to,
+          subject: confirmation.subject,
+          html: confirmation.html,
+          text: confirmation.text,
+        });
+        if (confirmError)
+          console.error(`[webhook] Resend refused the customer confirmation for ${session.id}:`, confirmError);
+        else confirmed = true;
+      }
+    } catch (err) {
+      console.error(`[webhook] customer confirmation failed for ${session.id}:`, err);
     }
-    return res.status(200).json({ received: true, emailed: true });
+
+    return res.status(200).json({ received: true, emailed, confirmed });
   } catch (err) {
     // Swallowed on purpose: see the ALWAYS 200 note at the top.
     console.error(`[webhook] order notification failed for ${session.id}:`, err);

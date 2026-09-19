@@ -202,7 +202,9 @@ function hatRows(line) {
   return rows;
 }
 
-const addressLines = (details) => {
+// Exported for customerEmail.js, which formats the same Stripe address block
+// the same way. Nothing about the owner's email changes by sharing it.
+export const addressLines = (details) => {
   const a = details?.address || {};
   const cityLine = [a.city, [a.state, a.postal_code].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   return [details?.name, a.line1, a.line2, cityLine, a.country].filter((v) => v && String(v).trim());
