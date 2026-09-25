@@ -2,3 +2,9 @@ node_modules
 dist
 *.local
 .DS_Store
+
+# Environment files carry live keys. Never commit them. .env.example is the
+# one exception: it lists the variable names with empty values, as docs.
+.env
+.env.*
+!.env.example

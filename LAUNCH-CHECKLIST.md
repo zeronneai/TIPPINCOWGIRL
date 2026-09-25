@@ -1,67 +1,19 @@
 # Launch checklist
 
-**Right now this site is deliberately hidden from Google and every other
-search engine.** That is on purpose: the catalog prices are still
-provisional, and a page that gets indexed with the wrong prices is hard to
-take back. The site works normally for anyone you send the link to. It just
-will not turn up in search results.
-
-This file is the full list of what to undo, and what else has to be true,
-before the site goes live for real. Work top to bottom. You do not need to
-know anything about the project to follow it.
+The site is live on **https://tippincowgirl.com** and open to search
+engines. This file tracks what is left before a full launch. Work top to
+bottom. You do not need to know anything about the project to follow it.
 
 ---
 
-## Part 1: take the search block down
+## Part 1: search engines
 
-The block has **three layers**, and they only work as a set. Removing one
-and leaving the others does nothing useful, so do all three in the same
-change and deploy them together.
+The pre launch block is gone. `public/robots.txt` allows everything and
+points at the sitemap, the `noindex` meta tag is out of `index.html`, and
+the `X-Robots-Tag` header is out of `vercel.json`.
 
-### 1. `public/robots.txt`
+### 1. Verify after the deploy
 
-Replace the whole file with the four lines kept in the comment at the top of
-it:
-
-```
-User-agent: *
-Allow: /
-
-Sitemap: https://tippincowgirl.com/sitemap.xml
-```
-
-That Sitemap URL is already the live domain, so it is a straight copy and
-paste. `public/sitemap.xml` already exists and has been sitting there
-untouched; this is the line that puts it back in play.
-
-### 2. `index.html`
-
-Delete this tag from the `<head>`, along with the comment above it:
-
-```html
-<meta name="robots" content="noindex, nofollow" />
-```
-
-### 3. `vercel.json`
-
-Delete the entire `headers` block, leaving `rewrites` alone:
-
-```json
-"headers": [
-  {
-    "source": "/(.*)",
-    "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
-  }
-],
-```
-
-This is the layer that matters most. It works even for crawlers that never
-read the HTML, and it covers files that are not pages. If you only have time
-to check one thing after deploying, check this one.
-
-### 4. Deploy and verify
-
-Push the change and let Vercel deploy. Then confirm the block is really gone.
 In a terminal:
 
 ```bash
@@ -69,15 +21,12 @@ curl -sI https://tippincowgirl.com/ | grep -i x-robots-tag
 ```
 
 That should print **nothing**. If it still prints `noindex`, the deploy has
-not finished or the `headers` block is still in `vercel.json`.
+not finished.
 
 Also open `https://tippincowgirl.com/robots.txt` in a browser and confirm it
-says `Allow: /` and not `Disallow: /`.
+says `Allow: /` and has the `Sitemap:` line.
 
-### 5. Only now, register the site with Google
-
-Do this **after** the three layers are down and verified, not before. Adding
-a blocked site to Search Console just teaches Google that it is blocked.
+### 2. Register the site with Google
 
 1. Go to <https://search.google.com/search-console>.
 2. Add a property for `tippincowgirl.com`. Pick the **Domain** option if you
@@ -90,11 +39,7 @@ Indexing takes days, not minutes. Do not panic on day one.
 
 ---
 
-## Part 2: what else has to be true before launch
-
-These are separate from the search block and every one of them is a real
-blocker. Search visibility with any of these unfinished is worse than no
-search visibility at all.
+## Part 2: what else has to be true before a full launch
 
 ### Real prices
 
@@ -107,7 +52,17 @@ builder, the cart, Stripe and the order email all follow. Amounts are in
 **whole cents**: `9800` means $98.00. Do not write `98`.
 
 The shipping rule sits in the same file: flat rate for one hat, free from two
-hats up. Confirm that is still what the owner wants.
+hats up. If it changes, the wording in `src/components/TrustPages.jsx`
+(Shipping & Returns and FAQ) has to change with it.
+
+### Production time
+
+Nobody has confirmed how long a hat takes to build. Until the owner does,
+nothing on the site or in the emails promises a date. When the number is
+known, it goes in two places:
+
+- `FULFILLMENT_NOTE` in `src/shop/customerEmail.js` (the customer email)
+- the "How long does my hat take?" answer in `src/components/TrustPages.jsx`
 
 ### Stripe in live mode
 
@@ -141,36 +96,19 @@ symptom is the webhook failing with a 400 while everything looks correct.
 7. Redeploy. Environment variables do not reach functions that are already
    running.
 
-Then place one real order with a real card, confirm the order email arrives,
+Then place one real order with a real card, confirm both emails arrive,
 and refund yourself from the Stripe dashboard.
 
-### The domain in the metadata
+### Sales tax
 
-Done in the code. `index.html` (canonical, Open Graph, Twitter card and the
-structured data block) and `public/sitemap.xml` all point at
-`https://tippincowgirl.com`, with every image URL absolute.
+Not collected. `automatic_tax` is off in `api/create-checkout-session.js`
+until the Texas registration is done in Stripe Tax.
 
-One thing is still a dashboard setting, not code: set `PUBLIC_BASE_URL` in
-Vercel to `https://tippincowgirl.com` for Production, so the Stripe return
-links and the "See this hat" links in the order email use the real domain.
-Leave it unset on Preview, where deriving the origin from the request is
-what you want.
+### PUBLIC_BASE_URL
 
-### The order email sender
-
-The code already sends as `Tippin' Cowgirl <orders@tippincowgirl.com>`. What
-is left is the Resend side: add tippincowgirl.com under Domains in Resend
-and publish the DNS records it gives you, for SPF and DKIM. Until that shows
-as verified, Resend refuses the send. The webhook logs the refusal and still
-answers Stripe with a 200, so the symptom is a silent missing email, not a
-failed payment. Place one test order after verifying and confirm the mail
-lands.
-
-### The events form endpoint
-
-`VITE_BOOKING_ENDPOINT` must be set in Vercel, pointing at the Google Apps
-Script web app URL. Unlike the others this one is read when the site is
-**built**, so after changing it you need a fresh deploy, not just a restart.
+Set it in Vercel to `https://tippincowgirl.com` for Production, so the Stripe
+return links and the "See this hat" links in the order email use the real
+domain. Leave it unset on Preview.
 
 ---
 
@@ -178,15 +116,17 @@ Script web app URL. Unlike the others this one is read when the site is
 
 | Item | Done |
 | --- | --- |
-| robots.txt unblocked | no |
-| meta robots removed | no |
-| X-Robots-Tag header removed | no |
+| Search block removed in the code | yes |
 | Verified with curl after deploy | no |
 | Search Console set up and sitemap submitted | no |
 | Real prices in pricing.js | no |
+| Real production time confirmed | no |
 | Stripe live secret key in Vercel | no |
 | Live mode webhook with its own whsec | no |
-| Domain updated in canonical, OG and sitemap | yes, in the code |
-| PUBLIC_BASE_URL set to the real domain in Vercel | no |
-| tippincowgirl.com verified in Resend | no |
-| VITE_BOOKING_ENDPOINT set | no |
+| Sales tax | no |
+| Domain in canonical, OG and sitemap | yes |
+| www redirects to the root | yes |
+| tippincowgirl.com verified in Resend | yes |
+| Notification emails moved to the owner | yes |
+| VITE_BOOKING_ENDPOINT set | yes |
+| PUBLIC_BASE_URL set in Vercel | unconfirmed |
