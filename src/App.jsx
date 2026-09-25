@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CONTACT_EMAIL } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
@@ -1513,18 +1514,29 @@ function Footer({ onBook }) {
             <a href="#/privacy" style={trustLink}>
               Privacy
             </a>
+            <a href="#/terms" style={trustLink}>
+              Terms
+            </a>
             <a href="#/faq" style={trustLink}>
               FAQ
             </a>
           </div>
-          <a
-            href={IG}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontWeight: 800, fontSize: 13.5, color: "var(--coral-deep)", textDecoration: "none" }}
-          >
-            @_tippincowgirl
-          </a>
+          <div style={{ display: "flex", gap: "10px 20px", flexWrap: "wrap", alignItems: "center" }}>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              style={{ fontWeight: 800, fontSize: 13.5, color: "var(--coral-deep)", textDecoration: "none", overflowWrap: "anywhere" }}
+            >
+              {CONTACT_EMAIL}
+            </a>
+            <a
+              href={IG}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontWeight: 800, fontSize: 13.5, color: "var(--coral-deep)", textDecoration: "none" }}
+            >
+              @_tippincowgirl
+            </a>
+          </div>
         </div>
         <div style={{ fontSize: 13, color: "#8a7460", fontWeight: 600 }}>
           Custom Hat Bar · The Shoppes at Solana · El Paso, TX
@@ -1551,7 +1563,7 @@ function Site() {
   };
   const closeBooking = () => setBookingOpen(false);
 
-  // Tiny hash router: #/shipping-returns, #/privacy and #/faq swap the
+  // Tiny hash router: #/shipping-returns, #/privacy, #/terms and #/faq swap the
   // landing for a trust page; every other hash is a plain anchor.
   const [route, setRoute] = useState(() => (typeof window !== "undefined" ? window.location.hash : ""));
   useEffect(() => {
