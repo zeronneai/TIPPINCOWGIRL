@@ -38,6 +38,7 @@
 //      the markup.
 // ---------------------------------------------------------------------------
 
+import { STORE_HOURS } from "../business.js";
 import { addressLines, buildHatImageUrl, esc, money, parseCartFromMetadata } from "./orderEmail.js";
 import { findBand, findBase, findBrand, findSize } from "./pricing.js";
 
@@ -50,9 +51,13 @@ import { findBand, findBase, findBrand, findSize } from "./pricing.js";
 // nothing: it converts a happy customer into a refund request on day eight.
 //
 // When the real number is known, write it here in plain words, for example
-// "Your hat will be ready to ship within about two weeks." That is the only
-// line that needs to change; the email picks it up automatically, and the
-// plain text version uses the same constant.
+// "Your hat will be ready to ship within about two weeks." The HTML and the
+// plain text version both read this constant.
+//
+// The site makes the same no date promise and has to change in the same
+// commit, or the email and the pages start contradicting each other:
+// "How long does my hat take?" in the FAQ and "When your hat ships" in
+// Shipping & Returns, both in src/components/TrustPages.jsx.
 // ---------------------------------------------------------------------------
 const FULFILLMENT_NOTE =
   "Every hat is made to order by hand, so it is not an off the shelf thing. Deborah will email you with the shipping details as soon as your order is on its way.";
@@ -68,16 +73,8 @@ const LOGO_DISPLAY = 200;
 const STORE_ADDRESS = "The Shoppes at Solana, 750 Sunland Park Dr, El Paso, TX 79912";
 const INSTAGRAM_URL = "https://www.instagram.com/_tippincowgirl/";
 
-// ---------------------------------------------------------------------------
-// TODO(hours): FILL THIS IN WITH THE REAL OPENING HOURS.
-//
-// The site does not publish hours anywhere, so there was nothing to copy and
-// guessing them would send customers to a closed door. Left null on purpose:
-// while it is null the footer simply omits the line rather than inventing
-// one. Set it to a string such as "Thursday to Sunday, 11am to 6pm" and it
-// appears in both the HTML and the plain text version.
-// ---------------------------------------------------------------------------
-const STORE_HOURS = null;
+// Opening hours come from STORE_HOURS in src/business.js, the same list the
+// Solana section of the site shows, so the two cannot drift apart.
 
 // Same palette as the site, hard coded because an email cannot read CSS
 // custom properties.
@@ -245,8 +242,8 @@ export function buildCustomerEmail({ session }) {
                   <td style="${SANS} font-size: 15px; line-height: 1.6; color: ${INK}; padding: 0 0 8px 0;">${textValue}</td>
                 </tr>`;
 
-  const hoursLine = STORE_HOURS
-    ? `<p style="${SANS} font-size: 13px; line-height: 1.6; color: ${MUTED}; margin: 0 0 4px 0;">${esc(STORE_HOURS)}</p>`
+  const hoursLine = STORE_HOURS.length
+    ? `<p style="${SANS} font-size: 13px; line-height: 1.6; color: ${MUTED}; margin: 8px 0 4px 0;">${STORE_HOURS.map((l) => esc(l)).join("<br>")}</p>`
     : "";
 
   const html = `<!DOCTYPE html>
@@ -392,7 +389,7 @@ ${nextStep(esc(FULFILLMENT_NOTE))}${nextStep("If she needs to check anything abo
     "Tippin' Cowgirl",
     STORE_ADDRESS,
   ];
-  if (STORE_HOURS) textParts.push(STORE_HOURS);
+  textParts.push(...STORE_HOURS);
   textParts.push(INSTAGRAM_URL, "", `Order reference ${s.id || "unknown"}`);
 
   return { subject, html, text: textParts.join("\n"), totalHats };

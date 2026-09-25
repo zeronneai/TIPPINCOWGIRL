@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CONTACT_EMAIL } from "./business.js";
+import { CONTACT_EMAIL, STORE_HOURS } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
@@ -1344,9 +1344,31 @@ function Solana() {
             <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(30px,4vw,46px)" }}>
               At the Shoppes at Solana
             </h2>
-            <p style={{ margin: "16px 0 24px", fontSize: 15.5, lineHeight: 1.6, color: "#3a1508", fontWeight: 600 }}>
+            <p style={{ margin: "16px 0 18px", fontSize: 15.5, lineHeight: 1.6, color: "#3a1508", fontWeight: 600 }}>
               750 Sunland Park Dr, El Paso, TX 79912. Come find the bar and build your own.
             </p>
+            {/* Same STORE_HOURS list the customer email prints. */}
+            <div style={{ margin: "0 0 24px" }}>
+              <div
+                style={{
+                  fontWeight: 800,
+                  fontSize: 12,
+                  letterSpacing: ".12em",
+                  textTransform: "uppercase",
+                  color: "var(--ink)",
+                  marginBottom: 6,
+                }}
+              >
+                Hours
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                {STORE_HOURS.map((line) => (
+                  <li key={line} style={{ fontSize: 15, lineHeight: 1.6, color: "#3a1508", fontWeight: 600 }}>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               <a href={MAPS_DIRECTIONS} target="_blank" rel="noopener noreferrer" className="tc-btn tc-btn--ghost">
                 Get directions →
