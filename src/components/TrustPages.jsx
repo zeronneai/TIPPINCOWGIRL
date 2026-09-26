@@ -18,8 +18,9 @@
 import { CONTACT_EMAIL } from "../business.js";
 import { FREE_SHIPPING_MIN_QTY, SHIPPING_FLAT, formatCents } from "../shop/pricing.js";
 
-// Shown at the top of Privacy and Terms. Change it whenever either changes.
-const POLICY_EFFECTIVE_DATE = "September 25, 2026";
+// Shown at the top of each page. Change a date whenever that page changes.
+const PRIVACY_EFFECTIVE_DATE = "September 26, 2026";
+const TERMS_EFFECTIVE_DATE = "September 25, 2026";
 
 const P = { margin: "0 0 14px", fontSize: 15.5, lineHeight: 1.65, color: "#4a3a2c" };
 const H3 = {
@@ -109,7 +110,7 @@ export const TRUST_ROUTES = {
     title: "Privacy",
     body: (
       <>
-        <p style={EFFECTIVE}>Effective {POLICY_EFFECTIVE_DATE}</p>
+        <p style={EFFECTIVE}>Effective {PRIVACY_EFFECTIVE_DATE}</p>
         <p style={P}>
           We collect only what we need to build and ship your hat or plan your event. We do not sell your
           information, and we do not share it for advertising. Ever.
@@ -139,16 +140,24 @@ export const TRUST_ROUTES = {
         <h3 style={H3}>Who else handles your data</h3>
         <p style={P}>
           Only the services that make the site work: Stripe for payments, Google for booking requests (they are
-          saved to a Google Sheet), our email provider to send your order confirmation, and our hosting
-          provider to serve the site. Each one gets only what it needs for that job.
+          saved to a Google Sheet), our email provider to send your order confirmation, and Vercel, which hosts
+          the site and counts visits to it (see below). Each one gets only what it needs for that job.
         </p>
 
-        <h3 style={H3}>Cookies and tracking</h3>
+        <h3 style={H3}>Visit counts, cookies and tracking</h3>
         <p style={P}>
-          No analytics, no ad trackers, no tracking cookies. Your browser keeps your cart on your own device so
-          it survives closing the tab; clear your browser storage and it is gone. The map in the Solana section
-          is Google Maps and only loads if you tap it. Our fonts come from Google Fonts and Fontshare, which see
-          your IP address the way any site you load a file from does.
+          We count visits with Vercel Web Analytics, so we know which pages people read and where they came
+          from. It uses no cookies and does not identify you: it records the page, the site that sent you, and
+          your country, device and browser type, and it tells visits apart with an anonymous code that resets
+          every day. Before a visit is counted we strip the details from the page address, such as your hat
+          design or your order reference, keeping only campaign tags like the name of the post that brought
+          you here.
+        </p>
+        <p style={P}>
+          No ad trackers, no tracking cookies, and nothing is sold. Your browser keeps your cart on your own
+          device so it survives closing the tab; clear your browser storage and it is gone. The map in the
+          Solana section is Google Maps and only loads if you tap it. Our fonts come from Google Fonts and
+          Fontshare, which see your IP address the way any site you load a file from does.
         </p>
 
         <h3 style={H3}>How long we keep it</h3>
@@ -171,7 +180,7 @@ export const TRUST_ROUTES = {
     title: "Terms",
     body: (
       <>
-        <p style={EFFECTIVE}>Effective {POLICY_EFFECTIVE_DATE}</p>
+        <p style={EFFECTIVE}>Effective {TERMS_EFFECTIVE_DATE}</p>
         <p style={P}>
           Tippin' Cowgirl is a custom hat bar at The Shoppes at Solana, 750 Sunland Park Dr, El Paso, TX 79912.
           By ordering on this site or booking the bar, you agree to these terms.

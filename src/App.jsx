@@ -1,4 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { scrubEvent } from "./analytics.js";
 import { CONTACT_EMAIL, STORE_HOURS } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
@@ -1581,16 +1583,21 @@ export default function App() {
   useEffect(() => scrollToInitialHash(), []);
   useCanonical(path);
 
-  if (path === "/giveaway")
-    return (
-      <Suspense fallback={<div className="gw-page" />}>
-        <Giveaway />
-      </Suspense>
-    );
   return (
-    <CartProvider>
-      <Site />
-    </CartProvider>
+    <>
+      {/* mounted once for every page, the giveaway included; it follows
+          pushState navigation on its own. See src/analytics.js. */}
+      <Analytics beforeSend={scrubEvent} />
+      {path === "/giveaway" ? (
+        <Suspense fallback={<div className="gw-page" />}>
+          <Giveaway />
+        </Suspense>
+      ) : (
+        <CartProvider>
+          <Site />
+        </CartProvider>
+      )}
+    </>
   );
 }
 
