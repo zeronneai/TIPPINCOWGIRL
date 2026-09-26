@@ -43,17 +43,18 @@ Indexing takes days, not minutes. Do not panic on day one.
 
 ### Real prices
 
-Every price in `src/shop/pricing.js` is still a placeholder tier, marked with
-a `TODO(prices)` comment at the top of the list. They are the numbers the
-site has been demoed with, not numbers the owner has approved.
+The base hat is **$140** for every felt color, confirmed by the owner. The
+accessory prices are the ones the owner gave for builder v2. What is still
+pending is the **shipping rate**: a flat $12 per order, free from two hats
+up, marked `TODO(shipping)` in `src/shop/pricing.js`.
 
 Prices live in exactly one place. Change them in `pricing.js` and the
 builder, the cart, Stripe and the order email all follow. Amounts are in
-**whole cents**: `9800` means $98.00. Do not write `98`.
+**whole cents**: `14000` means $140.00. Do not write `140`.
 
-The shipping rule sits in the same file: flat rate for one hat, free from two
-hats up. If it changes, the wording in `src/components/TrustPages.jsx`
-(Shipping & Returns and FAQ) has to change with it.
+If the shipping rule changes, the wording in `src/components/TrustPages.jsx`
+(Shipping & Returns and FAQ) follows on its own for the amount and the free
+threshold, since both are read from `pricing.js`.
 
 ### Production time
 
@@ -119,7 +120,8 @@ domain. Leave it unset on Preview.
 | Search block removed in the code | yes |
 | Verified with curl after deploy | no |
 | Search Console set up and sitemap submitted | no |
-| Real prices in pricing.js | no |
+| Base hat price ($140) | yes |
+| Real shipping rate | no |
 | Real production time confirmed | no |
 | Stripe live secret key in Vercel | no |
 | Live mode webhook with its own whsec | no |

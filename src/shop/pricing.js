@@ -38,15 +38,16 @@ export const CURRENCY = "USD";
 export const BRANDS_ENABLED = false;
 
 // --- prices ---------------------------------------------------------------
-// TODO(price): the base hat price is still pending from the owner. These are
-// the provisional tiers the site has been running with, unchanged.
+// The base hat is $140, confirmed by the owner, and the same for every felt
+// color: the color never changes the price.
+export const BASE_PRICE = 14000;
 export const BASE_OPTIONS = [
-  { id: "ivory", name: "Ivory", price: 9800 },
-  { id: "black", name: "Black", price: 10500 },
-  { id: "chocolate", name: "Chocolate", price: 9800 },
-  { id: "pink", name: "Dusty Pink", price: 10500 },
-  { id: "wine", name: "Wine", price: 10500 },
-  { id: "turquoise", name: "Turquoise", price: 9800 },
+  { id: "ivory", name: "Ivory", price: BASE_PRICE },
+  { id: "black", name: "Black", price: BASE_PRICE },
+  { id: "chocolate", name: "Chocolate", price: BASE_PRICE },
+  { id: "pink", name: "Dusty Pink", price: BASE_PRICE },
+  { id: "wine", name: "Wine", price: BASE_PRICE },
+  { id: "turquoise", name: "Turquoise", price: BASE_PRICE },
 ];
 
 // NAMES. `name` is the creative catalog name every customer sees (builder,
@@ -371,7 +372,7 @@ export function parsePermalink(search, defaults = { baseId: "ivory" }) {
   });
 }
 
-/** Format integer cents for display, e.g. 9800 -> "$98". */
+/** Format integer cents for display, e.g. 14000 -> "$140". */
 export function formatCents(cents) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
