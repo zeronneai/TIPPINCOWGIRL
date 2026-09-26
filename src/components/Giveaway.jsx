@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // /giveaway: a standalone entry page for the giveaway with Girls Run The 915.
 //
-// Reached only by link (Instagram), at /giveaway or /#/giveaway. It is not in
+// Reached only by link (Instagram), at /giveaway (old /#/giveaway links are
+// rewritten to it by src/router.js). It is not in
 // the nav, the footer or the sitemap, and it renders on its own: no nav, no
 // cart, no footer, so the whole thing fits one phone screen. It is loaded as
 // its own chunk, so the main site bundle does not carry it.

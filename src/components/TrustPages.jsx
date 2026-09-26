@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// Trust pages: Shipping & Returns, Privacy, Terms, FAQ. Simple hash routes
-// (#/shipping-returns, #/privacy, #/terms, #/faq) rendered instead of the
-// landing. Stripe reviews these before activating the account, so nothing
+// Trust pages: Shipping & Returns, Privacy, Terms, FAQ. Clean paths
+// (/shipping-returns, /privacy, /terms, /faq, see src/router.js) rendered
+// instead of the landing. Stripe reviews these before activating the account, so nothing
 // here may promise something the business does not actually do.
 //
 // Facts are read, never retyped:
@@ -53,7 +53,7 @@ function Instagram() {
 }
 
 export const TRUST_ROUTES = {
-  "#/shipping-returns": {
+  "/shipping-returns": {
     kicker: "The fine print, tipped politely",
     title: "Shipping & Returns",
     body: (
@@ -104,7 +104,7 @@ export const TRUST_ROUTES = {
     ),
   },
 
-  "#/privacy": {
+  "/privacy": {
     kicker: "Your data, kept under our hat",
     title: "Privacy",
     body: (
@@ -166,7 +166,7 @@ export const TRUST_ROUTES = {
     ),
   },
 
-  "#/terms": {
+  "/terms": {
     kicker: "Plain words, fair deal",
     title: "Terms",
     body: (
@@ -205,7 +205,7 @@ export const TRUST_ROUTES = {
         <p style={P}>
           We ship within the United States only. Shipping costs, when your hat ships and what happens if
           something is wrong are all on{" "}
-          <a href="#/shipping-returns" style={LINK}>
+          <a href="/shipping-returns" style={LINK}>
             Shipping &amp; Returns
           </a>
           , which is part of these terms.
@@ -244,7 +244,7 @@ export const TRUST_ROUTES = {
     ),
   },
 
-  "#/faq": {
+  "/faq": {
     kicker: "Asked at the bar, answered here",
     title: "FAQ",
     body: (
@@ -276,7 +276,7 @@ export const TRUST_ROUTES = {
           Every hat is made for you, so we cannot take one back because of a change of mind. If it arrives
           damaged, is not the build you ordered, or the size is off, write to us within 7 days of delivery. The
           details are on{" "}
-          <a href="#/shipping-returns" style={LINK}>
+          <a href="/shipping-returns" style={LINK}>
             Shipping &amp; Returns
           </a>
           .
@@ -319,7 +319,7 @@ export default function TrustPage({ route }) {
           {page.title}
         </h1>
         {page.body}
-        <a href="#top" className="tc-btn tc-btn--ghost" style={{ marginTop: 18 }}>
+        <a href="/" className="tc-btn tc-btn--ghost" style={{ marginTop: 18 }}>
           ← Back to the bar
         </a>
       </div>

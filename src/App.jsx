@@ -6,6 +6,7 @@ import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOT
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
+import { installLinkInterception, navigate, scrollToInitialHash, useCanonical, usePath } from "./router.js";
 import logo from "/logo.png";
 
 const IG = "https://www.instagram.com/_tippincowgirl/";
@@ -574,18 +575,18 @@ function Nav({ onBook }) {
           padding: "13px 0",
         }}
       >
-        <a href="#top" style={{ textDecoration: "none", minWidth: 0 }} aria-label="Tippin Cowgirl, home">
+        <a href="/" style={{ textDecoration: "none", minWidth: 0 }} aria-label="Tippin Cowgirl, home">
           <Brand />
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="tc-nav-desktop" style={{ display: "flex", alignItems: "center", gap: 26, marginRight: 8 }}>
-            <a href="#builder" style={link}>
+            <a href="/#builder" style={link}>
               Build your hat
             </a>
-            <a href="#events" style={link}>
+            <a href="/#events" style={link}>
               Events
             </a>
-            <a href="#gallery" style={link}>
+            <a href="/#gallery" style={link}>
               Gallery
             </a>
           </div>
@@ -606,19 +607,19 @@ function Nav({ onBook }) {
       </div>
       {open && (
         <div className="tc-nav-mobile">
-          <a href="#builder" style={link} onClick={() => setOpen(false)}>
+          <a href="/#builder" style={link} onClick={() => setOpen(false)}>
             Build your hat
           </a>
-          <a href="#deborah" style={link} onClick={() => setOpen(false)}>
+          <a href="/#deborah" style={link} onClick={() => setOpen(false)}>
             Meet Deborah
           </a>
-          <a href="#events" style={link} onClick={() => setOpen(false)}>
+          <a href="/#events" style={link} onClick={() => setOpen(false)}>
             Events & Pop-Ups
           </a>
-          <a href="#gallery" style={link} onClick={() => setOpen(false)}>
+          <a href="/#gallery" style={link} onClick={() => setOpen(false)}>
             Gallery
           </a>
-          <a href="#solana" style={{ ...link, color: "var(--coral-deep)" }} onClick={() => setOpen(false)}>
+          <a href="/#solana" style={{ ...link, color: "var(--coral-deep)" }} onClick={() => setOpen(false)}>
             Find us at Solana
           </a>
           <button
@@ -717,7 +718,7 @@ function Hero({ onBook }) {
           Pick your felt, shape the brim, pin your charm. Walk away with a hat nobody else has.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 34 }}>
-          <a href="#builder" className="tc-btn">
+          <a href="/#builder" className="tc-btn">
             Build your hat
           </a>
           <button type="button" className="tc-btn tc-btn--ghost" onClick={onBook}>
@@ -1475,7 +1476,7 @@ function BuildFab() {
 
   return (
     <a
-      href="#builder"
+      href="/#builder"
       className={`tc-fab${shown ? " on" : ""}${labelOn ? " tc-fab--intro" : ""}`}
       aria-label="Build Your Hat"
       title="Build Your Hat"
@@ -1530,16 +1531,16 @@ function Footer({ onBook }) {
           }}
         >
           <div style={{ display: "flex", gap: "10px 20px", flexWrap: "wrap" }}>
-            <a href="#/shipping-returns" style={trustLink}>
+            <a href="/shipping-returns" style={trustLink}>
               Shipping &amp; Returns
             </a>
-            <a href="#/privacy" style={trustLink}>
+            <a href="/privacy" style={trustLink}>
               Privacy
             </a>
-            <a href="#/terms" style={trustLink}>
+            <a href="/terms" style={trustLink}>
               Terms
             </a>
-            <a href="#/faq" style={trustLink}>
+            <a href="/faq" style={trustLink}>
               FAQ
             </a>
           </div>
@@ -1570,21 +1571,17 @@ function Footer({ onBook }) {
 
 // The giveaway renders instead of the whole site, with no nav, cart or footer,
 // and in its own chunk so ordinary visitors never download it. It answers at
-// /giveaway (vercel.json rewrites the path to index.html) and at #/giveaway.
+// /giveaway; the old /#/giveaway links are rewritten to it by router.js.
 const Giveaway = lazy(() => import("./components/Giveaway.jsx"));
-const isGiveawayRoute = () =>
-  typeof window !== "undefined" &&
-  (window.location.hash === "#/giveaway" || window.location.pathname.replace(/\/+$/, "") === "/giveaway");
 
 export default function App() {
-  const [giveaway, setGiveaway] = useState(isGiveawayRoute);
-  useEffect(() => {
-    const onHash = () => setGiveaway(isGiveawayRoute());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+  const path = usePath();
+  // one handler for the whole app turns internal link clicks into pushState
+  useEffect(() => installLinkInterception(), []);
+  useEffect(() => scrollToInitialHash(), []);
+  useCanonical(path);
 
-  if (giveaway)
+  if (path === "/giveaway")
     return (
       <Suspense fallback={<div className="gw-page" />}>
         <Giveaway />
@@ -1606,20 +1603,14 @@ function Site() {
   };
   const closeBooking = () => setBookingOpen(false);
 
-  // Tiny hash router: #/shipping-returns, #/privacy, #/terms and #/faq swap the
-  // landing for a trust page; every other hash is a plain anchor.
-  const [route, setRoute] = useState(() => (typeof window !== "undefined" ? window.location.hash : ""));
-  useEffect(() => {
-    const onHash = () => setRoute(window.location.hash);
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-  const trustRoute = TRUST_ROUTES[route] ? route : null;
+  // Clean paths (see router.js): /shipping-returns, /privacy, /terms and /faq
+  // swap the landing for a trust page, and Stripe returns to
+  // /order-confirmed and /checkout-cancelled. Every path is served by
+  // index.html through the rewrite in vercel.json. Hashes are only section
+  // anchors on the landing now.
+  const pathname = usePath();
+  const trustRoute = TRUST_ROUTES[pathname] ? pathname : null;
   const { closeCart } = useCart();
-
-  // Stripe returns to real paths, not hashes, so those are read from the
-  // pathname (vercel.json rewrites them to index.html).
-  const pathname = typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") : "";
   const checkoutRoute = CHECKOUT_ROUTES.includes(pathname) ? pathname : null;
 
   useEffect(() => {
@@ -1680,7 +1671,7 @@ function Site() {
         onAddAnother={() => {
           closeCart();
           if (isLanding) document.getElementById("builder")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          else window.location.href = "/#builder";
+          else navigate("/#builder");
         }}
       />
       <Footer onBook={openBooking} />

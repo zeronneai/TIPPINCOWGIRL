@@ -13,8 +13,12 @@
          tippincowgirl.com: relative paths are not resolved by most link
          preview crawlers, so og:image and twitter:image in particular have
          to carry the full origin. Keep these in sync with
-         public/sitemap.xml and the Sitemap line in public/robots.txt. -->
-    <link rel="canonical" href="https://tippincowgirl.com/" />
+         public/sitemap.xml and the Sitemap line in public/robots.txt.
+
+         NO rel="canonical" HERE ON PURPOSE. This one file serves every path
+         (/, /faq, /terms...), so a static canonical would tell Google that
+         /faq is a copy of the home page. src/router.js sets exactly one
+         canonical per page instead, which Google reads when it renders. -->
 
     <!-- Open Graph: what IG bios / WhatsApp / iMessage show when the link is shared -->
     <meta property="og:type" content="website" />

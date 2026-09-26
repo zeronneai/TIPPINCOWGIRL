@@ -299,11 +299,11 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
                 the page would open underneath, hidden. */}
             <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 12.5, lineHeight: 1.5, color: "#6f5b48" }}>
               By checking out you agree to our{" "}
-              <a href="#/terms" onClick={closeCart} style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
+              <a href="/terms" onClick={closeCart} style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
                 Terms
               </a>{" "}
               and{" "}
-              <a href="#/shipping-returns" onClick={closeCart} style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
+              <a href="/shipping-returns" onClick={closeCart} style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
                 Shipping &amp; Returns
               </a>
               . We ship within the US only.

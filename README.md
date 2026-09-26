@@ -45,9 +45,27 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | `VITE_BOOKING_ENDPOINT` | yes, for the events form | The Google Apps Script web app URL the private events form posts to, ending in `/exec`. Unlike every other variable here this one is read at BUILD time and baked into the client bundle, which the `VITE_` prefix makes explicit. That is fine: an Apps Script web app URL is not a secret, anyone can read it in the network tab. Without it the form refuses to send and tells the visitor to DM instead of failing quietly. Changing it needs a rebuild, not just a restart. |
 | `VITE_GIVEAWAY_ENDPOINT` | yes, for /giveaway | The Apps Script web app URL for the giveaway entries. It is a **separate** script and Sheet from booking; the page refuses to send if this equals `VITE_BOOKING_ENDPOINT`. Read at build time, like the booking one. |
 
+### Routing
+
+Pages are clean paths handled by `src/router.js`, a tiny history router: `/`,
+`/shipping-returns`, `/privacy`, `/terms`, `/faq`, `/giveaway`, and the two
+Stripe return pages `/order-confirmed` and `/checkout-cancelled`. The
+catch all rewrite in `vercel.json` serves `index.html` for every path that
+is not a real file or `/api`, so entering any of them directly never 404s.
+
+- Links are plain `<a href="/faq">`; one click handler turns them into
+  client side navigation, so the app does not reload.
+- Section anchors on the landing are written `/#builder`, `/#events`, so
+  they work from any page.
+- Old hash links (`/#/faq`, `/#/giveaway`...) are rewritten to the clean
+  path before the first render, so anything already shared keeps working.
+- Each indexable page sets its own `rel="canonical"`; `index.html` has none
+  on purpose. The indexable list lives in `INDEXABLE_PATHS` and must match
+  `public/sitemap.xml`.
+
 ### The giveaway page
 
-`/giveaway` (also `/#/giveaway`) is a standalone entry page for the
+`/giveaway` (old `/#/giveaway` links redirect to it) is a standalone entry page for the
 giveaway with Girls Run The 915, shared only by link. It is not in the nav,
 footer or sitemap, and it carries `noindex` both as a meta tag and, for the
 path, as an `X-Robots-Tag` header in `vercel.json`. Code:

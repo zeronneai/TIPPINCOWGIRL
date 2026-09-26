@@ -9,6 +9,9 @@
 // shows it follows.
 // ---------------------------------------------------------------------------
 
+/** Production origin, used for canonical URLs. */
+export const SITE_ORIGIN = "https://tippincowgirl.com";
+
 /** Public contact address: footer, Privacy, Terms, Shipping & Returns. */
 export const CONTACT_EMAIL = "tippincowgirlhatbar@gmail.com";
 
