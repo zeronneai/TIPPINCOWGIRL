@@ -49,27 +49,29 @@ export const BASE_OPTIONS = [
   { id: "turquoise", name: "Turquoise", price: 9800 },
 ];
 
-// TODO(names): every accessory and color name below is a plain descriptive
-// placeholder. The owner is sending creative names; change the `name`
-// fields only, never the ids (ids are in carts, links and past orders).
+// NAMES. `name` is the creative catalog name every customer sees (builder,
+// cart, Stripe Checkout, the customer email). `plain` is what the piece
+// physically is, shown in brackets next to the name ONLY in the owner's work
+// order email, so she can pick the right piece without memorizing names.
+// Rename freely; never change an `id` (ids live in carts, links and orders).
 
 export const FEATHER_OPTIONS = [
   { id: "none", name: "No feather", price: 0 },
-  { id: "natural", name: "Natural Pheasant", price: 5000 },
-  { id: "bronze", name: "Bronze Pheasant", price: 5000 },
-  { id: "guinea", name: "Guinea Fowl", price: 5000 },
-  { id: "magenta", name: "Magenta Mix", price: 5000 },
-  { id: "polka", name: "Black Polka Dot", price: 5000 },
-  { id: "turquoise", name: "Turquoise Concho", price: 5000 },
+  { id: "natural", name: "Prairie Pheasant", plain: "natural pheasant feather band", price: 5000 },
+  { id: "bronze", name: "Midnight Outlaw", plain: "bronze pheasant feather band", price: 5000 },
+  { id: "guinea", name: "Dusty Trail", plain: "guinea fowl feather band", price: 5000 },
+  { id: "magenta", name: "Pink Outlaw", plain: "magenta mix feather band", price: 5000 },
+  { id: "polka", name: "Polka Dot Posse", plain: "black polka dot feather band", price: 5000 },
+  { id: "turquoise", name: "Turquoise Queen", plain: "feather band with turquoise concho", price: 5000 },
 ];
 
 export const STITCHING_COLORS = [
-  { id: "raspberry", name: "Raspberry" },
-  { id: "sage", name: "Sage" },
-  { id: "cognac", name: "Cognac" },
-  { id: "rust", name: "Rust" },
-  { id: "navy", name: "Navy" },
-  { id: "teal", name: "Teal" },
+  { id: "raspberry", name: "Raspberry Rodeo", plain: "raspberry" },
+  { id: "sage", name: "Sagebrush", plain: "sage" },
+  { id: "cognac", name: "Cognac Saddle", plain: "cognac" },
+  { id: "rust", name: "Desert Rust", plain: "rust" },
+  { id: "navy", name: "Midnight Navy", plain: "navy" },
+  { id: "teal", name: "Turquoise Creek", plain: "teal" },
 ];
 
 // Free text under the stitching colors ("Want a different shade? Tell us").
@@ -77,11 +79,11 @@ export const STITCHING_NOTE_MAX_LEN = 120;
 
 export const CORD_OPTIONS = [
   { id: "none", name: "No cord", price: 0 },
-  { id: "stitching", name: "Suede Stitching", price: 1000, colors: STITCHING_COLORS },
-  { id: "leather-rope", name: "Leather Rope", price: 1000 },
-  { id: "barbed-wire", name: "Barbed Wire", price: 1000 },
-  { id: "rhinestone", name: "Rhinestone Chain", price: 1500 },
-  { id: "turquoise", name: "Turquoise Stone", price: 1500 },
+  { id: "stitching", name: "Saddle Stitch", plain: "suede stitching", price: 1000, colors: STITCHING_COLORS },
+  { id: "leather-rope", name: "Ranch Hand Rope", plain: "leather rope", price: 1000 },
+  { id: "barbed-wire", name: "Barbed & Beautiful", plain: "leather barbed wire", price: 1000 },
+  { id: "rhinestone", name: "Rhinestone Sass", plain: "rhinestone chain", price: 1500 },
+  { id: "turquoise", name: "Turquoise Trail", plain: "turquoise stone", price: 1500 },
 ];
 
 // The brim bud is chosen size first, then color. The colors differ by size.
@@ -89,36 +91,40 @@ export const BUD_SIZES = [
   { id: "none", name: "No brim bud", price: 0, colors: [] },
   {
     id: "small",
-    name: "Small",
+    name: "Petite Bud",
+    plain: "small brim bud",
     price: 2500,
     colors: [
-      { id: "orange", name: "Orange" },
-      { id: "yellow", name: "Yellow" },
-      { id: "teal", name: "Teal" },
+      { id: "orange", name: "Sunset Poppy", plain: "orange" },
+      { id: "yellow", name: "Wildflower", plain: "yellow" },
+      { id: "teal", name: "Sage & Sky", plain: "teal" },
     ],
   },
   {
     id: "large",
-    name: "Large",
+    name: "Full Bloom",
+    plain: "large brim bud",
     price: 3500,
     colors: [
-      { id: "teal", name: "Teal" },
-      { id: "red", name: "Red" },
-      { id: "purple", name: "Purple" },
-      { id: "yellow", name: "Yellow" },
+      { id: "teal", name: "Turquoise Sky", plain: "teal" },
+      { id: "red", name: "Scarlet Rodeo", plain: "red" },
+      { id: "purple", name: "Lavender Sunset", plain: "purple" },
+      { id: "yellow", name: "Desert Gold", plain: "yellow" },
     ],
   },
 ];
 
-// One accessory, four colors.
+// One accessory, four colors. The step is called "Strike It Up"; the colors
+// keep plain names on purpose.
 export const MATCHES = {
-  name: "Matches",
+  name: "Strike It Up",
+  plain: "matches",
   price: 500,
   colors: [
-    { id: "red", name: "Red" },
-    { id: "black", name: "Black" },
-    { id: "turquoise", name: "Turquoise" },
-    { id: "pink", name: "Pink" },
+    { id: "red", name: "Red", plain: "red" },
+    { id: "black", name: "Black", plain: "black" },
+    { id: "turquoise", name: "Turquoise", plain: "turquoise" },
+    { id: "pink", name: "Pink", plain: "pink" },
   ],
 };
 
@@ -486,41 +492,46 @@ function normalizeQuantity(value) {
  * One place turns a config into labelled, priced parts; buildOrder, the
  * one line description and both emails all read from it.
  *
- * @returns Array<{step, label, name, detail, price}>
+ * @returns Array<{step, label, name, detail, plain, price}>
  *   step    "base" | "feather" | "cord" | "bud" | "matches" | "brand"
  *   label   category heading, e.g. "Brim bud"
- *   name    the chosen option, e.g. "Large"
- *   detail  its color when it has one, e.g. "Teal"
+ *   name    the chosen option's catalog name, e.g. "Full Bloom"
+ *   detail  its color's catalog name when it has one, e.g. "Turquoise Sky"
+ *   plain   what the piece physically is, for the owner, e.g.
+ *           "large brim bud, teal" (null for the base)
  */
 export function hatParts(config) {
   const c = normalizeConfig(config);
   const parts = [];
   const base = findBase(c.baseId);
-  if (base) parts.push({ step: "base", label: "Base", name: base.name, detail: null, price: base.price });
+  if (base) parts.push({ step: "base", label: "Base", name: base.name, detail: null, plain: null, price: base.price });
 
   if (c.featherId !== "none") {
     const f = findFeather(c.featherId);
-    parts.push({ step: "feather", label: "Feather", name: f.name, detail: null, price: f.price });
+    parts.push({ step: "feather", label: "Feather", name: f.name, detail: null, plain: f.plain, price: f.price });
   }
   if (c.cordId !== "none") {
     const cord = findCord(c.cordId);
     const color = findCordColor(c.cordId, c.cordColor);
-    parts.push({ step: "cord", label: "Cord", name: cord.name, detail: color?.name ?? null, price: cord.price });
+    const plain = color ? `${cord.plain}, ${color.plain}` : cord.plain;
+    parts.push({ step: "cord", label: "Cord", name: cord.name, detail: color?.name ?? null, plain, price: cord.price });
   }
   if (c.budSize !== "none") {
     const bud = findBudSize(c.budSize);
     const color = findBudColor(c.budSize, c.budColor);
-    parts.push({ step: "bud", label: "Brim bud", name: bud.name, detail: color?.name ?? null, price: bud.price });
+    const plain = color ? `${bud.plain}, ${color.plain}` : bud.plain;
+    parts.push({ step: "bud", label: "Brim bud", name: bud.name, detail: color?.name ?? null, plain, price: bud.price });
   }
   if (c.matchesColor !== "none") {
     const color = findMatchesColor(c.matchesColor);
-    // one accessory in four colors, so the color IS the choice: "Matches: Red"
-    parts.push({ step: "matches", label: "Matches", name: color.name, detail: null, price: MATCHES.price });
+    // one accessory in four colors, so the color IS the choice:
+    // "Strike It Up: Red"
+    parts.push({ step: "matches", label: MATCHES.name, name: color.name, detail: null, plain: `${color.plain} ${MATCHES.plain}`, price: MATCHES.price });
   }
   if (BRANDS_ENABLED && c.brandId !== "none") {
     const brand = findBrand(c.brandId);
     const name = brand.custom && c.customText ? `Your word "${c.customText.toUpperCase()}"` : brand.name;
-    parts.push({ step: "brand", label: "Brand", name, detail: null, price: brand.price });
+    parts.push({ step: "brand", label: "Brand", name, detail: null, plain: null, price: brand.price });
   }
   return parts;
 }
@@ -528,18 +539,18 @@ export function hatParts(config) {
 /** "Name, Color" or just "Name". */
 const partText = (p) => (p.detail ? `${p.name}, ${p.detail}` : p.name);
 
-/** Short human description of one hat, for cart rows and image alt text. */
+/**
+ * Short human description of one hat, for cart rows and image alt text:
+ * "Ivory, Prairie Pheasant, Saddle Stitch in Raspberry Rodeo, Full Bloom in
+ * Turquoise Sky, Strike It Up in Red, size M". Catalog names are kept exactly
+ * as written, never lowercased.
+ */
 export function describeConfig(config) {
   const c = normalizeConfig(config);
-  const words = [];
-  for (const p of hatParts(c)) {
-    if (p.step === "base") words.push(p.name);
-    else if (p.step === "feather") words.push(`${p.name} feather`);
-    else if (p.step === "cord") words.push(p.detail ? `${p.detail} ${p.name.toLowerCase()}` : p.name);
-    else if (p.step === "bud") words.push(`${p.name.toLowerCase()} ${p.detail?.toLowerCase() ?? ""} brim bud`.replace(/\s+/g, " "));
-    else if (p.step === "matches") words.push(`${p.name.toLowerCase()} matches`);
-    else words.push(p.name);
-  }
+  const words = hatParts(c).map((p) => {
+    if (p.step === "matches") return `${p.label} in ${p.name}`;
+    return p.detail ? `${p.name} in ${p.detail}` : p.name;
+  });
   const size = findSize(c.size);
   if (size) words.push(`size ${size.name}`);
   return words.join(", ");

@@ -31,7 +31,7 @@ import {
 //   02 Feather    None or one
 //   03 Cord       None or one; Suede Stitching adds a color and a note
 //   04 Brim bud   None, or Small / Large, then a color for that size
-//   05 Matches    None or Matches, then a color
+//   05 Strike It Up (matches)  None or matches, then a color
 //   06 Size       required
 //
 // The stage is HatStack: one full canvas PNG per chosen piece, stacked in
@@ -851,7 +851,7 @@ export default function Builder() {
               {cord?.colors && (
                 <>
                   <ColorChips
-                    legend="Stitching color"
+                    legend={`${cord.name} color`}
                     step="cord"
                     colors={cord.colors}
                     value={design.cordColor}
@@ -917,7 +917,7 @@ export default function Builder() {
               </div>
               {design.budSize !== "none" && (
                 <ColorChips
-                  legend={`${bud.name} bud color`}
+                  legend={`${bud.name} color`}
                   step="bud"
                   colors={bud.colors}
                   value={design.budColor}
@@ -927,7 +927,7 @@ export default function Builder() {
               )}
             </Step>
 
-            <Step num={next()} id="matches" label="Matches" value={matchesValue}>
+            <Step num={next()} id="matches" label={MATCHES.name} value={matchesValue}>
               <div className="tc-opt-grid">
                 <Tile
                   testId="matches-none"
@@ -951,7 +951,7 @@ export default function Builder() {
               </div>
               {design.matchesColor !== "none" && (
                 <ColorChips
-                  legend="Matches color"
+                  legend="Color"
                   step="matches"
                   colors={MATCHES.colors}
                   value={design.matchesColor}

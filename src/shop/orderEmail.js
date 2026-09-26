@@ -125,8 +125,15 @@ const LEGACY_BAND_NAMES = {
   turquoise: "Turquoise Stone",
 };
 
-/** "Name, Color" or just "Name". */
-const partValue = (p) => (p.detail ? `${p.name}, ${p.detail}` : p.name);
+/**
+ * "Name, Color (what it physically is)". The owner reads the catalog name
+ * the customer chose AND the plain description, so she knows which piece to
+ * pull without memorizing the names: "Barbed & Beautiful (leather barbed wire)".
+ */
+const partValue = (p) => {
+  const name = p.detail ? `${p.name}, ${p.detail}` : p.name;
+  return p.plain ? `${name} (${p.plain})` : name;
+};
 
 /**
  * Human readable rows for one hat, skipping every step left at "none", so a
