@@ -43,6 +43,23 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | `ORDER_NOTIFICATION_EMAIL` | yes | Where the order emails land. Orders send from `orders@tippincowgirl.com`, so this can be any address once the domain is verified in Resend. Until that verification finishes Resend refuses the send outright, which the webhook logs and survives. |
 | `PUBLIC_BASE_URL` | no | Absolute site origin for the success and cancel URLs and for the "See this hat" links in the order email, e.g. `https://tippincowgirl.com`. Leave it unset to derive the origin from the request, which is what preview deployments want. |
 | `VITE_BOOKING_ENDPOINT` | yes, for the events form | The Google Apps Script web app URL the private events form posts to, ending in `/exec`. Unlike every other variable here this one is read at BUILD time and baked into the client bundle, which the `VITE_` prefix makes explicit. That is fine: an Apps Script web app URL is not a secret, anyone can read it in the network tab. Without it the form refuses to send and tells the visitor to DM instead of failing quietly. Changing it needs a rebuild, not just a restart. |
+| `VITE_GIVEAWAY_ENDPOINT` | yes, for /giveaway | The Apps Script web app URL for the giveaway entries. It is a **separate** script and Sheet from booking; the page refuses to send if this equals `VITE_BOOKING_ENDPOINT`. Read at build time, like the booking one. |
+
+### The giveaway page
+
+`/giveaway` (also `/#/giveaway`) is a standalone entry page for the
+giveaway with Girls Run The 915, shared only by link. It is not in the nav,
+footer or sitemap, and it carries `noindex` both as a meta tag and, for the
+path, as an `X-Robots-Tag` header in `vercel.json`. Code:
+`src/components/Giveaway.jsx`, styles in `src/components/Giveaway.css` (loaded only with the page). The
+draw date is the `DRAW_DATE` constant at the top of the component.
+
+The prize photo is blurred by Cloudinary in the URL, so the browser only
+ever receives blurred pixels. That does not protect the **original** upload,
+which stays public at the same public id without the transformation. To
+truly hide it until the reveal, upload a pre-blurred copy as its own asset
+and point `PRIZE_ID` at it, then make the original private in Cloudinary or
+remove it until reveal day.
 
 Stripe returns customers to two real paths, which `vercel.json` rewrites to
 the single page app: `/order-confirmed` and `/checkout-cancelled`. The cart

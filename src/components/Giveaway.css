@@ -1,0 +1,221 @@
+/* Loaded only with the giveaway chunk (src/components/Giveaway.jsx), so the
+   rest of the site never downloads these rules. It still uses the site's
+   global tokens and classes from styles.css: --coral, --cream, --ink,
+   .tc-sticker, .tc-btn and .tc-hp. */
+
+/* ---- /giveaway: standalone entry page with Girls Run The 915. Everything
+   is scoped to .gw-*, so none of it reaches the rest of the site. The same
+   sticker, Satoshi and wood button as the site, on a softer blush ground,
+   so it sits comfortably next to the Girls Run The 915 pinks. Mobile first:
+   the traffic comes from Instagram's in-app browser. ---- */
+.gw-page {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(130% 75% at 50% 0%, #fde2e2 0%, #fcece6 45%, var(--cream) 100%);
+  color: var(--ink);
+  font-family: "Satoshi", sans-serif;
+}
+.gw-wrap {
+  max-width: 440px;
+  margin: 0 auto;
+}
+.gw-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.gw-logos img {
+  display: block;
+  height: auto;
+}
+.gw-logo-tc {
+  width: 48px;
+  border-radius: 50%;
+}
+.gw-logo-grt {
+  width: 62px;
+}
+.gw-x {
+  font-family: "Alfa Slab One", "Satoshi", serif;
+  font-size: 20px;
+  line-height: 1;
+  color: #d9707f;
+}
+/* Sized to the viewport so the headline stays on ONE line on phones:
+   in Alfa Slab it runs about 11.7 times its font size, and 7.4vw keeps it
+   inside the column down to 360px wide. */
+.gw-title {
+  margin: 6px 0 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: clamp(22px, 7.4vw, 46px);
+}
+.gw-sub {
+  margin: 8px 0 12px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b3a36;
+}
+.gw-grid {
+  display: grid;
+  gap: 14px;
+}
+.gw-prize {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 4px 0 var(--ink);
+  background: #f3d3d3;
+}
+.gw-prize img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gw-ready {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  text-align: center;
+  font-size: clamp(22px, 6.6vw, 34px);
+}
+.gw-field {
+  margin-bottom: 8px;
+}
+.gw-field label {
+  display: block;
+  margin: 0 0 4px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a4a4f;
+}
+/* 16px on purpose: anything smaller makes iOS zoom the page on focus */
+.gw-field input {
+  width: 100%;
+  padding: 8px 13px;
+  border: 1.5px solid rgba(43, 26, 16, 0.4);
+  border-radius: 12px;
+  background: #fffaf7;
+  font-family: "Satoshi", sans-serif;
+  font-size: 16px;
+  color: var(--ink);
+}
+.gw-field input[aria-invalid="true"] {
+  border-color: var(--coral-deep);
+}
+.gw-field-error {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--coral-deep);
+}
+.gw-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #4a2a28;
+  cursor: pointer;
+}
+.gw-consent input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--coral);
+}
+.gw-submit {
+  width: 100%;
+  margin-top: 12px;
+}
+.gw-error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fde4e1;
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--coral-deep);
+  text-align: center;
+}
+.gw-success {
+  padding: 18px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  background: #fffaf7;
+  text-align: center;
+  outline: none;
+}
+.gw-success-title {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 8vw, 40px);
+}
+.gw-success-body {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #4a2a28;
+}
+.gw-follow {
+  display: grid;
+  gap: 10px;
+}
+.gw-follow .tc-btn {
+  width: 100%;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.gw-fine {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #7a5a55;
+  text-align: center;
+}
+/* short phones (iPhone SE class): a slightly wider frame buys back the
+   height the Enter button needs to stay on screen */
+@media (max-height: 700px) and (max-width: 819px) {
+  .gw-prize {
+    aspect-ratio: 2 / 1;
+  }
+}
+@media (min-width: 820px) {
+  .gw-page {
+    padding-top: 28px;
+  }
+  .gw-wrap {
+    max-width: 900px;
+  }
+  .gw-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 28px;
+  }
+  .gw-prize {
+    aspect-ratio: 3 / 4;
+    max-height: 520px;
+  }
+  .gw-fine {
+    max-width: 640px;
+    margin: 18px auto 0;
+  }
+}

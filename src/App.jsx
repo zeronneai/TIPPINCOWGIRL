@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { CONTACT_EMAIL, STORE_HOURS } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
@@ -1568,7 +1568,28 @@ function Footer({ onBook }) {
   );
 }
 
+// The giveaway renders instead of the whole site, with no nav, cart or footer,
+// and in its own chunk so ordinary visitors never download it. It answers at
+// /giveaway (vercel.json rewrites the path to index.html) and at #/giveaway.
+const Giveaway = lazy(() => import("./components/Giveaway.jsx"));
+const isGiveawayRoute = () =>
+  typeof window !== "undefined" &&
+  (window.location.hash === "#/giveaway" || window.location.pathname.replace(/\/+$/, "") === "/giveaway");
+
 export default function App() {
+  const [giveaway, setGiveaway] = useState(isGiveawayRoute);
+  useEffect(() => {
+    const onHash = () => setGiveaway(isGiveawayRoute());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  if (giveaway)
+    return (
+      <Suspense fallback={<div className="gw-page" />}>
+        <Giveaway />
+      </Suspense>
+    );
   return (
     <CartProvider>
       <Site />
