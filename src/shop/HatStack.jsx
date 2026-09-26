@@ -1,12 +1,14 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { BLEND, BRAND_TEXT, CATEGORIES, Z_INDEX, findIn } from "./catalog.js";
+import { BASES, BLEND, BRANDS, BRANDS_ENABLED, BRAND_TEXT, Z_INDEX, accessoryLayers, findIn } from "./catalog.js";
+import { layerUrl } from "./layerArt.js";
 
 // ---------------------------------------------------------------------------
 // The composed hat, shared by the builder stage and the cart thumbnails so
 // both render through exactly the same stacking rules. Nothing here decides
-// anything: z-order and blend modes come from catalog.js, and the images are
-// the plain layer URLs (no Cloudinary transforms beyond the ones already
-// baked into them).
+// anything: which layers, their z-order and blend modes all come from
+// catalog.js (accessoryLayers), and the files from layerArt.js. The base is
+// the Cloudinary PNG; every accessory is a local 1600px PNG on the same
+// canvas, so all of them stack at inset 0 with no offsets.
 //
 // It fills its positioned parent, so give the parent a size and
 // position: relative.
@@ -123,35 +125,41 @@ export function BrandTextLayer({ text, z }) {
   );
 }
 
-// Maps a config's category key to its selected id.
-const SELECTED = { base: "baseId", band: "bandId", brand: "brandId" };
+// The optional steps, bottom to top. Each keeps its own slot even when empty,
+// so swapping a color crossfades inside that slot instead of remounting.
+const ACCESSORY_STEPS = ["feather", "cord", "bud", "matches"];
+
+const slot = (step, z, blend, children) => (
+  <div key={step} data-layer={step} style={{ position: "absolute", inset: 0, zIndex: z, mixBlendMode: blend }}>
+    {children}
+  </div>
+);
 
 /**
- * @param config  { baseId, bandId, brandId, customText }
+ * @param config  a hat config (see pricing.js): baseId, featherId, cordId,
+ *                cordColor, budSize, budColor, matchesColor (+ brand fields,
+ *                used only while BRANDS_ENABLED)
  * @param alt     accessible description of the composed hat
  */
 export default function HatStack({ config, alt }) {
   const c = config || {};
+  const base = findIn(BASES, c.baseId);
+  const byStep = Object.fromEntries(accessoryLayers(c).map((l) => [l.step, l]));
+
+  let brandLayer = null;
+  if (BRANDS_ENABLED) {
+    const brand = findIn(BRANDS, c.brandId);
+    if (brand?.custom) brandLayer = <BrandTextLayer key="brand" text={c.customText} z={Z_INDEX.brand} />;
+    else if (brand?.layerImg) brandLayer = slot("brand", Z_INDEX.brand, BLEND.brand, <FadeImg src={brand.layerImg} />);
+  }
+
   return (
     <div role="img" aria-label={alt} style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
-      {CATEGORIES.map((cat) => {
-        const it = findIn(cat.options, c[SELECTED[cat.key]]);
-        if (cat.key === "brand" && it?.custom)
-          return <BrandTextLayer key="brand-text" text={c.customText} z={Z_INDEX.brand} />;
-        if (!it?.layerImg) return null;
-        return (
-          <div
-            key={cat.key}
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: Z_INDEX[cat.key],
-              mixBlendMode: BLEND[cat.key],
-            }}
-          >
-            <FadeImg src={it.layerImg} />
-          </div>
-        );
+      {slot("base", Z_INDEX.base, BLEND.base, <FadeImg src={base?.layerImg} />)}
+      {brandLayer}
+      {ACCESSORY_STEPS.map((step) => {
+        const l = byStep[step];
+        return slot(step, Z_INDEX[step], BLEND[step], <FadeImg src={l ? layerUrl(l.key) : null} />);
       })}
     </div>
   );

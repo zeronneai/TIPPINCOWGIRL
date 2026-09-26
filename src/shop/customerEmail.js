@@ -40,7 +40,7 @@
 
 import { STORE_HOURS } from "../business.js";
 import { addressLines, buildHatImageUrl, esc, money, parseCartFromMetadata } from "./orderEmail.js";
-import { findBand, findBase, findBrand, findSize } from "./pricing.js";
+import { findBase, findSize, hatParts } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // TODO(fulfillment): REPLACE THIS ONCE DEBORAH CONFIRMS A REAL TURNAROUND.
@@ -105,25 +105,25 @@ function firstNameOf(full) {
 /**
  * The rows describing one hat, for the customer.
  *
- * Differs from the owner's version in two ways that matter here: an option
- * the customer did not choose produces no row at all rather than the word
- * "none", and an id the catalog cannot resolve is skipped rather than
- * printed as "Unknown (xyz)". The customer cannot act on a broken id; the
- * owner's email is where those are reported.
+ * Differs from the owner's version in two ways that matter here: a step the
+ * customer left empty produces no row at all (never the word "none"), and an
+ * id the catalog cannot resolve is skipped rather than printed as
+ * "Unknown (xyz)". The customer cannot act on a broken id; the owner's email
+ * is where those are reported. The pieces come from hatParts(), the same
+ * list that priced the order.
  */
 function hatRows(line) {
   const rows = [];
-
-  const base = findBase(line.baseId);
-  if (base) rows.push(["Hat", base.name]);
-
-  const band = findBand(line.bandId);
-  if (band && band.id !== "none") rows.push(["Band", band.name]);
-
-  const brand = findBrand(line.brandId);
-  if (brand && brand.id !== "none") {
-    rows.push(["Brand", brand.custom ? "Your word" : brand.name]);
-    if (brand.custom && line.customText) rows.push(["Your word", String(line.customText).toUpperCase()]);
+  if (line.legacy) {
+    // an order from the first builder, paid before the switch
+    const base = findBase(line.baseId);
+    if (base) rows.push(["Hat", base.name]);
+  } else {
+    for (const p of hatParts(line)) {
+      if (p.step === "base") rows.push(["Hat", p.name]);
+      else rows.push([p.label, p.detail ? `${p.name}, ${p.detail}` : p.name]);
+      if (p.step === "cord" && line.stitchingNote) rows.push(["Your color note", line.stitchingNote]);
+    }
   }
 
   const size = findSize(line.size);

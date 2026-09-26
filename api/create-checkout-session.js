@@ -7,8 +7,10 @@
 // bundles that file into the deployed function. There is exactly one price
 // list in this project and it lives in src/shop/pricing.js.
 //
-// Request body: { cart: [ { baseId, bandId, brandId, customText, size,
-// quantity }, ... ] }
+// Request body: { cart: [ { baseId, featherId, cordId, cordColor,
+// stitchingNote, budSize, budColor, matchesColor, size, quantity }, ... ] }
+// (the exact field list is CONFIG_FIELDS in pricing.js; brand fields are
+// accepted and ignored while BRANDS_ENABLED is off)
 //
 // THE RULE: the browser never sends money. The body carries only the chosen
 // configuration. This function revalidates every line against the catalog
@@ -33,34 +35,15 @@
 //                      origin is derived from the request headers, which is
 //                      what you want on preview deployments.
 //
-// TODO(phase 2): the webhook and the owner notification email land next.
 // ---------------------------------------------------------------------------
 
 import Stripe from "stripe";
-import { buildOrder, validateCart } from "../src/shop/pricing.js";
+import { encodeOrderMetadata } from "../src/shop/orderMetadata.js";
+import { buildOrder, pickConfig, validateCart } from "../src/shop/pricing.js";
 
-// ---------------------------------------------------------------------------
-// SESSION METADATA FORMAT (phase 2 parses this, do not change it casually)
-//
-// One key per hat, hat_1 .. hat_N, each a pipe separated record:
-//
-//   hat_1 = "chocolate|leather|star||M|1"
-//   hat_2 = "ivory|feathers|custom|ZERO|L|2"
-//
-// Fields in order: base id, band id, brand id, custom text, size, quantity.
-// A field is empty when it does not apply (custom text on a non custom
-// brand). The pipe is safe as a separator because the custom text charset
-// (see BRAND_TEXT_ALLOWED in pricing.js) cannot contain one.
-//
-// Plus the order wide keys: hat_count, total_quantity, subtotal, shipping,
-// order_total. Amounts are integer cents, as strings.
-//
-// Permalinks are deliberately NOT stored: phase 2 can rebuild any of them
-// from the ids with buildPermalinkQuery, and keys are a scarce resource
-// here. Stripe allows 50 keys and 500 characters per value; a full cart of
-// ten hats uses 15 keys and values well under 60 characters.
-// ---------------------------------------------------------------------------
-const METADATA_VALUE_MAX = 500;
+// SESSION METADATA: the format (v2, with v1 still readable), the key budget
+// and the 500 character limit are all documented in src/shop/orderMetadata.js,
+// which both writes it here and reads it back in the webhook.
 
 // A cart is a list of short id records. Ten hats fit in a couple of KB;
 // anything past this is not a customer.
@@ -93,8 +76,6 @@ function isBodyTooLarge(req) {
   }
 }
 
-const trim = (value) => String(value ?? "").slice(0, METADATA_VALUE_MAX);
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -116,22 +97,14 @@ export default async function handler(req, res) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
     return json(res, 400, { error: "Invalid request body" });
 
-  // Only these fields are read, per line. Any price, total or currency the
+  // Only the design fields (CONFIG_FIELDS) and quantity are read, per line,
+  // through pickConfig. Any price, total or currency the
   // client tries to send is simply never looked at, and neither is the
   // line's `id`: that is the browser's own row handle and must not touch
   // anything about the charge.
   // Not truncated on purpose: an oversized cart must be rejected by
   // validateCart, never silently trimmed into something chargeable.
-  const cart = Array.isArray(payload.cart)
-    ? payload.cart.map((line) => ({
-        baseId: line?.baseId,
-        bandId: line?.bandId,
-        brandId: line?.brandId,
-        customText: line?.customText,
-        size: line?.size,
-        quantity: line?.quantity,
-      }))
-    : null;
+  const cart = Array.isArray(payload.cart) ? payload.cart.map((line) => pickConfig(line)) : null;
 
   if (!cart) return json(res, 400, { error: "Invalid cart" });
 
@@ -157,27 +130,7 @@ export default async function handler(req, res) {
 
   const currency = order.currency.toLowerCase();
 
-  // See the metadata format block at the top of this file.
-  const metadata = {
-    hat_count: String(order.lines.length),
-    total_quantity: String(order.totalQuantity),
-    subtotal: String(order.subtotal),
-    shipping: String(order.shipping),
-    order_total: String(order.total),
-  };
-  order.lines.forEach((line, index) => {
-    const c = line.config;
-    metadata[`hat_${index + 1}`] = trim(
-      [
-        c.baseId ?? "",
-        c.bandId ?? "",
-        c.brandId ?? "",
-        (c.customText ?? "").toUpperCase(),
-        (c.size ?? "").toUpperCase(),
-        line.quantity,
-      ].join("|")
-    );
-  });
+  const metadata = encodeOrderMetadata(order);
 
   try {
     const stripe = new Stripe(secretKey);

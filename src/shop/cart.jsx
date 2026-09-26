@@ -1,16 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import {
-  MAX_CART_QUANTITY,
-  MAX_QUANTITY,
-  MIN_QUANTITY,
-  countHats,
-  findBand,
-  findBase,
-  findBrand,
-  findSize,
-  sanitizeBrandText,
-  validateConfig,
-} from "./pricing.js";
+import { MAX_CART_QUANTITY, MAX_QUANTITY, MIN_QUANTITY, countHats, normalizeConfig, validateConfig } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // The cart: a list of hat designs, each with its own quantity, persisted in
@@ -23,7 +12,11 @@ import {
 // cart rather than a blank page.
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "tc_cart_v1";
+// v2: builder v2 (feather, cord, brim bud, matches). A v1 cart held bands and
+// brands that no longer exist, so it is dropped rather than half restored:
+// restoring it would quietly change hats the customer had designed.
+const STORAGE_KEY = "tc_cart_v2";
+const RETIRED_KEYS = ["tc_cart_v1"];
 
 /** Local row identifier. Never a Stripe id: it only exists to edit and remove. */
 export function newLineId() {
@@ -48,24 +41,20 @@ const clampQuantity = (value) => {
  */
 export function reviveLine(raw) {
   if (!raw || typeof raw !== "object") return null;
-  const brand = findBrand(raw.brandId);
-  if (!findBase(raw.baseId) || !findBand(raw.bandId) || !brand || !findSize(raw.size)) return null;
-  const line = {
+  // Strict first: a stored value that is present but unknown (a retired
+  // color, say) drops the row instead of silently becoming "none".
+  const candidate = { ...raw, quantity: clampQuantity(raw.quantity) };
+  if (!validateConfig(candidate).valid) return null;
+  return {
     id: typeof raw.id === "string" && raw.id ? raw.id : newLineId(),
-    baseId: raw.baseId,
-    bandId: raw.bandId,
-    brandId: raw.brandId,
-    customText: brand.custom ? sanitizeBrandText(raw.customText).trim() : null,
-    size: raw.size,
-    quantity: clampQuantity(raw.quantity),
+    ...normalizeConfig(candidate),
+    quantity: candidate.quantity,
   };
-  // Last gate: anything validateConfig still rejects (an empty custom word,
-  // say) does not belong in a restored cart.
-  return validateConfig(line).valid ? line : null;
 }
 
 function loadCart() {
   try {
+    for (const k of RETIRED_KEYS) localStorage.removeItem(k);
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);

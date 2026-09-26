@@ -18,46 +18,41 @@
 // "Leather & Buckle", never "leather".
 // ---------------------------------------------------------------------------
 
-// The labelled rows are built from the find* helpers, one per piece
-// ("Band: Leather & Buckle"). describeConfig's one line summary is used for
+// The labelled rows come from hatParts() in pricing.js, the same list that
+// prices the order, so the email can never describe a different hat from
+// the one that was charged. describeConfig's one line summary is used for
 // the hat image's alt text, which is all a reader sees when their client
 // blocks remote images.
-import { BANDS, BASES, BRANDS, CLOUDINARY_CLOUD, findIn } from "./catalog.js";
-import {
-  buildPermalinkQuery,
-  describeConfig,
-  findBand,
-  findBase,
-  findBrand,
-  findSize,
-} from "./pricing.js";
+import { ACCESSORY_PUBLIC_IDS, BASES, CLOUDINARY_CLOUD, accessoryLayers, findIn } from "./catalog.js";
+import { parseCartFromMetadata } from "./orderMetadata.js";
+import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts } from "./pricing.js";
+
+export { parseCartFromMetadata };
 
 // ---------------------------------------------------------------------------
 // One flattened hat image, composed by Cloudinary.
 //
-// The site stacks the layers with CSS and mix-blend-mode. Email clients have
-// neither, so the compositing has to happen before the bytes arrive, which
-// Cloudinary does with chained overlays in the URL itself.
+// The site stacks the layers with CSS. Email clients cannot, so Cloudinary
+// flattens them first with chained overlays in the URL itself, in the SAME
+// order catalog.js fixes for the stage:
 //
-// The stacking contract is the SAME one catalog.js documents, and it has to
-// stay that way or the picture in the email stops matching what the customer
-// approved on screen:
+//   base     root image
+//   feather  overlay
+//   cord     overlay (over the feather)
+//   bud      overlay
+//   matches  overlay
 //
-//   base   root image
-//   brand  first overlay, e_multiply   (the burn, UNDER the band)
-//   band   second overlay, normal
+// Every layer is 1600x1600, so each overlay lands 1:1 on the full size base,
+// and the resize to email width is the LAST step, after every fl_layer_apply,
+// so scaling can never knock a layer out of register.
 //
-// Sizing detail worth knowing: every layer is 1600x1600, so the overlays are
-// applied at full size onto the full size base and land 1:1. The resize to
-// the email width is the LAST transformation in the chain, after both
-// fl_layer_apply steps, so scaling can never knock a layer out of register.
-//
-// The custom branded word is deliberately NOT drawn here. On the site it is
-// rendered by the browser from BRAND_TEXT (position, rotation, skew, the
-// blurred scorch halo), and reproducing that with Cloudinary text overlays
-// would be a calibration we cannot check from here against the real
-// artwork. A wrong looking word is worse than no word, and the email
-// already carries a "Custom text: ZERO" row that says exactly what to burn.
+// A picture MISSING a piece the customer paid for is worse than no picture:
+// it is exactly the mismatch that turns into a return. So an overlay is only
+// possible for layers listed in ACCESSORY_PUBLIC_IDS (catalog.js), and a hat
+// using any layer that is not listed gets null, meaning no image at all.
+// Today that list is empty (the accessory PNGs are in the repo, not yet on
+// Cloudinary), so only base only hats get a picture. The rows below the
+// picture always carry the full build.
 // ---------------------------------------------------------------------------
 
 const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload`;
@@ -68,39 +63,32 @@ const HAT_IMAGE_WIDTH = 240;
 const HAT_IMAGE_DISPLAY = 120;
 
 // Inside an overlay reference a public id cannot carry slashes: folder
-// separators are written as colons. Ours are flat today, but a foldered id
-// would silently produce a broken URL without this.
+// separators are written as colons.
 const overlayRef = (publicId) => String(publicId).replace(/\//g, ":");
 
 /**
- * Build a single URL for the composed hat, or null when it cannot be built.
- * Never throws: the email must go out even if the picture cannot.
+ * Build a single URL for the composed hat, or null when it cannot be built
+ * faithfully. Never throws: the email must go out even if the picture cannot.
  *
- * @param config  { baseId, bandId, brandId }
+ * @param config  a hat config (see pricing.js)
  * @param width   delivered pixel width, default 240
  * @returns {string|null}
  */
 export function buildHatImageUrl(config, { width = 240 } = {}) {
   try {
     const c = config || {};
+    if (c.legacy) return null;
     const base = findIn(BASES, c.baseId);
-    // No base means no hat to show. The email still goes out without it.
     if (!base?.publicId || !base?.layerFile) return null;
 
     const w = Number.isInteger(width) && width > 0 ? width : 240;
     const chain = [];
-
-    // z=20, multiply, under the band. A missing piece just is not chained.
-    const brand = findIn(BRANDS, c.brandId);
-    if (brand?.publicId) chain.push(`l_${overlayRef(brand.publicId)},e_multiply`, "fl_layer_apply");
-
-    // z=30, normal, on top.
-    const band = findIn(BANDS, c.bandId);
-    if (band?.publicId) chain.push(`l_${overlayRef(band.publicId)}`, "fl_layer_apply");
-
-    // Resize last, once the stack is flat.
+    for (const l of accessoryLayers(c)) {
+      const id = ACCESSORY_PUBLIC_IDS[l.key];
+      if (!id) return null; // a piece we cannot draw: no picture, never a wrong one
+      chain.push(`l_${overlayRef(id)}`, "fl_layer_apply");
+    }
     chain.push(`w_${w},c_fit,f_auto,q_auto`);
-
     return `${CLOUDINARY_BASE}/${chain.join("/")}/${base.layerFile}`;
   } catch {
     return null;
@@ -126,76 +114,43 @@ export const money = (cents) =>
     maximumFractionDigits: 2,
   }).format((Number(cents) || 0) / 100);
 
+// Names for the first builder's bands, which no longer exist in the catalog.
+// Only used to read out a v1 order that was paid before the switch.
+const LEGACY_BAND_NAMES = {
+  none: null,
+  "lace-pearls": "Lace & Pearls",
+  ribbons: "Braided Ribbons",
+  leather: "Leather & Buckle",
+  feathers: "Feather",
+  turquoise: "Turquoise Stone",
+};
+
+/** "Name, Color" or just "Name". */
+const partValue = (p) => (p.detail ? `${p.name}, ${p.detail}` : p.name);
+
 /**
- * Parse the hat records written by api/create-checkout-session.js:
- *
- *   hat_N = "base|band|brand|customText|size|quantity"
- *
- * Empty fields are legal anywhere. A record that does not split into exactly
- * six parts is reported rather than guessed at, so the email can say so.
- *
- * @returns {{cart: Array<object>, problems: string[]}}
+ * Human readable rows for one hat, skipping every step left at "none", so a
+ * bare hat never shows an empty row or the word "none".
  */
-export function parseCartFromMetadata(metadata) {
-  const md = metadata && typeof metadata === "object" ? metadata : {};
-  const problems = [];
-  const cart = [];
-
-  const declared = Number(md.hat_count);
-  const keys = Object.keys(md).filter((k) => /^hat_\d+$/.test(k));
-  const found = keys.length;
-  if (!found) {
-    problems.push("No hat records were found in the session metadata.");
-    return { cart, problems };
-  }
-  if (Number.isInteger(declared) && declared !== found)
-    problems.push(`Metadata says ${declared} hats but carries ${found} records.`);
-
-  for (let i = 1; i <= found; i += 1) {
-    const raw = md[`hat_${i}`];
-    if (typeof raw !== "string") {
-      problems.push(`Hat ${i} is missing from the metadata.`);
-      continue;
-    }
-    const parts = raw.split("|");
-    if (parts.length !== 6) {
-      problems.push(`Hat ${i} could not be read: ${raw}`);
-      continue;
-    }
-    const [baseId, bandId, brandId, customText, size, quantity] = parts;
-    const qty = Number(quantity);
-    cart.push({
-      baseId,
-      bandId,
-      brandId,
-      customText: customText || null,
-      // sizes are stored uppercase in the metadata, lowercase in the catalog
-      size: String(size || "").toLowerCase(),
-      quantity: Number.isInteger(qty) && qty > 0 ? qty : 1,
-    });
-    if (!Number.isInteger(qty) || qty < 1) problems.push(`Hat ${i} had an unreadable quantity: ${quantity}`);
-  }
-  return { cart, problems };
-}
-
-/** Human readable rows for one hat, skipping anything that does not apply. */
-function hatRows(line) {
+export function hatRows(line) {
   const rows = [];
-  const base = findBase(line.baseId);
-  rows.push(["Base", base ? base.name : `Unknown (${line.baseId || "blank"})`]);
-
-  const band = findBand(line.bandId);
-  if (band && band.id !== "none") rows.push(["Band", band.name]);
-  else if (line.bandId && line.bandId !== "none" && !band) rows.push(["Band", `Unknown (${line.bandId})`]);
-
-  const brand = findBrand(line.brandId);
-  if (brand && brand.id !== "none") {
-    rows.push(["Brand", brand.custom ? "Your word" : brand.name]);
-    if (brand.custom && line.customText) rows.push(["Custom text", String(line.customText).toUpperCase()]);
-  } else if (line.brandId && line.brandId !== "none" && !brand) {
-    rows.push(["Brand", `Unknown (${line.brandId})`]);
+  if (line.legacy) {
+    const base = findBase(line.baseId);
+    rows.push(["Base", base ? base.name : `Unknown (${line.baseId || "blank"})`]);
+    const band = LEGACY_BAND_NAMES[line.bandId];
+    if (band) rows.push(["Band (first builder)", band]);
+    else if (line.bandId && line.bandId !== "none") rows.push(["Band (first builder)", line.bandId]);
+    const brand = BRAND_OPTIONS.find((b) => b.id === line.brandId);
+    if (brand && brand.id !== "none") rows.push(["Brand (first builder)", brand.custom ? "Your word" : brand.name]);
+    if (brand?.custom && line.customText) rows.push(["Custom text", String(line.customText).toUpperCase()]);
+  } else {
+    const parts = hatParts(line);
+    if (!parts.some((p) => p.step === "base")) rows.push(["Base", `Unknown (${line.baseId || "blank"})`]);
+    for (const p of parts) {
+      rows.push([p.label, partValue(p)]);
+      if (p.step === "cord" && line.stitchingNote) rows.push(["Color note", line.stitchingNote]);
+    }
   }
-
   const size = findSize(line.size);
   rows.push(["Size", size ? size.name : `Unknown (${line.size || "blank"})`]);
   rows.push(["Quantity", String(line.quantity)]);
@@ -269,7 +224,9 @@ export function buildOrderEmail({ session, baseUrl = "" }) {
                   </tr>`
         )
         .join("");
-      const link = origin ? permalinkFor(line) : "";
+      // A first builder hat cannot be rebuilt in this builder (its band and
+      // brand are gone), so it gets no link rather than a wrong one.
+      const link = origin && !line.legacy ? permalinkFor(line) : "";
       const imageUrl = buildHatImageUrl(line, { width: HAT_IMAGE_WIDTH });
       // Plenty of clients block remote images by default, so the alt text
       // has to carry the build on its own. A hat with no composable image
@@ -412,7 +369,7 @@ ${totalsRow("Subtotal", money(subtotal))}${totalsRow("Shipping", shippingCost ==
       const rows = hatRows(line)
         .map(([label, value]) => `  ${label}: ${value}`)
         .join("\n");
-      const link = origin ? `\n  See this hat: ${permalinkFor(line)}` : "";
+      const link = origin && !line.legacy ? `\n  See this hat: ${permalinkFor(line)}` : "";
       return `Hat ${i + 1}\n${rows}${link}`;
     })
     .join("\n\n");

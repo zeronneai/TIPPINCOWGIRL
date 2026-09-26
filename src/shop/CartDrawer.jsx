@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import HatStack from "./HatStack.jsx";
 import { useCart } from "./cart.jsx";
 import { useDialog } from "./useDialog.js";
-import { FREE_SHIPPING_MIN_QTY, MAX_QUANTITY, MIN_QUANTITY, buildOrder, formatCents } from "./pricing.js";
+import { FREE_SHIPPING_MIN_QTY, MAX_QUANTITY, MIN_QUANTITY, buildOrder, formatCents, pickConfig } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // The cart drawer. Mounted once at the app root so the nav can open it from
@@ -161,14 +161,7 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
         headers: { "Content-Type": "application/json" },
         // configuration only, never prices; the line id stays home
         body: JSON.stringify({
-          cart: order.lines.map((line) => ({
-            baseId: line.config.baseId,
-            bandId: line.config.bandId,
-            brandId: line.config.brandId,
-            customText: line.config.customText,
-            size: line.config.size,
-            quantity: line.quantity,
-          })),
+          cart: order.lines.map((line) => pickConfig({ ...line.config, quantity: line.quantity })),
         }),
       });
       const data = await res.json().catch(() => ({}));

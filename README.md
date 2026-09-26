@@ -45,6 +45,27 @@ committed and run with `vercel dev` (plain `vite` does not serve `/api`).
 | `VITE_BOOKING_ENDPOINT` | yes, for the events form | The Google Apps Script web app URL the private events form posts to, ending in `/exec`. Unlike every other variable here this one is read at BUILD time and baked into the client bundle, which the `VITE_` prefix makes explicit. That is fine: an Apps Script web app URL is not a secret, anyone can read it in the network tab. Without it the form refuses to send and tells the visitor to DM instead of failing quietly. Changing it needs a rebuild, not just a restart. |
 | `VITE_GIVEAWAY_ENDPOINT` | yes, for /giveaway | The Apps Script web app URL for the giveaway entries. It is a **separate** script and Sheet from booking; the page refuses to send if this equals `VITE_BOOKING_ENDPOINT`. Read at build time, like the booking one. |
 
+### The hat builder (v2)
+
+A base plus optional stacked accessories: Feather, Cord (Suede Stitching
+takes a color and an optional note), Brim bud (size, then color) and
+Matches (color). Where things live:
+
+- `src/shop/pricing.js`: ids, names, prices in cents, validation, the
+  permalink format. Base prices are marked `TODO(price)`, accessory names
+  `TODO(names)`. The burned brand is kept but off: `BRANDS_ENABLED = false`.
+- `src/shop/catalog.js`: stacking order (base 10, feather 20, cord 30, bud 40,
+  matches 50, all normal blend). Server safe.
+- `src/shop/layers/` and `layers/thumbs/`: the accessory PNGs (1600px) and
+  JPG thumbnails, turned into URLs by `src/shop/layerArt.js` (browser only).
+- `src/shop/orderMetadata.js`: the Stripe metadata format, v2, with v1
+  orders still readable.
+
+The order emails flatten the hat with Cloudinary overlays, and the accessory
+PNGs are not on Cloudinary yet, so a hat with accessories goes out without a
+picture (the rows list every piece). Upload the 27 PNGs to Cloudinary and fill
+`ACCESSORY_PUBLIC_IDS` in `catalog.js` to bring the picture back.
+
 ### Routing
 
 Pages are clean paths handled by `src/router.js`, a tiny history router: `/`,
