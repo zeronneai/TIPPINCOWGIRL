@@ -53,10 +53,15 @@ Matches (color). Where things live:
 
 - `src/shop/pricing.js`: ids, names, prices in cents, validation, the
   permalink format, and the hat types (`HAT_TYPES`): Wool ($140, the only
-  one enabled), Faux Suede and Straw ($80 each, defined but disabled until
-  their images exist). Each type sets its colors, sizes, which accessories it
-  takes and whether it can be branded; flip `enabled` to put one on sale. The
-  type selector in the builder appears by itself once two types are enabled.
+  one enabled, 12 colors), Faux Suede and Straw ($80 each, with their
+  images, but disabled for sale). Each type sets its colors, sizes, which
+  accessories it takes and whether it can be branded; flip `enabled` to put
+  one on sale. The type selector in the builder appears by itself once two
+  types are enabled.
+- Private preview: add `?preview=types` to the site address to see every
+  type in the builder (suede and straw without accessories). It only looks:
+  the button reads "Preview only", nothing goes in the cart, and the server
+  refuses any order for a disabled type whatever the page sends.
   The burned brand is kept but off: `BRANDS_ENABLED = false`.
 - `src/shop/catalog.js`: stacking order (base 10, feather 20, cord 30, bud 40,
   matches 50, all normal blend). Server safe.

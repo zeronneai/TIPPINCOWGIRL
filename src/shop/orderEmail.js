@@ -78,7 +78,7 @@ export function buildHatImageUrl(config, { width = 240 } = {}) {
   try {
     const c = config || {};
     if (c.legacy) return null;
-    // Cloudinary only holds the wool bases; another type gets no picture.
+    // The base of the hat's own type (catalog.js maps every type's bases).
     const base = baseArtFor(c);
     if (!base?.publicId || !base?.layerFile) return null;
 

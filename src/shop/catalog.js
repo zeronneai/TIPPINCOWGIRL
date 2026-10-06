@@ -32,6 +32,8 @@ import {
   BRAND_TEXT_MAX_LEN,
   DEFAULT_HAT_TYPE,
   SIZE_OPTIONS,
+  STRAW_COLORS,
+  SUEDE_COLORS,
   findHatType,
   normalizeConfig,
 } from "./pricing.js";
@@ -65,21 +67,48 @@ const withArt = (options, art) =>
     publicId: art[o.id] ? publicIdOf(art[o.id]) : null,
   }));
 
-// Base artwork exists for WOOL only. Suede and straw are defined in
-// pricing.js but disabled until their images exist; baseArtFor() returns
-// null for them so a suede "black" can never be drawn with the wool felt.
+// One art map per hat type, because color ids repeat across types: a suede
+// "black" is its own file and must never be drawn with the wool felt.
+// Every base is a 1600x1600 transparent PNG centered on the same canvas.
 export const BASES = withArt(BASE_OPTIONS, {
   ivory: "v1789658517/base-ivory_bcsh3a.png",
-  black: "v1789658517/base-black_rfptm8.png",
+  white: "v1791321777/base-white_kgytui.png",
+  sand: "v1791321777/base-sand_cfjvob.png",
   chocolate: "v1789658517/base-chocolate_osknft.png",
-  pink: "v1789658517/base-pink_jqkfio.png",
-  wine: "v1789658517/base-wine_zssnd7.png",
+  black: "v1789658517/base-black_rfptm8.png",
+  navy: "v1791321777/base-navy_jnbmth.png",
+  "baby-blue": "v1791321778/base-baby-blue_jxadxz.png",
   turquoise: "v1789658518/base-turquoise_x0zmnn.png",
+  pink: "v1789658517/base-pink_jqkfio.png",
+  "cotton-candy-pink": "v1791321777/base-cotton-candy-pink_weeofk.png",
+  red: "v1791321777/base-red_huaglj.png",
+  wine: "v1789658517/base-wine_zssnd7.png",
 });
 
-/** The Cloudinary base layer for a config, or null when its type has no art yet. */
-export const baseArtFor = (config) =>
-  (config?.hatType ?? DEFAULT_HAT_TYPE) === DEFAULT_HAT_TYPE ? findIn(BASES, config?.baseId) : null;
+export const SUEDE_BASES = withArt(SUEDE_COLORS, {
+  cream: "v1791319050/base-suede-cream_mymyyv.png",
+  black: "v1791319051/base-suede-black_lrtlj0.png",
+  brown: "v1791319051/base-suede-brown_bpdmr2.png",
+  camel: "v1791319051/base-suede-camel_q3dftk.png",
+  tobacco: "v1791319050/base-suede-tobacco_tx7v8o.png",
+  burgundy: "v1791319051/base-suede-burgundy_fwpzrj.png",
+  navy: "v1791319050/base-suede-navy_inyjzi.png",
+  olive: "v1791319050/base-suede-olive_jjfona.png",
+  gray: "v1791319050/base-suede-gray_vgc9ho.png",
+});
+
+export const STRAW_BASES = withArt(STRAW_COLORS, {
+  cream: "v1791319051/base-straw-cream_dgvh8l.png",
+  black: "v1791319050/base-straw-black_mqmfpv.png",
+});
+
+const BASES_BY_TYPE = { wool: BASES, suede: SUEDE_BASES, straw: STRAW_BASES };
+
+/** Every base of a hat type, with its art. */
+export const basesFor = (typeId = DEFAULT_HAT_TYPE) => BASES_BY_TYPE[typeId] || [];
+
+/** The Cloudinary base layer for a config, or null when there is none. */
+export const baseArtFor = (config) => findIn(basesFor(config?.hatType ?? DEFAULT_HAT_TYPE), config?.baseId);
 
 // ---- accessories -----------------------------------------------------------
 /**

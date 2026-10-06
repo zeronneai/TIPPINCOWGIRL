@@ -49,29 +49,37 @@ export const BRANDS_ENABLED = false;
 //
 // WOOL keeps the original six ids, because they are in carts, links, past
 // orders and the Cloudinary layer files; only the visible names changed
-// (ivory reads "Silver Belly", pink "Soft Pink", wine "Burgundy").
+// (ivory reads "Silver Belly", pink "Soft Pink", wine "Burgundy"). The list
+// order is the order of the tiles in the builder.
 export const BASE_PRICE = 14000; // wool, confirmed by the owner
 export const BASE_OPTIONS = [
   { id: "ivory", name: "Silver Belly", price: BASE_PRICE },
-  { id: "black", name: "Black", price: BASE_PRICE },
+  { id: "white", name: "White", price: BASE_PRICE },
+  { id: "sand", name: "Sand", price: BASE_PRICE },
   { id: "chocolate", name: "Chocolate", price: BASE_PRICE },
-  { id: "pink", name: "Soft Pink", price: BASE_PRICE },
-  { id: "wine", name: "Burgundy", price: BASE_PRICE },
+  { id: "black", name: "Black", price: BASE_PRICE },
+  { id: "navy", name: "Navy", price: BASE_PRICE },
+  { id: "baby-blue", name: "Baby Blue", price: BASE_PRICE },
   { id: "turquoise", name: "Turquoise", price: BASE_PRICE },
+  { id: "pink", name: "Soft Pink", price: BASE_PRICE },
+  { id: "cotton-candy-pink", name: "Cotton Candy Pink", price: BASE_PRICE },
+  { id: "red", name: "Red", price: BASE_PRICE },
+  { id: "wine", name: "Burgundy", price: BASE_PRICE },
 ];
 export const WOOL_COLORS = BASE_OPTIONS;
 
-// Defined ahead of their artwork; the types are disabled until it exists.
+// Their artwork is on Cloudinary (catalog.js); the types stay disabled for
+// sale until the owner turns them on.
 export const SUEDE_COLORS = [
   { id: "cream", name: "Cream" },
   { id: "black", name: "Black" },
   { id: "brown", name: "Brown" },
   { id: "camel", name: "Camel" },
+  { id: "tobacco", name: "Tobacco" },
   { id: "burgundy", name: "Burgundy" },
   { id: "navy", name: "Navy" },
   { id: "olive", name: "Olive" },
   { id: "gray", name: "Gray" },
-  { id: "tobacco", name: "Tobacco" },
 ];
 export const STRAW_COLORS = [
   { id: "cream", name: "Cream" },
@@ -191,7 +199,9 @@ export const DEFAULT_HAT_TYPE = "wool";
 
 // `enabled` is the switch: a disabled type is fully defined but cannot be
 // picked in the builder or ordered (validateConfig refuses it). Suede and
-// straw stay off until their artwork exists.
+// straw stay off until the owner puts them on sale. The builder can show
+// them under ?preview=types, but only to look at: the server still refuses
+// any order for a disabled type.
 export const HAT_TYPES = [
   {
     id: "wool",
@@ -446,9 +456,11 @@ export function buildPermalinkQuery(config) {
  *
  * No `t` means wool, so every link made before hat types opens unchanged.
  * A type that is unknown or not enabled yet also opens as wool: a link must
- * never put the builder in a state the customer cannot order.
+ * never put the builder in a state the customer cannot order. The one
+ * exception is the private preview (`previewTypes`, from ?preview=types),
+ * which may open a disabled type to look at it.
  */
-export function parsePermalink(search, defaults = { baseId: "ivory" }) {
+export function parsePermalink(search, defaults = { baseId: "ivory" }, { previewTypes = false } = {}) {
   let q;
   try {
     q = search instanceof URLSearchParams ? search : new URLSearchParams(String(search || ""));
@@ -458,7 +470,7 @@ export function parsePermalink(search, defaults = { baseId: "ivory" }) {
   const get = (k) => q.get(PARAM_KEYS[k]);
 
   const requested = findHatType(get("hatType"));
-  const type = requested?.enabled ? requested : findHatType(DEFAULT_HAT_TYPE);
+  const type = requested && (requested.enabled || previewTypes) ? requested : findHatType(DEFAULT_HAT_TYPE);
   const defaultBase = type.id === DEFAULT_HAT_TYPE ? defaults.baseId : type.colors[0].id;
 
   const cordId = findCord(get("cord"))?.id ?? "none";

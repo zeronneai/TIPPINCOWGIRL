@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BASES, BRANDS, BRANDS_ENABLED, BRAND_TEXT, SIZE_GUIDE, baseArtFor, findIn, sizeGuideRows, thumbKey } from "./catalog.js";
+import { BASES, BRANDS, BRANDS_ENABLED, BRAND_TEXT, SIZE_GUIDE, baseArtFor, basesFor, findIn, sizeGuideRows, thumbKey } from "./catalog.js";
 import HatStack, { BrandTextLayer } from "./HatStack.jsx";
 import { preloadLayer, thumbUrl } from "./layerArt.js";
 import { useCart } from "./cart.jsx";
@@ -8,6 +8,7 @@ import {
   BUD_SIZES,
   CORD_OPTIONS,
   FEATHER_OPTIONS,
+  HAT_TYPES,
   LEGACY_PARAM_KEYS,
   MATCHES,
   MAX_CART_QUANTITY,
@@ -29,7 +30,9 @@ import {
 // ---------------------------------------------------------------------------
 // The hat builder (v2): a base plus stacked, optional accessories.
 //
-//   01 Base       one of six felts, required
+//   00 Hat        Wool, Faux Suede or Straw; shown only when more than one
+//                 type is enabled (or under ?preview=types, see below)
+//   01 Base       a color of that type, required
 //   02 Feather    None or one
 //   03 Cord       None or one; Suede Stitching adds a color and a note
 //   04 Brim bud   None, or Small / Large, then a color for that size
@@ -60,9 +63,22 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // stale key from an older link (a band, a charm) never lingers.
 const OWN_KEYS = [...Object.values(PARAM_KEYS), ...LEGACY_PARAM_KEYS];
 
+// ?preview=types is a private look at the types that are not on sale yet:
+// the builder lists every type and lets you dress a suede or straw base, but
+// it will not add one to the cart, and the server refuses to charge for a
+// disabled type no matter what the page sends. Without the parameter the
+// builder only knows the enabled types.
+function isTypesPreview() {
+  try {
+    return new URLSearchParams(window.location.search).get("preview") === "types";
+  } catch {
+    return false;
+  }
+}
+
 function readUrl() {
   try {
-    return parsePermalink(window.location.search);
+    return parsePermalink(window.location.search, undefined, { previewTypes: isTypesPreview() });
   } catch {
     return parsePermalink("");
   }
@@ -445,6 +461,7 @@ export default function Builder() {
   // its normalized form, which is what the stage, the price, the URL and the
   // cart all read.
   const initial = useMemo(readUrl, []);
+  const previewTypes = useMemo(isTypesPreview, []);
   const [draft, setDraft] = useState(initial);
   const [sizeModal, setSizeModal] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
@@ -483,9 +500,10 @@ export default function Builder() {
     return () => clearTimeout(t);
   }, [added]);
 
-  // Warm the selected base right away and the rest of the bases shortly
-  // after: base swaps are the most common tap and should feel instant.
-  // Accessories warm on hover or touch instead (see Tile and ColorChips).
+  // Warm the selected base right away and the rest of its type's bases
+  // shortly after: base swaps are the most common tap and should feel
+  // instant. Accessories warm on hover or touch instead (see Tile and
+  // ColorChips).
   useEffect(() => {
     const warm = (u) => {
       if (!u) return;
@@ -493,10 +511,10 @@ export default function Builder() {
       im.src = u;
     };
     warm(baseArtFor(design)?.layerImg);
-    const t = setTimeout(() => BASES.forEach((b) => warm(b.layerImg)), 1200);
+    const t = setTimeout(() => basesFor(design.hatType).forEach((b) => warm(b.layerImg)), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [design.hatType]);
 
   // ---- step handlers: each keeps the draft valid as it changes -------------------
   // Switching type keeps what still fits the new type and resets the rest:
@@ -505,7 +523,7 @@ export default function Builder() {
   // normalizeConfig.
   const pickType = (id) => {
     const t = findHatType(id);
-    if (!t?.enabled) return;
+    if (!t || (!t.enabled && !previewTypes)) return;
     setDraft((d) => ({
       ...d,
       hatType: t.id,
@@ -609,6 +627,10 @@ export default function Builder() {
   };
 
   const submitDesign = () => {
+    if (!type.enabled) {
+      setAdded(`Preview only: the ${type.label} is not for sale yet.`);
+      return;
+    }
     if (!designReady()) return;
     if (editingId) {
       updateLine(editingId, design);
@@ -659,8 +681,9 @@ export default function Builder() {
   const type = findHatType(design.hatType);
   const takes = (step) => type.accessories.includes(step);
   const base = type.colors.find((c) => c.id === design.baseId);
-  // The selector appears only once there is a real choice to make.
-  const types = enabledHatTypes();
+  // The selector appears only once there is a real choice to make, or in the
+  // private preview, which lists every type.
+  const types = previewTypes ? HAT_TYPES : enabledHatTypes();
   const feather = FEATHER_OPTIONS.find((o) => o.id === design.featherId);
   const cord = findCord(design.cordId);
   const bud = findBudSize(design.budSize);
@@ -821,7 +844,7 @@ export default function Builder() {
                       testId={`type-${t.id}`}
                       label={t.name}
                       price={fmt(t.basePrice)}
-                      thumb={null}
+                      thumb={basesFor(t.id)[0]?.layerImg ?? null}
                       selected={design.hatType === t.id}
                       onPick={() => pickType(t.id)}
                     />
@@ -1107,7 +1130,7 @@ export default function Builder() {
                 </span>
               </div>
               <button type="button" className="tc-btn" style={{ width: "100%" }} onClick={submitDesign}>
-                {editingId ? "Update this hat" : "Add to cart"}
+                {!type.enabled ? "Preview only" : editingId ? "Update this hat" : "Add to cart"}
               </button>
               {!design.size && (
                 <p style={{ margin: "9px 0 0", textAlign: "center", fontSize: 12.5, color: "#8a7460", fontWeight: 600 }}>
