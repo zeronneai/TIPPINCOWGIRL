@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
-import { ENGRAVING_FONT_FILES, ENGRAVING_MAX_WIDTH, findStampArt } from "./catalog.js";
+import { ENGRAVING_FONT_FILES, ENGRAVING_MAX_WIDTH, ENGRAVING_STAMPS } from "./engravingArt.js";
+import { describeEngravingElement } from "./engravingText.js";
 import {
   ENGRAVING_FEE,
   ENGRAVING_FONTS,
   ENGRAVING_POSITIONS,
   ENGRAVING_SIZES,
-  ENGRAVING_STAMP_OPTIONS,
   ENGRAVING_TEXT_MAX_LEN,
   FREE_BRAND_COUNT,
   MAX_ELEMENTS_PER_POSITION,
   brandCount,
   cleanEngravingText,
-  describeEngravingElement,
   formatCents,
 } from "./pricing.js";
 import { fitsRow, loadAllEngravingFonts, useEngravingVersion } from "./engraving.js";
@@ -22,7 +21,7 @@ import { fitsRow, loadAllEngravingFonts, useEngravingVersion } from "./engraving
 // that can be branded. Loaded lazily, so the public builder never ships it.
 //
 // Pick a side, then add a stamp or a word to it. A piece that would make the
-// row wider than that side takes (catalog.js, ENGRAVING_MAX_WIDTH) is not
+// row wider than that side takes (engravingArt.js, ENGRAVING_MAX_WIDTH) is not
 // added. The count and the price come from pricing.js.
 // ---------------------------------------------------------------------------
 
@@ -126,7 +125,7 @@ export default function EngravingStep({ engraving, typeId, maxWidths = ENGRAVING
           <Toggle label="Stamp size" name="stamp-size" options={ENGRAVING_SIZES} value={stampSize} onPick={setStampSize} />
           <div style={sub}>Stamp</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 8 }}>
-            {ENGRAVING_STAMP_OPTIONS.map((s) => (
+            {ENGRAVING_STAMPS.map((s) => (
               <button
                 key={s.id}
                 type="button"
@@ -135,7 +134,7 @@ export default function EngravingStep({ engraving, typeId, maxWidths = ENGRAVING
                 onClick={() => (setStampId(s.id), setMessage(""))}
                 style={{ ...chip(stampId === s.id), padding: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
               >
-                <img src={findStampArt(s.id).file} alt="" loading="lazy" draggable={false} style={{ width: 40, height: 40, objectFit: "contain", opacity: 0.85 }} />
+                <img src={s.file} alt="" loading="lazy" draggable={false} style={{ width: 40, height: 40, objectFit: "contain", opacity: 0.85 }} />
                 <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.15 }}>{s.name}</span>
               </button>
             ))}

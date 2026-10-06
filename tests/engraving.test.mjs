@@ -1,6 +1,7 @@
 // The engraving (burned stamps and letters): the model, the price rule, the
 // codes in the permalink and the Stripe metadata, the emails, and the real
-// checkout handler refusing it while ENGRAVING_ENABLED is off.
+// checkout handler charging it on wool and refusing it on straw and on any
+// type that is not on sale.
 //
 //   npm test
 import assert from "node:assert/strict";
@@ -9,10 +10,13 @@ import { mock, test } from "node:test";
 
 import * as P from "../src/shop/pricing.js";
 import { ENGRAVING_STAMPS } from "../src/shop/engravingStamps.js";
+import { ENGRAVING_STAMP_IDS } from "../src/shop/engravingStampIds.js";
+import { ENGRAVING_ANCHORS, ENGRAVING_MAX_WIDTH, stampInches } from "../src/shop/engravingArt.js";
+import { engravingRows } from "../src/shop/engravingText.js";
 import { encodeOrderMetadata, parseCartFromMetadata, METADATA_VALUE_MAX } from "../src/shop/orderMetadata.js";
 import { buildOrderEmail, hatRows } from "../src/shop/orderEmail.js";
 import { buildCustomerEmail } from "../src/shop/customerEmail.js";
-import { buildStampData, renderModule } from "../scripts/engraving-data.mjs";
+import { BOX_OVERRIDES, buildStampData, renderIdsModule, renderModule } from "../scripts/engraving-data.mjs";
 
 const stamp = (stampId, size = "large", position = "front") => ({ kind: "stamp", stampId, size, position });
 const text = (t, font = "durango", size = "large", position = "front") => ({ kind: "text", text: t, font, size, position });
@@ -21,8 +25,8 @@ const order = (...lines) => P.buildOrder(lines.map((l) => ({ baseId: "ivory", si
 const errorsOf = (c) => P.validateConfig({ baseId: "ivory", size: "m", quantity: 1, ...c }).errors.map((e) => e.message);
 
 // ---- the rule and its constants --------------------------------------------------------
-test("constants: off, 4 free brands, $10 once, 12 per position", () => {
-  assert.equal(P.ENGRAVING_ENABLED, false);
+test("constants: on, 4 free brands, $10 once, 12 per position", () => {
+  assert.equal(P.ENGRAVING_ENABLED, true);
   assert.equal(P.FREE_BRAND_COUNT, 4);
   assert.equal(P.ENGRAVING_FEE, 1000);
   assert.equal(P.MAX_ELEMENTS_PER_POSITION, 12);
@@ -83,14 +87,21 @@ test("the browser never sets the engraving price", () => {
 });
 
 // ---- validation --------------------------------------------------------------------------
-test("the server refuses any engraving while ENGRAVING_ENABLED is off", () => {
-  assert.deepEqual(errorsOf({ engraving: DEB }), ["Branding is not available yet"]);
+test("an engraved wool hat is accepted", () => {
+  assert.deepEqual(errorsOf({ engraving: DEB }), []);
+  assert.deepEqual(errorsOf({ engraving: [text("ABCDEFGHIJKL"), stamp("olive-branch", "small", "left")] }), []);
   assert.deepEqual(errorsOf({ engraving: [] }), [], "an empty list is no engraving");
   assert.deepEqual(errorsOf({}), [], "missing is no engraving");
 });
 
+test("an engraved suede hat is refused while suede is not on sale", () => {
+  const errors = P.validateConfig({ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }).errors;
+  assert.deepEqual(errors.map((e) => e.field), ["hatType"], "refused for the type, the engraving itself is fine on suede");
+  assert.equal(P.findHatType("suede").enabled, false);
+});
+
 test("invalid text is refused", () => {
-  const msgs = (t) => errorsOf({ engraving: [{ ...text("X"), text: t }] }).slice(1);
+  const msgs = (t) => errorsOf({ engraving: [{ ...text("X"), text: t }] });
   assert.deepEqual(msgs("DEB!"), ["Brand 1: the text can only use A to Z, 0 to 9 and spaces"]);
   assert.deepEqual(msgs("ÑANDÚ"), ["Brand 1: the text can only use A to Z, 0 to 9 and spaces"]);
   assert.deepEqual(msgs("   "), ["Brand 1: the text is empty"]);
@@ -98,14 +109,14 @@ test("invalid text is refused", () => {
   assert.deepEqual(msgs(42), ["Brand 1: the text is empty"]);
   assert.deepEqual(msgs(" deb "), [], "lowercase and outer spaces are fine; it is stored as DEB");
   assert.equal(P.normalizeConfig({ engraving: [text(" d e b ")] }).engraving[0].text, "D E B");
-  assert.deepEqual(errorsOf({ engraving: [{ ...text("DEB"), font: "comic" }] }).slice(1), ['Brand 1: unknown font "comic"']);
+  assert.deepEqual(errorsOf({ engraving: [{ ...text("DEB"), font: "comic" }] }), ['Brand 1: unknown font "comic"']);
 });
 
 test("an unknown stamp, size, position or kind is refused", () => {
-  assert.deepEqual(errorsOf({ engraving: [stamp("unicorn")] }).slice(1), ['Brand 1: unknown stamp "unicorn"']);
-  assert.deepEqual(errorsOf({ engraving: [stamp("longhorn", "huge")] }).slice(1), ['Brand 1: unknown size "huge"']);
-  assert.deepEqual(errorsOf({ engraving: [stamp("longhorn", "large", "back")] }).slice(1), ['Brand 1: unknown position "back"']);
-  assert.deepEqual(errorsOf({ engraving: [{ kind: "sticker", size: "large", position: "front" }] }).slice(1), ['Brand 1: unknown kind "sticker"']);
+  assert.deepEqual(errorsOf({ engraving: [stamp("unicorn")] }), ['Brand 1: unknown stamp "unicorn"']);
+  assert.deepEqual(errorsOf({ engraving: [stamp("longhorn", "huge")] }), ['Brand 1: unknown size "huge"']);
+  assert.deepEqual(errorsOf({ engraving: [stamp("longhorn", "large", "back")] }), ['Brand 1: unknown position "back"']);
+  assert.deepEqual(errorsOf({ engraving: [{ kind: "sticker", size: "large", position: "front" }] }), ['Brand 1: unknown kind "sticker"']);
   assert.deepEqual(errorsOf({ engraving: "lt.d.DEB" }), ["Branding must be a list"]);
 });
 
@@ -133,12 +144,12 @@ test("old permalinks with no engraving work as before", () => {
   }
 });
 
-test("the engraving code in the permalink, read only in the preview", () => {
+test("the engraving code in the permalink, read without any preview", () => {
   const q = P.buildPermalinkQuery({ baseId: "ivory", size: "m", engraving: [...DEB, text("A B", "soft", "small", "left")] });
   assert.equal(q, "b=ivory&e=lt.d.DEB_ls.longhorn*ss.horseshoe_st.s.A+B&sz=m");
-  assert.deepEqual(P.parsePermalink(q).engraving, [], "the public builder ignores it");
-  const back = P.parsePermalink(q, undefined, { previewEngraving: true });
+  const back = P.parsePermalink(q);
   assert.deepEqual(back.engraving, P.normalizeEngraving([...DEB, text("A B", "soft", "small", "left")]));
+  assert.equal(P.parsePermalink(`t=straw&${q}`).engraving.length, 4, "a straw link (straw is off) opens as wool, engraving kept");
   // a hand edited code keeps what it can read
   assert.deepEqual(P.parseEngraving("ls.longhorn_xx.nope*").engraving, [stamp("longhorn")]);
   assert.deepEqual(P.parseEngraving("ls.longhorn_xx.nope*").problems, ["Unreadable engraving piece: xx.nope"]);
@@ -195,8 +206,8 @@ test("Deborah's work order lists the engraving by position", () => {
     ["Left", "Horseshoe (small)"],
     ["Branding", "5 brands, unlimited +$10"],
   ]);
-  assert.deepEqual(P.engravingRows([text("DEB")]).at(-1), ["Branding", "3 brands, free"]);
-  assert.deepEqual(P.engravingRows([stamp("cactus")]).at(-1), ["Branding", "1 brand, free"]);
+  assert.deepEqual(engravingRows([text("DEB")]).at(-1), ["Branding", "3 brands, free"]);
+  assert.deepEqual(engravingRows([stamp("cactus")]).at(-1), ["Branding", "1 brand, free"]);
 
   const { html, text: plain } = buildOrderEmail({ session: sessionFor([{ baseId: "ivory", size: "m", quantity: 1, engraving: DEB }]), baseUrl: "https://tippincowgirl.com" });
   assert.ok(plain.includes("Front: DEB (Durango, large) + Longhorn (large)"), plain);
@@ -213,14 +224,40 @@ test("the generated stamp list matches public/engraving", () => {
   assert.equal(ENGRAVING_STAMPS.length, 30);
   assert.deepEqual(ENGRAVING_STAMPS.map((s) => [s.id, s.name]), json.stamps.map((s) => [s.id, s.label]));
   assert.equal(readFileSync(new URL("../src/shop/engravingStamps.js", import.meta.url), "utf8"), renderModule(buildStampData()), "run node scripts/engraving-data.mjs");
+  assert.equal(readFileSync(new URL("../src/shop/engravingStampIds.js", import.meta.url), "utf8"), renderIdsModule(buildStampData()), "run node scripts/engraving-data.mjs");
+  assert.deepEqual(ENGRAVING_STAMP_IDS, ENGRAVING_STAMPS.map((s) => s.id));
   for (const s of ENGRAVING_STAMPS)
     for (const size of ["small", "large"]) {
+      if (BOX_OVERRIDES[s.id]) continue;
       assert.equal(Math.max(s[size].w, s[size].h), Math.max(...json.stamps.find((j) => j.id === s.id).sizeInches[size]), `${s.id} ${size}`);
     }
 });
 
+test("Olive Branch has its square box: 1.1 in large, 0.9 in small", () => {
+  assert.deepEqual(stampInches("olive-branch", "large"), { w: 1.1, h: 1.1 });
+  assert.deepEqual(stampInches("olive-branch", "small"), { w: 0.9, h: 0.9 });
+  assert.deepEqual(Object.keys(BOX_OVERRIDES), ["olive-branch"], "the only exception");
+  // the sheet is untouched: the exception lives in the script
+  const json = JSON.parse(readFileSync(new URL("../public/engraving/stamps.json", import.meta.url), "utf8"));
+  assert.deepEqual(json.stamps.find((s) => s.id === "olive-branch").sizeInches, { large: [1.5, 0.5], small: [1.2, 0.4] });
+});
+
+test("the calibrated anchors and widths", () => {
+  assert.deepEqual(ENGRAVING_ANCHORS, {
+    wool: {
+      front: { x: 589, y: 674, pxPerInch: 100, rotate: 2.5, skewX: -10.5, scaleX: 0.92 },
+      left: { x: 1026, y: 692, pxPerInch: 110, rotate: -21.5, skewX: -11.5, scaleX: 0.55 },
+    },
+    suede: {
+      front: { x: 665, y: 552, pxPerInch: 100, rotate: 0.5, skewX: -5.5, scaleX: 0.89 },
+      left: { x: 1078, y: 580, pxPerInch: 109, rotate: -16, skewX: -6, scaleX: 0.49 },
+    },
+  });
+  assert.deepEqual(ENGRAVING_MAX_WIDTH, { wool: { front: 4, left: 2.5 }, suede: { front: 4, left: 2.5 } });
+});
+
 // ---- the real checkout handler ----------------------------------------------------------------------
-test("checkout refuses any engraving while it is off, preview or not, and never calls Stripe", async () => {
+test("checkout charges the engraving on wool, and refuses straw and types not on sale, without Stripe", async () => {
   const calls = [];
   mock.module("stripe", {
     defaultExport: class Stripe {
@@ -236,20 +273,39 @@ test("checkout refuses any engraving while it is off, preview or not, and never 
     const res = { code: 0, body: null, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; }, setHeader() {} };
     const body = { cart, ...extra };
     const query = Object.fromEntries(new URL(url, "https://tippincowgirl.com").searchParams);
-    await handler({ method: "POST", url, query, headers: { host: "tippincowgirl.com", referer: "https://tippincowgirl.com/?preview=engraving", "content-length": String(JSON.stringify(body).length) }, body }, res);
+    await handler({ method: "POST", url, query, headers: { host: "tippincowgirl.com", referer: "https://tippincowgirl.com/", "content-length": String(JSON.stringify(body).length) }, body }, res);
     return res;
   };
+  const charged = (p) => p.line_items.reduce((s, l) => s + l.price_data.unit_amount * l.quantity, 0);
 
-  for (const engraving of [[text("DEB")], DEB, [stamp("cactus", "small", "left")]]) {
-    const r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving, price: 100 }], "/api/create-checkout-session?preview=engraving", { preview: "engraving" });
-    assert.equal(r.code, 400, JSON.stringify(engraving));
-    assert.ok(r.body.errors.some((e) => e.field === "engraving" && e.index === 0 && e.message === "Branding is not available yet"));
-  }
-  assert.equal(calls.length, 0, "Stripe is never called");
-
-  // the same hat without the engraving goes through, priced on the server
-  const r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: [], price: 100 }]);
+  // 5 brands on wool: $140 + $10, the browser's own prices ignored
+  let r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: DEB.map((e) => ({ ...e, price: 0 })), price: 100, engravingPrice: 0 }]);
   assert.equal(r.code, 200, JSON.stringify(r.body));
-  assert.equal(calls[0].line_items.reduce((s, l) => s + l.price_data.unit_amount * l.quantity, 0), 14000);
-  assert.ok(!("hat_1_engr" in calls[0].metadata));
+  assert.equal(charged(calls[0]), 15000);
+  assert.deepEqual(calls[0].line_items.map((l) => [l.price_data.product_data.name, l.price_data.unit_amount]), [
+    ["Wool Hat: Silver Belly", 14000],
+    ["Branding: Unlimited (5 brands)", 1000],
+  ]);
+  assert.equal(calls[0].metadata.hat_1_engr, "lt.d.DEB_ls.longhorn*ss.horseshoe");
+  assert.equal(calls[0].metadata.order_total, "16200", "plus $12 shipping for one hat");
+
+  // 4 brands: free, and no $0 line reaches Stripe
+  r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: [text("DEBS")] }]);
+  assert.equal(r.code, 200);
+  assert.equal(charged(calls[1]), 14000);
+  assert.equal(calls[1].line_items.length, 1);
+  assert.equal(calls[1].metadata.hat_1_engr, "lt.d.DEBS*");
+
+  // straw cannot be branded, suede is not on sale: refused, preview or not
+  calls.length = 0;
+  r = await post([{ hatType: "straw", baseId: "cream", size: "m", quantity: 1, engraving: [stamp("cactus")] }], "/api/create-checkout-session?preview=types,engraving", { preview: "types,engraving" });
+  assert.equal(r.code, 400);
+  assert.ok(r.body.errors.some((e) => e.field === "engraving" && e.message === "A Straw Hat cannot be branded"));
+  r = await post([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }], "/api/create-checkout-session?preview=types,engraving", { preview: "types,engraving" });
+  assert.equal(r.code, 400);
+  assert.ok(r.body.errors.some((e) => e.field === "hatType" && e.index === 0));
+  // a bad piece is refused too
+  r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: [stamp("unicorn")] }]);
+  assert.equal(r.code, 400);
+  assert.equal(calls.length, 0, "Stripe is never called for a refused hat");
 });

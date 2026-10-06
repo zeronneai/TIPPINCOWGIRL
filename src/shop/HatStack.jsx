@@ -1,7 +1,10 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import { BLEND, BRANDS, BRANDS_ENABLED, BRAND_TEXT, Z_INDEX, accessoryLayers, baseArtFor, findIn } from "./catalog.js";
 import { layerUrl } from "./layerArt.js";
-import EngravingLayer from "./EngravingLayer.jsx";
+
+// Loaded only when a hat is engraved: the drawing code, its fonts and the
+// stamp list stay out of the main bundle.
+const EngravingLayer = lazy(() => import("./EngravingLayer.jsx"));
 
 // ---------------------------------------------------------------------------
 // The composed hat, shared by the builder stage and the cart thumbnails so
@@ -162,7 +165,9 @@ export default function HatStack({ config, alt, engravingAnchors }) {
       {slot("base", Z_INDEX.base, BLEND.base, <FadeImg src={base?.layerImg} />)}
       {brandLayer}
       {c.engraving?.length > 0 && (
-        <EngravingLayer engraving={c.engraving} hatType={c.hatType ?? "wool"} anchors={engravingAnchors} z={Z_INDEX.brand} />
+        <Suspense fallback={null}>
+          <EngravingLayer engraving={c.engraving} hatType={c.hatType ?? "wool"} anchors={engravingAnchors} z={Z_INDEX.brand} />
+        </Suspense>
       )}
       {ACCESSORY_STEPS.map((step) => {
         const l = byStep[step];

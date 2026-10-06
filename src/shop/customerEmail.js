@@ -40,7 +40,8 @@
 
 import { STORE_HOURS } from "../business.js";
 import { addressLines, buildHatImageUrl, esc, money, parseCartFromMetadata } from "./orderEmail.js";
-import { engravingRows, findBase, findSize, hatParts } from "./pricing.js";
+import { findBase, findSize, hatParts } from "./pricing.js";
+import { engravingRows } from "./engravingText.js";
 
 // ---------------------------------------------------------------------------
 // TODO(fulfillment): REPLACE THIS ONCE DEBORAH CONFIRMS A REAL TURNAROUND.

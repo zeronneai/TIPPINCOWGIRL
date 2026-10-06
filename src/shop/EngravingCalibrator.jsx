@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
-import { ENGRAVING_LETTER_HEIGHT } from "./catalog.js";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ENGRAVING_ANCHORS, ENGRAVING_LETTER_HEIGHT, ENGRAVING_MAX_WIDTH } from "./engravingArt.js";
 import { ENGRAVING_POSITIONS } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
@@ -11,11 +12,70 @@ import { ENGRAVING_POSITIONS } from "./pricing.js";
 // large letter's height), drawn with the same transform as the engraving.
 // Drag it, or use the arrow keys, to move the anchor; the panel sets the
 // scale (canvas pixels per inch), rotate, skewX, scaleX and the maximum
-// width. "Copy anchors" puts both tables on the clipboard as JSON, ready to
-// paste over ENGRAVING_ANCHORS and ENGRAVING_MAX_WIDTH in catalog.js.
+// width. Every type and position keeps its own values while you switch
+// between them (and across a reload, in this browser; Reset goes back to the
+// file). "Copy anchors" puts both tables on the clipboard as JSON, ready to
+// paste over ENGRAVING_ANCHORS and ENGRAVING_MAX_WIDTH in engravingArt.js.
 // ---------------------------------------------------------------------------
 
-export const CALIBRATE_TYPES = ["wool", "suede"];
+const STORAGE_KEY = "tc_engraving_calibration_v1";
+const DEFAULTS = { anchors: ENGRAVING_ANCHORS, maxWidths: ENGRAVING_MAX_WIDTH };
+const DEFAULTS_KEY = JSON.stringify(DEFAULTS);
+
+// What was tuned, kept in this browser until it is reset. A new set of
+// defaults in engravingArt.js starts afresh rather than hiding behind it.
+function loadSaved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved && saved.base === DEFAULTS_KEY && saved.anchors && saved.maxWidths) return { anchors: saved.anchors, maxWidths: saved.maxWidths };
+  } catch {
+    /* blocked storage: start from the file */
+  }
+  return DEFAULTS;
+}
+
+/**
+ * The whole tool. Owns the anchors and widths for every type and position
+ * (switching position or type never drops what was tuned), draws the box
+ * into the stage through a portal, renders the panel where it is mounted,
+ * and reports every change up so the stage and the fit check follow it.
+ */
+export default function CalibrationTool({ stageLayer, typeId, onType, onChange }) {
+  const [tuned, setTuned] = useState(loadSaved);
+  const [position, setPosition] = useState("front");
+  useEffect(() => {
+    onChange(tuned);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ base: DEFAULTS_KEY, ...tuned }));
+    } catch {
+      /* private window: works, forgets on reload */
+    }
+  }, [tuned, onChange]);
+
+  const type = tuned.anchors[typeId] ? typeId : "wool";
+  const setAnchors = (f) => setTuned((t) => ({ ...t, anchors: f(t.anchors) }));
+  const setMaxWidths = (f) => setTuned((t) => ({ ...t, maxWidths: f(t.maxWidths) }));
+  const onMove = (xy) => setAnchors((all) => ({ ...all, [type]: { ...all[type], [position]: { ...all[type][position], ...xy } } }));
+
+  return (
+    <>
+      {stageLayer &&
+        tuned.anchors[typeId] &&
+        createPortal(<CalibrationOverlay anchors={tuned.anchors} maxWidths={tuned.maxWidths} typeId={typeId} position={position} onMove={onMove} />, stageLayer)}
+      <CalibrationPanel
+        anchors={tuned.anchors}
+        setAnchors={setAnchors}
+        maxWidths={tuned.maxWidths}
+        setMaxWidths={setMaxWidths}
+        typeId={type}
+        onType={onType}
+        position={position}
+        setPosition={setPosition}
+        onReset={() => setTuned(DEFAULTS)}
+      />
+    </>
+  );
+}
 
 const round = (n, step = 1) => Math.round(n / step) * step;
 const fix = (n) => Math.round(n * 1000) / 1000;
@@ -33,7 +93,9 @@ export function CalibrationOverlay({ anchors, maxWidths, typeId, position, onMov
   // screen pixels to canvas units, whatever the stage size and zoom
   const unit = () => 1600 / (svgRef.current?.getBoundingClientRect().width || 1600);
   const down = (e) => {
+    // the stage ignores a pointer that starts here (Builder, onCalibrateBox)
     e.stopPropagation();
+    e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, ax: a.x, ay: a.y };
   };
@@ -61,9 +123,24 @@ export function CalibrationOverlay({ anchors, maxWidths, typeId, position, onMov
         <rect
           data-calibrate-box
           tabIndex={0}
+          // the visible box is one letter tall; the grab area is taller so
+          // a tall stamp in the row is still "on the box"
+          x={-w / 2 - 10}
+          y={-Math.max(h, 1.3 * a.pxPerInch) / 2}
+          width={w + 20}
+          height={Math.max(h, 1.3 * a.pxPerInch)}
+          fill="transparent"
           role="slider"
           aria-label={`Move the ${position} anchor (arrow keys, shift for 10)`}
           aria-valuetext={`x ${a.x}, y ${a.y}`}
+          style={{ pointerEvents: "all", cursor: "move", touchAction: "none", outline: "none" }}
+          onPointerDown={down}
+          onPointerMove={move}
+          onPointerUp={up}
+          onPointerCancel={up}
+          onKeyDown={key}
+        />
+        <rect
           x={-w / 2}
           y={-h / 2}
           width={w}
@@ -73,12 +150,7 @@ export function CalibrationOverlay({ anchors, maxWidths, typeId, position, onMov
           strokeWidth={4}
           strokeDasharray="14 8"
           vectorEffect="non-scaling-stroke"
-          style={{ pointerEvents: "all", cursor: "move", touchAction: "none" }}
-          onPointerDown={down}
-          onPointerMove={move}
-          onPointerUp={up}
-          onPointerCancel={up}
-          onKeyDown={key}
+          style={{ pointerEvents: "none" }}
         />
         <line x1={-20} x2={20} y1={0} y2={0} stroke="#e0533a" strokeWidth={3} vectorEffect="non-scaling-stroke" />
         <line x1={0} x2={0} y1={-20} y2={20} stroke="#e0533a" strokeWidth={3} vectorEffect="non-scaling-stroke" />
@@ -107,7 +179,7 @@ function Slider({ label, value, min, max, step, onChange, name }) {
 }
 
 /** The controls, under the stage. */
-export function CalibrationPanel({ anchors, setAnchors, maxWidths, setMaxWidths, typeId, onType, position, setPosition }) {
+export function CalibrationPanel({ anchors, setAnchors, maxWidths, setMaxWidths, typeId, onType, position, setPosition, onReset }) {
   const [copied, setCopied] = useState("");
   const a = anchors[typeId]?.[position];
   if (!a) return null;
@@ -126,7 +198,7 @@ export function CalibrationPanel({ anchors, setAnchors, maxWidths, setMaxWidths,
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(json);
-      setCopied("Copied. Paste it to update catalog.js.");
+      setCopied("Copied. Paste it to update engravingArt.js.");
     } catch {
       setCopied("The clipboard is blocked here; copy the text below instead.");
     }
@@ -169,9 +241,14 @@ export function CalibrationPanel({ anchors, setAnchors, maxWidths, setMaxWidths,
       <Slider name="skewX" label="Skew X (deg)" value={a.skewX} min={-45} max={45} step={0.5} onChange={(v) => setA({ skewX: v })} />
       <Slider name="scaleX" label="Scale X" value={a.scaleX} min={0.2} max={1.5} step={0.01} onChange={(v) => setA({ scaleX: v })} />
       <Slider name="maxWidth" label="Max width (in)" value={maxWidths[typeId][position]} min={0.5} max={8} step={0.1} onChange={setMax} />
-      <button type="button" className="tc-btn" onClick={copy} data-calibrate="copy">
-        Copy anchors
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="button" className="tc-btn" style={{ flex: 1 }} onClick={copy} data-calibrate="copy">
+          Copy anchors
+        </button>
+        <button type="button" className="tc-btn tc-btn--ghost" onClick={onReset} data-calibrate="reset">
+          Reset
+        </button>
+      </div>
       {copied && (
         <p role="status" style={{ margin: 0, fontSize: 12.5, fontWeight: 700 }}>
           {copied}

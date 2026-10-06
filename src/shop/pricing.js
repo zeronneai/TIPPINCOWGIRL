@@ -2,7 +2,7 @@
 // Pricing engine: the commercial source of truth for the hat builder.
 //
 // This module is PURE. No React, no window, no document, and no imports but
-// plain data (the generated stamp list), so the same file can run inside a
+// plain data (the generated stamp ids), so the same file can run inside a
 // serverless function and recompute an order from scratch instead of
 // trusting whatever the browser posts.
 //
@@ -28,8 +28,8 @@
 //   matches    none or one color             matchesColor
 //   size       required, a size OF THAT TYPE size
 //   engraving  a list of burned stamps and     engraving (missing means [])
-//              letters, front and left; OFF
-//              (ENGRAVING_ENABLED), see below
+//              letters, front and left; see
+//              ENGRAVING_ENABLED below
 //
 // Each hat type (HAT_TYPES below) sets its own base price, colors, sizes,
 // which accessories it takes and whether it can be branded.
@@ -38,7 +38,7 @@
 // what was chosen, including "nothing".
 // ---------------------------------------------------------------------------
 
-import { ENGRAVING_STAMPS } from "./engravingStamps.js";
+import { ENGRAVING_STAMP_IDS } from "./engravingStampIds.js";
 
 export const CURRENCY = "USD";
 
@@ -196,9 +196,9 @@ export const BRAND_OPTIONS = [
 // one brand, spaces are not. Up to FREE_BRAND_COUNT brands is free; past
 // that, one flat ENGRAVING_FEE per hat, however many more fit.
 //
-// While ENGRAVING_ENABLED is false the builder shows it only under
-// ?preview=engraving and the server refuses any hat that carries it.
-export const ENGRAVING_ENABLED = false;
+// ON. Turning ENGRAVING_ENABLED off again hides the step (except under
+// ?preview=engraving) and makes the server refuse any hat that carries it.
+export const ENGRAVING_ENABLED = true;
 export const FREE_BRAND_COUNT = 4;
 export const ENGRAVING_FEE = 1000; // per hat, once, past the free brands
 // A safety cap for the server; what really limits a row is its width, which
@@ -223,7 +223,9 @@ export const ENGRAVING_FONTS = [
   { id: "copperplate", name: "Copperplate", code: "c" },
   { id: "durango", name: "Durango", code: "d" },
 ];
-export const ENGRAVING_STAMP_OPTIONS = ENGRAVING_STAMPS.map(({ id, name }) => ({ id, name }));
+// Ids only: names, files and sizes live in engravingStamps.js, which the
+// browser loads with the Brand it step (see engravingText.js for the words).
+const isStampId = (id) => ENGRAVING_STAMP_IDS.includes(id);
 
 const ENGRAVING_TEXT_RAW = /^[A-Za-z0-9 ]+$/;
 
@@ -244,8 +246,7 @@ function normalizeEngravingElement(e) {
   const size = byId(ENGRAVING_SIZES, e.size)?.id;
   if (!position || !size) return null;
   if (e.kind === "stamp") {
-    const stamp = byId(ENGRAVING_STAMP_OPTIONS, e.stampId);
-    return stamp ? { kind: "stamp", stampId: stamp.id, size, position } : null;
+    return isStampId(e.stampId) ? { kind: "stamp", stampId: e.stampId, size, position } : null;
   }
   if (e.kind === "text") {
     const text = typeof e.text === "string" ? cleanEngravingText(e.text) : "";
@@ -279,31 +280,6 @@ export function brandCount(engraving) {
 /** The engraving charge for one hat: free up to FREE_BRAND_COUNT, then one flat fee. */
 export function engravingPrice(engraving) {
   return brandCount(engraving) > FREE_BRAND_COUNT ? ENGRAVING_FEE : 0;
-}
-
-/** "DEB (Durango, large)" or "Longhorn (large)". */
-export function describeEngravingElement(e) {
-  const size = byId(ENGRAVING_SIZES, e.size)?.name.toLowerCase() ?? e.size;
-  if (e.kind === "stamp") return `${byId(ENGRAVING_STAMP_OPTIONS, e.stampId)?.name ?? e.stampId} (${size})`;
-  return `${e.text} (${byId(ENGRAVING_FONTS, e.font)?.name ?? e.font}, ${size})`;
-}
-
-/**
- * The engraving as the maker reads it, one row per position plus the count:
- *   ["Front", "DEB (Durango, large) + Longhorn (large)"]
- *   ["Left", "Horseshoe (small)"]
- *   ["Branding", "5 brands, unlimited +$10"]
- */
-export function engravingRows(engraving) {
-  const list = normalizeEngraving(engraving);
-  if (!list.length) return [];
-  const rows = ENGRAVING_POSITIONS.map((p) => [p.name, list.filter((e) => e.position === p.id)])
-    .filter(([, els]) => els.length)
-    .map(([name, els]) => [name, els.map(describeEngravingElement).join(" + ")]);
-  const n = brandCount(list);
-  const price = engravingPrice(list);
-  rows.push(["Branding", `${n} brand${n === 1 ? "" : "s"}, ${price ? `unlimited +${formatCents(price)}` : "free"}`]);
-  return rows;
 }
 
 // THE ENGRAVING CODE, one string shared by the permalink (?e=) and the
@@ -808,7 +784,7 @@ function validateEngraving(engraving, type, push) {
     else perPosition[e.position] = (perPosition[e.position] || 0) + 1;
     if (!byId(ENGRAVING_SIZES, e.size)) push("engraving", `${at}: unknown size ${JSON.stringify(e.size ?? null)}`);
     if (e.kind === "stamp") {
-      if (!byId(ENGRAVING_STAMP_OPTIONS, e.stampId)) push("engraving", `${at}: unknown stamp ${JSON.stringify(e.stampId ?? null)}`);
+      if (!isStampId(e.stampId)) push("engraving", `${at}: unknown stamp ${JSON.stringify(e.stampId ?? null)}`);
     } else if (e.kind === "text") {
       const text = typeof e.text === "string" ? e.text.trim() : "";
       if (!text) push("engraving", `${at}: the text is empty`);
@@ -913,7 +889,7 @@ export function hatParts(config) {
   }
   if (c.engraving.length) {
     // One part for the whole engraving: the price is per hat, not per piece.
-    // The emails list the pieces with engravingRows().
+    // The emails list the pieces with engravingRows() (engravingText.js).
     const n = brandCount(c.engraving);
     const price = engravingPrice(c.engraving);
     const name = price ? `Unlimited (${n} brands)` : `${n} free brand${n === 1 ? "" : "s"}`;

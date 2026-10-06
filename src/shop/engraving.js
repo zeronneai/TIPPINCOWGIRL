@@ -7,12 +7,12 @@
 // shows an engraving, never fetches a font or a stamp.
 //
 // Text width is measured on a canvas with the real font, then scaled so a
-// capital letter is exactly the size's letter height (catalog.js). Stamps
+// capital letter is exactly the size's letter height (engravingArt.js). Stamps
 // are measured from the generated stamp list, no fetch needed.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useSyncExternalStore } from "react";
-import { ENGRAVING_FONT_FILES, ENGRAVING_GAP, ENGRAVING_LETTER_HEIGHT, ENGRAVING_MAX_WIDTH, findStampArt, stampInches } from "./catalog.js";
+import { ENGRAVING_FONT_FILES, ENGRAVING_GAP, ENGRAVING_LETTER_HEIGHT, ENGRAVING_MAX_WIDTH, findStampArt, stampInches } from "./engravingArt.js";
 
 // ---- a tiny store: anything that loads bumps the version --------------------
 let version = 0;

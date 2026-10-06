@@ -4,8 +4,6 @@ import {
   BRANDS,
   BRANDS_ENABLED,
   BRAND_TEXT,
-  ENGRAVING_ANCHORS,
-  ENGRAVING_MAX_WIDTH,
   SIZE_GUIDE,
   baseArtFor,
   basesFor,
@@ -21,6 +19,8 @@ import {
   BUD_SIZES,
   CORD_OPTIONS,
   ENGRAVING_ENABLED,
+  ENGRAVING_FEE,
+  FREE_BRAND_COUNT,
   FEATHER_OPTIONS,
   HAT_TYPES,
   LEGACY_PARAM_KEYS,
@@ -28,6 +28,7 @@ import {
   MAX_CART_QUANTITY,
   PARAM_KEYS,
   STITCHING_NOTE_MAX_LEN,
+  brandCount,
   buildOrder,
   buildPermalinkQuery,
   describeConfig,
@@ -47,8 +48,10 @@ import {
 //   00 Hat        Wool, Faux Suede or Straw; shown only when more than one
 //                 type is enabled (or under ?preview=types, see below)
 //   01 Base       a color of that type, required
-//   ·· Brand it   burned stamps and letters, front and left; only under
-//                 ?preview=engraving while ENGRAVING_ENABLED is off
+//   ·· Brand it   burned stamps and letters, front and left, for a type
+//                 that can be branded (ENGRAVING_ENABLED; ?preview=engraving
+//                 shows it if that is ever switched off). Starts closed:
+//                 its code, fonts and stamps load when it is opened
 //   02 Feather    None or one
 //   03 Cord       None or one; Suede Stitching adds a color and a note
 //   04 Brim bud   None, or Small / Large, then a color for that size
@@ -99,10 +102,18 @@ function previewFlags() {
   }
 }
 
-// Loaded only under ?preview=engraving, so the public builder never ships them.
-const EngravingStep = lazy(() => import("./EngravingStep.jsx"));
-const CalibrationOverlay = lazy(() => import("./EngravingCalibrator.jsx").then((m) => ({ default: m.CalibrationOverlay })));
-const CalibrationPanel = lazy(() => import("./EngravingCalibrator.jsx").then((m) => ({ default: m.CalibrationPanel })));
+// Loaded on demand, never in the main bundle: the step when it is opened,
+// the calibration tool only under &calibrate=1.
+const loadEngravingStep = () => import("./EngravingStep.jsx");
+const EngravingStep = lazy(loadEngravingStep);
+const CalibrationTool = lazy(() => import("./EngravingCalibrator.jsx"));
+
+// The stage pans and pinches only for a pointer that starts on the hat. A
+// press on its own buttons (zoom) or on the calibration box is theirs: if
+// the stage captured that pointer, the browser would hand the click to the
+// stage and the button would never fire, and a calibration drag would move
+// the hat instead of the box.
+const notForStage = (e) => Boolean(e.target?.closest?.("button, [data-calibrate-box]"));
 
 function readUrl() {
   try {
@@ -492,10 +503,12 @@ export default function Builder() {
   const initial = useMemo(readUrl, []);
   const preview = useMemo(previewFlags, []);
   const previewTypes = preview.types;
-  // calibration only: live anchors and widths, starting from catalog.js
-  const [anchors, setAnchors] = useState(ENGRAVING_ANCHORS);
-  const [maxWidths, setMaxWidths] = useState(ENGRAVING_MAX_WIDTH);
-  const [calPosition, setCalPosition] = useState("front");
+  const [brandOpen, setBrandOpen] = useState(false);
+
+  // Calibration only (&calibrate=1): the tool owns the tuned anchors and
+  // widths and reports them here, so the stage and the fit check follow.
+  const [cal, setCal] = useState(null);
+  const [calLayer, setCalLayer] = useState(null);
   const [draft, setDraft] = useState(initial);
   const [sizeModal, setSizeModal] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
@@ -555,9 +568,10 @@ export default function Builder() {
   // its first color when the color is not offered, no size when the size is
   // not offered. Accessories the type does not take drop to none in
   // normalizeConfig.
-  const pickType = (id) => {
+  // `any`: the calibration tool switches to a type on sale or not
+  const pickType = (id, any = false) => {
     const t = findHatType(id);
-    if (!t || (!t.enabled && !previewTypes)) return;
+    if (!t || (!t.enabled && !previewTypes && !any)) return;
     setDraft((d) => ({
       ...d,
       hatType: t.id,
@@ -567,17 +581,7 @@ export default function Builder() {
       engraving: t.brandingAllowed ? d.engraving : [],
     }));
   };
-  // The calibration tool switches type directly, on sale or not.
-  const calibrateType = (id) => {
-    const t = findHatType(id);
-    if (!t) return;
-    setDraft((d) => ({
-      ...d,
-      hatType: t.id,
-      baseId: t.colors.some((c) => c.id === d.baseId) ? d.baseId : t.colors[0].id,
-      size: t.sizes.some((z) => z.id === d.size) ? d.size : null,
-    }));
-  };
+
 
   const pickCord = (id) => {
     const cord = findCord(id);
@@ -618,6 +622,7 @@ export default function Builder() {
   }, []);
 
   const onPointerDown = (e) => {
+    if (notForStage(e)) return;
     stageRef.current?.setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 2) {
@@ -626,7 +631,7 @@ export default function Builder() {
     }
   };
   const onPointerMove = (e) => {
-    if (!pointers.current.has(e.pointerId)) return;
+    if (notForStage(e) || !pointers.current.has(e.pointerId)) return;
     const prev = pointers.current.get(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const rect = stageRef.current?.getBoundingClientRect();
@@ -733,6 +738,8 @@ export default function Builder() {
   const takes = (step) => type.accessories.includes(step);
   // an engraved hat cannot be ordered while engraving is off
   const engravedPreview = !ENGRAVING_ENABLED && design.engraving.length > 0;
+  const brands = brandCount(design.engraving);
+  const brandValue = brands ? `${brands} brand${brands === 1 ? "" : "s"}` : null;
   const base = type.colors.find((c) => c.id === design.baseId);
   // The selector appears only once there is a real choice to make, or in the
   // private preview, which lists every type.
@@ -848,23 +855,10 @@ export default function Builder() {
                 <HatStack
                   config={design}
                   alt={`Custom hat preview: ${describeConfig(design)}`}
-                  engravingAnchors={preview.calibrate ? anchors : undefined}
+                  engravingAnchors={cal?.anchors}
                 />
                 {preview.calibrate && (
-                  <Suspense fallback={null}>
-                    <CalibrationOverlay
-                      anchors={anchors}
-                      maxWidths={maxWidths}
-                      typeId={design.hatType}
-                      position={calPosition}
-                      onMove={(xy) =>
-                        setAnchors((all) => ({
-                          ...all,
-                          [design.hatType]: { ...all[design.hatType], [calPosition]: { ...all[design.hatType][calPosition], ...xy } },
-                        }))
-                      }
-                    />
-                  </Suspense>
+                  <div ref={setCalLayer} style={{ position: "absolute", inset: 0, zIndex: 60, pointerEvents: "none" }} />
                 )}
               </div>
               {/* live total, always on top of the stage */}
@@ -906,16 +900,7 @@ export default function Builder() {
             </p>
             {preview.calibrate && (
               <Suspense fallback={null}>
-                <CalibrationPanel
-                  anchors={anchors}
-                  setAnchors={setAnchors}
-                  maxWidths={maxWidths}
-                  setMaxWidths={setMaxWidths}
-                  typeId={anchors[design.hatType] ? design.hatType : "wool"}
-                  onType={calibrateType}
-                  position={calPosition}
-                  setPosition={setCalPosition}
-                />
+                <CalibrationTool stageLayer={calLayer} typeId={design.hatType} onType={(id) => pickType(id, true)} onChange={setCal} />
               </Suspense>
             )}
           </div>
@@ -956,16 +941,36 @@ export default function Builder() {
               </div>
             </Step>
 
-            {preview.engraving && type.brandingAllowed && (
-              <Step num={next()} id="engraving" label="Brand it">
-                <Suspense fallback={<p style={{ margin: 0, fontSize: 13, color: "#8a7460" }}>Loading</p>}>
-                  <EngravingStep
-                    engraving={design.engraving}
-                    typeId={design.hatType}
-                    maxWidths={maxWidths}
-                    onChange={(engraving) => set({ engraving })}
-                  />
-                </Suspense>
+            {(ENGRAVING_ENABLED || preview.engraving) && type.brandingAllowed && (
+              <Step num={next()} id="engraving" label="Brand it" value={brandValue}>
+                {brandOpen || design.engraving.length > 0 || preview.calibrate ? (
+                  <Suspense fallback={<p style={{ margin: 0, fontSize: 13, color: "#8a7460" }}>Loading</p>}>
+                    <EngravingStep
+                      engraving={design.engraving}
+                      typeId={design.hatType}
+                      maxWidths={cal?.maxWidths}
+                      onChange={(engraving) => set({ engraving })}
+                    />
+                  </Suspense>
+                ) : (
+                  <div>
+                    <p style={{ margin: "0 0 10px", fontSize: 13.5, lineHeight: 1.5, color: "#4a3a2c" }}>
+                      Burn your initials or a stamp into the felt. Up to {FREE_BRAND_COUNT} brands are free, then{" "}
+                      {fmt(ENGRAVING_FEE)} for as many as fit.
+                    </p>
+                    <button
+                      type="button"
+                      className="tc-btn tc-btn--ghost"
+                      style={{ width: "100%" }}
+                      data-engrave="open"
+                      onPointerEnter={loadEngravingStep}
+                      onFocus={loadEngravingStep}
+                      onClick={() => setBrandOpen(true)}
+                    >
+                      Brand your hat
+                    </button>
+                  </div>
+                )}
               </Step>
             )}
 

@@ -1,4 +1,4 @@
-import { ENGRAVING_ANCHORS, ENGRAVING_FONT_FILES, ENGRAVING_GAP, ENGRAVING_STYLE } from "./catalog.js";
+import { ENGRAVING_ANCHORS, ENGRAVING_FONT_FILES, ENGRAVING_GAP, ENGRAVING_STYLE } from "./engravingArt.js";
 import { ENGRAVING_POSITIONS } from "./pricing.js";
 import { elementInches, stampShape, useEngravingAssets } from "./engraving.js";
 
@@ -35,9 +35,14 @@ export default function EngravingLayer({ engraving, hatType, anchors = ENGRAVING
       const left = x;
       x += w + ENGRAVING_GAP * ppi;
       if (e.kind === "stamp") {
+        // fit the SVG inside its box without stretching it, centered: the
+        // box can be squarer than the drawing (the Olive Branch)
         const { vb, paths } = stampShape(e.stampId);
+        const k = Math.min(w / vb[2], h / vb[3]);
+        const ox = left + (w - vb[2] * k) / 2;
+        const oy = -h / 2 + (h - vb[3] * k) / 2;
         return (
-          <g key={i} transform={`translate(${left} ${-h / 2}) scale(${w / vb[2]} ${h / vb[3]}) translate(${-vb[0]} ${-vb[1]})`}>
+          <g key={i} transform={`translate(${ox} ${oy}) scale(${k}) translate(${-vb[0]} ${-vb[1]})`}>
             {paths.map((d, j) => (
               <path key={j} d={d.d} fillRule={d.fillRule} />
             ))}

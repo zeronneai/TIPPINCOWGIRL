@@ -25,7 +25,8 @@
 // blocks remote images.
 import { ACCESSORY_PUBLIC_IDS, CLOUDINARY_CLOUD, accessoryLayers, baseArtFor } from "./catalog.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
-import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, engravingRows, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
+import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
+import { engravingRows } from "./engravingText.js";
 
 export { parseCartFromMetadata };
 

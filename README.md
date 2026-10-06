@@ -62,17 +62,19 @@ Matches (color). Where things live:
   type in the builder (suede and straw without accessories). It only looks:
   the button reads "Preview only", nothing goes in the cart, and the server
   refuses any order for a disabled type whatever the page sends.
-- Engraving (burned stamps and letters, front and left): `pricing.js` has
-  the model, the price rule (up to 4 brands free, then one $10 per hat;
-  spaces do not count) and `ENGRAVING_ENABLED = false`; `catalog.js` has the
-  look, the anchors and the widest row per side. It replaces the old brand
-  (`BRANDS_ENABLED`, still off and kept). See it with `?preview=engraving`
-  (combinable: `?preview=types,engraving`); tune the anchors with
+- Engraving (burned stamps and letters, front and left), ON:
+  `pricing.js` has the model, the price rule (up to 4 brands free, then
+  one $10 per hat; spaces do not count) and `ENGRAVING_ENABLED`. Wool takes
+  it; suede will once it is on sale; straw never. The look, the anchors and
+  the widest row per side are in `engravingArt.js`, which loads only when a
+  hat is engraved or the "Brand it" step is opened (it starts closed), so
+  the main bundle carries just the stamp ids. Tune the anchors with
   `?preview=engraving&calibrate=1` and paste the copied JSON into
-  `catalog.js`. While it is off, the server refuses any engraved hat.
-  The fonts, stamps and `stamps.json` live in `public/engraving/`; after
-  changing them run `node scripts/engraving-data.mjs` (a test fails if the
-  generated `src/shop/engravingStamps.js` is out of date).
+  `engravingArt.js`. The fonts, stamps and `stamps.json` live in
+  `public/engraving/` and are never edited by the code; after changing them
+  run `node scripts/engraving-data.mjs` (a test fails if the generated
+  `engravingStamps.js` or `engravingStampIds.js` is out of date). Stamp box
+  exceptions (the Olive Branch) are `BOX_OVERRIDES` in that script.
   The burned brand is kept but off: `BRANDS_ENABLED = false`.
 - `src/shop/catalog.js`: stacking order (base 10, feather 20, cord 30, bud 40,
   matches 50, all normal blend). Server safe.
