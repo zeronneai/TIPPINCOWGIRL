@@ -19,12 +19,17 @@
 //   base     z=10  normal   Cloudinary
 //   brand    z=15  multiply Cloudinary   OFF (BRANDS_ENABLED), burned into
 //                                        the felt, so under everything else
+//   engrave  z=15  multiply drawn in the browser (EngravingLayer.jsx) from
+//                           public/engraving/: the same burned slot the old
+//                           brand used, which it replaces. OFF for sale
+//                           (ENGRAVING_ENABLED), shown in ?preview=engraving
 //   feather  z=20  normal   layers/feather-*.png
 //   cord     z=30  normal   layers/cord-*.png     OVER the feather, on purpose
 //   bud      z=40  normal   layers/bud-{small|large}-*.png
 //   matches  z=50  normal   layers/matches-*.png
 // ---------------------------------------------------------------------------
 
+import { ENGRAVING_STAMPS } from "./engravingStamps.js";
 import {
   BASE_OPTIONS,
   BRANDS_ENABLED,
@@ -175,6 +180,56 @@ export const BRAND_TEXT = {
   color: "#4a2a12", // dark burn
   haloColor: "#8a5a30", // lighter scorch halo, blurred
 };
+
+// ---- engraving -------------------------------------------------------------
+// How the burned stamps and letters LOOK and where they sit. What they are
+// and what they cost is in pricing.js. All lengths in inches unless noted.
+
+export const ENGRAVING_FONT_FILES = {
+  original: { family: "TippinOriginal", url: "/engraving/fonts/TippinOriginal.woff2" },
+  soft: { family: "TippinSoft", url: "/engraving/fonts/TippinSoft.woff2" },
+  copperplate: { family: "TippinCopperplate", url: "/engraving/fonts/TippinCopperplate.woff2" },
+  durango: { family: "TippinDurango", url: "/engraving/fonts/TippinDurango.woff2" },
+};
+
+// Height of a capital letter, per size.
+export const ENGRAVING_LETTER_HEIGHT = { small: 0.35, large: 0.5 };
+// Space between two elements in a row.
+export const ENGRAVING_GAP = 0.1;
+
+/** A stamp's drawn size in inches, {w, h}, or null. See engravingStamps.js. */
+export const stampInches = (stampId, size) => ENGRAVING_STAMPS.find((s) => s.id === stampId)?.[size] ?? null;
+export const findStampArt = (stampId) => ENGRAVING_STAMPS.find((s) => s.id === stampId) || null;
+
+// TODO(calibrate): starting values. Tune them with
+// ?preview=engraving&calibrate=1 and paste the copied JSON over these two.
+//
+// The widest row each position takes, per hat type.
+export const ENGRAVING_MAX_WIDTH = {
+  wool: { front: 4.0, left: 2.5 },
+  suede: { front: 4.0, left: 2.5 },
+};
+
+// Where each row sits on the 1600 canvas, per type and position: its center
+// (x, y), how many canvas pixels make an inch there, and a rotate (degrees),
+// skewX (degrees) and scaleX that bend a flat row onto the curve of the
+// crown. The front starts where the old brand sat; the left is foreshortened
+// by the three quarter view, hence its smaller scaleX.
+export const ENGRAVING_ANCHORS = {
+  wool: {
+    front: { x: 800, y: 745, pxPerInch: 110, rotate: -5, skewX: -4, scaleX: 1 },
+    left: { x: 505, y: 760, pxPerInch: 110, rotate: -8, skewX: -10, scaleX: 0.55 },
+  },
+  suede: {
+    front: { x: 830, y: 690, pxPerInch: 110, rotate: -3, skewX: -3, scaleX: 1 },
+    left: { x: 575, y: 700, pxPerInch: 110, rotate: -6, skewX: -8, scaleX: 0.55 },
+  },
+};
+
+// The burn: very dark brown, multiplied into the felt, slightly soft, not
+// fully opaque, so it reads as burned rather than printed. On dark bases it
+// is subtle, as a real burn is.
+export const ENGRAVING_STYLE = { color: "#3A2414", blurPx: 0.6, opacity: 0.85, blend: "multiply" };
 
 export const SIZES = SIZE_OPTIONS;
 

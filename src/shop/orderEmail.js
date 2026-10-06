@@ -25,7 +25,7 @@
 // blocks remote images.
 import { ACCESSORY_PUBLIC_IDS, CLOUDINARY_CLOUD, accessoryLayers, baseArtFor } from "./catalog.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
-import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
+import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, engravingRows, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
 
 export { parseCartFromMetadata };
 
@@ -172,7 +172,9 @@ export function hatRows(line) {
     // the base is already in the three rows above
     for (const p of hatParts(line)) {
       if (p.step === "base") continue;
-      rows.push([p.label, partValue(p)]);
+      // "Front: DEB (Durango, large) + Longhorn (large)", then the count
+      if (p.step === "engraving") rows.push(...engravingRows(line.engraving));
+      else rows.push([p.label, partValue(p)]);
       if (p.step === "cord" && line.stitchingNote) rows.push(["Color note", line.stitchingNote]);
     }
   }

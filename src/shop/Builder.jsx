@@ -1,5 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { BASES, BRANDS, BRANDS_ENABLED, BRAND_TEXT, SIZE_GUIDE, baseArtFor, basesFor, findIn, sizeGuideRows, thumbKey } from "./catalog.js";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import {
+  BASES,
+  BRANDS,
+  BRANDS_ENABLED,
+  BRAND_TEXT,
+  ENGRAVING_ANCHORS,
+  ENGRAVING_MAX_WIDTH,
+  SIZE_GUIDE,
+  baseArtFor,
+  basesFor,
+  findIn,
+  sizeGuideRows,
+  thumbKey,
+} from "./catalog.js";
 import HatStack, { BrandTextLayer } from "./HatStack.jsx";
 import { preloadLayer, thumbUrl } from "./layerArt.js";
 import { useCart } from "./cart.jsx";
@@ -7,6 +20,7 @@ import { useDialog } from "./useDialog.js";
 import {
   BUD_SIZES,
   CORD_OPTIONS,
+  ENGRAVING_ENABLED,
   FEATHER_OPTIONS,
   HAT_TYPES,
   LEGACY_PARAM_KEYS,
@@ -33,6 +47,8 @@ import {
 //   00 Hat        Wool, Faux Suede or Straw; shown only when more than one
 //                 type is enabled (or under ?preview=types, see below)
 //   01 Base       a color of that type, required
+//   ·· Brand it   burned stamps and letters, front and left; only under
+//                 ?preview=engraving while ENGRAVING_ENABLED is off
 //   02 Feather    None or one
 //   03 Cord       None or one; Suede Stitching adds a color and a note
 //   04 Brim bud   None, or Small / Large, then a color for that size
@@ -63,22 +79,35 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // stale key from an older link (a band, a charm) never lingers.
 const OWN_KEYS = [...Object.values(PARAM_KEYS), ...LEGACY_PARAM_KEYS];
 
-// ?preview=types is a private look at the types that are not on sale yet:
-// the builder lists every type and lets you dress a suede or straw base, but
-// it will not add one to the cart, and the server refuses to charge for a
-// disabled type no matter what the page sends. Without the parameter the
-// builder only knows the enabled types.
-function isTypesPreview() {
+// Private previews, combinable: ?preview=types,engraving
+//
+//   types      every hat type, including the ones not on sale yet
+//   engraving  the "Brand it" step while ENGRAVING_ENABLED is off; add
+//              &calibrate=1 for the anchor calibration tool
+//
+// A preview only looks: the builder will not put a disabled type or an
+// engraving in the cart, and the server refuses both no matter what the
+// page sends. Without the parameter the builder is exactly the public one.
+function previewFlags() {
   try {
-    return new URLSearchParams(window.location.search).get("preview") === "types";
+    const q = new URLSearchParams(window.location.search);
+    const set = new Set((q.get("preview") || "").split(",").map((s) => s.trim()));
+    const engraving = set.has("engraving");
+    return { types: set.has("types"), engraving, calibrate: engraving && q.get("calibrate") === "1" };
   } catch {
-    return false;
+    return { types: false, engraving: false, calibrate: false };
   }
 }
 
+// Loaded only under ?preview=engraving, so the public builder never ships them.
+const EngravingStep = lazy(() => import("./EngravingStep.jsx"));
+const CalibrationOverlay = lazy(() => import("./EngravingCalibrator.jsx").then((m) => ({ default: m.CalibrationOverlay })));
+const CalibrationPanel = lazy(() => import("./EngravingCalibrator.jsx").then((m) => ({ default: m.CalibrationPanel })));
+
 function readUrl() {
   try {
-    return parsePermalink(window.location.search, undefined, { previewTypes: isTypesPreview() });
+    const flags = previewFlags();
+    return parsePermalink(window.location.search, undefined, { previewTypes: flags.types, previewEngraving: flags.engraving });
   } catch {
     return parsePermalink("");
   }
@@ -461,7 +490,12 @@ export default function Builder() {
   // its normalized form, which is what the stage, the price, the URL and the
   // cart all read.
   const initial = useMemo(readUrl, []);
-  const previewTypes = useMemo(isTypesPreview, []);
+  const preview = useMemo(previewFlags, []);
+  const previewTypes = preview.types;
+  // calibration only: live anchors and widths, starting from catalog.js
+  const [anchors, setAnchors] = useState(ENGRAVING_ANCHORS);
+  const [maxWidths, setMaxWidths] = useState(ENGRAVING_MAX_WIDTH);
+  const [calPosition, setCalPosition] = useState("front");
   const [draft, setDraft] = useState(initial);
   const [sizeModal, setSizeModal] = useState(false);
   const [sizeHint, setSizeHint] = useState(false);
@@ -524,6 +558,19 @@ export default function Builder() {
   const pickType = (id) => {
     const t = findHatType(id);
     if (!t || (!t.enabled && !previewTypes)) return;
+    setDraft((d) => ({
+      ...d,
+      hatType: t.id,
+      baseId: t.colors.some((c) => c.id === d.baseId) ? d.baseId : t.colors[0].id,
+      size: t.sizes.some((z) => z.id === d.size) ? d.size : null,
+      // a type that cannot be branded (straw) clears the engraving for good
+      engraving: t.brandingAllowed ? d.engraving : [],
+    }));
+  };
+  // The calibration tool switches type directly, on sale or not.
+  const calibrateType = (id) => {
+    const t = findHatType(id);
+    if (!t) return;
     setDraft((d) => ({
       ...d,
       hatType: t.id,
@@ -631,6 +678,10 @@ export default function Builder() {
       setAdded(`Preview only: the ${type.label} is not for sale yet.`);
       return;
     }
+    if (engravedPreview) {
+      setAdded("Preview only: branding is not for sale yet.");
+      return;
+    }
     if (!designReady()) return;
     if (editingId) {
       updateLine(editingId, design);
@@ -680,6 +731,8 @@ export default function Builder() {
   // ---- current values for the step headings ---------------------------------------
   const type = findHatType(design.hatType);
   const takes = (step) => type.accessories.includes(step);
+  // an engraved hat cannot be ordered while engraving is off
+  const engravedPreview = !ENGRAVING_ENABLED && design.engraving.length > 0;
   const base = type.colors.find((c) => c.id === design.baseId);
   // The selector appears only once there is a real choice to make, or in the
   // private preview, which lists every type.
@@ -792,7 +845,27 @@ export default function Builder() {
                   transition: pointers.current.size ? "none" : "transform .12s ease-out",
                 }}
               >
-                <HatStack config={design} alt={`Custom hat preview: ${describeConfig(design)}`} />
+                <HatStack
+                  config={design}
+                  alt={`Custom hat preview: ${describeConfig(design)}`}
+                  engravingAnchors={preview.calibrate ? anchors : undefined}
+                />
+                {preview.calibrate && (
+                  <Suspense fallback={null}>
+                    <CalibrationOverlay
+                      anchors={anchors}
+                      maxWidths={maxWidths}
+                      typeId={design.hatType}
+                      position={calPosition}
+                      onMove={(xy) =>
+                        setAnchors((all) => ({
+                          ...all,
+                          [design.hatType]: { ...all[design.hatType], [calPosition]: { ...all[design.hatType][calPosition], ...xy } },
+                        }))
+                      }
+                    />
+                  </Suspense>
+                )}
               </div>
               {/* live total, always on top of the stage */}
               <div
@@ -831,6 +904,20 @@ export default function Builder() {
             <p className="tc-stage-hint" style={{ margin: "10px 2px 0", fontSize: 12, color: "#8a7460", textAlign: "center" }}>
               Scroll or pinch to zoom. Drag to look closer.
             </p>
+            {preview.calibrate && (
+              <Suspense fallback={null}>
+                <CalibrationPanel
+                  anchors={anchors}
+                  setAnchors={setAnchors}
+                  maxWidths={maxWidths}
+                  setMaxWidths={setMaxWidths}
+                  typeId={anchors[design.hatType] ? design.hatType : "wool"}
+                  onType={calibrateType}
+                  position={calPosition}
+                  setPosition={setCalPosition}
+                />
+              </Suspense>
+            )}
           </div>
 
           {/* --- steps --- */}
@@ -868,6 +955,19 @@ export default function Builder() {
                 ))}
               </div>
             </Step>
+
+            {preview.engraving && type.brandingAllowed && (
+              <Step num={next()} id="engraving" label="Brand it">
+                <Suspense fallback={<p style={{ margin: 0, fontSize: 13, color: "#8a7460" }}>Loading</p>}>
+                  <EngravingStep
+                    engraving={design.engraving}
+                    typeId={design.hatType}
+                    maxWidths={maxWidths}
+                    onChange={(engraving) => set({ engraving })}
+                  />
+                </Suspense>
+              </Step>
+            )}
 
             {BRANDS_ENABLED && (
               <Step num={next()} id="brand" label="Brand" value={findIn(BRANDS, design.brandId)?.name} stepRef={brandRowRef}>
@@ -1130,7 +1230,7 @@ export default function Builder() {
                 </span>
               </div>
               <button type="button" className="tc-btn" style={{ width: "100%" }} onClick={submitDesign}>
-                {!type.enabled ? "Preview only" : editingId ? "Update this hat" : "Add to cart"}
+                {!type.enabled || engravedPreview ? "Preview only" : editingId ? "Update this hat" : "Add to cart"}
               </button>
               {!design.size && (
                 <p style={{ margin: "9px 0 0", textAlign: "center", fontSize: 12.5, color: "#8a7460", fontWeight: 600 }}>

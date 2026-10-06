@@ -6,14 +6,20 @@
 // SERVER SIDE, pure, no imports beyond pricing.js.
 //
 // STRIPE LIMITS: 50 keys per session, 500 characters per value. A full cart
-// (10 hats, every one with a stitching note) uses 5 + 10 + 10 = 25 keys, and
-// the longest record is about 90 characters; a note is capped at
-// STITCHING_NOTE_MAX_LEN (120) and clipped to 500 again here regardless.
+// (10 hats, every one with a stitching note and an engraving) uses
+// 5 + 10 + 10 + 10 = 35 keys, and the longest record is about 90
+// characters; a note is capped at STITCHING_NOTE_MAX_LEN (120), the longest
+// possible engraving code is under 500 (see encodeEngraving in pricing.js),
+// and every value is clipped to 500 again here regardless.
 //
 // FORMAT v3 (hat types), one record per hat, pipe separated, WRITTEN now:
 //
 //   hat_1      = "v3|wool|ivory|natural|stitching|raspberry|large|teal|turquoise|none||M|1"
 //   hat_1_note = "a bit lighter please"          (only when there is a note)
+//   hat_1_engr = "lt.d.DEB_ls.longhorn*ss.horseshoe"
+//                (only when the hat is engraved; the code is
+//                encodeEngraving in pricing.js. Missing means none, so every
+//                order written before engraving reads unchanged.)
 //
 //   fields: v3 | hatType | base | feather | cord | cordColor | budSize |
 //           budColor | matches | brand | brandText | size | quantity
@@ -43,7 +49,7 @@
 // order_total, amounts in integer cents as strings.
 // ---------------------------------------------------------------------------
 
-import { normalizeConfig } from "./pricing.js";
+import { encodeEngraving, normalizeConfig, parseEngraving } from "./pricing.js";
 
 export const METADATA_VALUE_MAX = 500;
 const clip = (v) => String(v ?? "").slice(0, METADATA_VALUE_MAX);
@@ -78,6 +84,7 @@ export function encodeOrderMetadata(order) {
       ].join("|")
     );
     if (c.stitchingNote) md[`hat_${n}_note`] = clip(c.stitchingNote);
+    if (c.engraving.length) md[`hat_${n}_engr`] = clip(encodeEngraving(c.engraving));
   });
   return md;
 }
@@ -138,6 +145,8 @@ export function parseCartFromMetadata(metadata) {
       const fields = v3 ? parts.slice(1) : ["wool", ...parts.slice(1)];
       const [hatType, baseId, featherId, cordId, cordColor, budSize, budColor, matchesColor, brandId, customText, size, quantity] =
         fields;
+      const engr = parseEngraving(md[`hat_${i}_engr`]);
+      for (const p of engr.problems) problems.push(`Hat ${i}: ${p}`);
       const config = normalizeConfig({
         hatType,
         baseId,
@@ -152,9 +161,11 @@ export function parseCartFromMetadata(metadata) {
         customText: customText || null,
         // sizes are stored uppercase in the metadata, lowercase in the catalog
         size: String(size || "").toLowerCase(),
+        engraving: engr.engraving,
       });
       if (config.hatType !== hatType) problems.push(`Hat ${i} has an unknown hat type: ${hatType}`);
       if (!config.baseId) problems.push(`Hat ${i} has an unknown base: ${baseId}`);
+      if (config.engraving.length !== engr.engraving.length) problems.push(`Hat ${i} carries an engraving its type cannot take`);
       cart.push({ ...config, quantity: quantityOf(quantity, i) });
       continue;
     }

@@ -40,7 +40,7 @@
 
 import { STORE_HOURS } from "../business.js";
 import { addressLines, buildHatImageUrl, esc, money, parseCartFromMetadata } from "./orderEmail.js";
-import { findBase, findSize, hatParts } from "./pricing.js";
+import { engravingRows, findBase, findSize, hatParts } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // TODO(fulfillment): REPLACE THIS ONCE DEBORAH CONFIRMS A REAL TURNAROUND.
@@ -121,6 +121,8 @@ function hatRows(line) {
   } else {
     for (const p of hatParts(line)) {
       if (p.step === "base") rows.push(["Hat", `${p.label}, ${p.name}`]);
+      // the same rows the owner reads: each side, then the count
+      else if (p.step === "engraving") rows.push(...engravingRows(line.engraving));
       else rows.push([p.label, p.detail ? `${p.name}, ${p.detail}` : p.name]);
       if (p.step === "cord" && line.stitchingNote) rows.push(["Your color note", line.stitchingNote]);
     }

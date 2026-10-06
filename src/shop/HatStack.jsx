@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { BLEND, BRANDS, BRANDS_ENABLED, BRAND_TEXT, Z_INDEX, accessoryLayers, baseArtFor, findIn } from "./catalog.js";
 import { layerUrl } from "./layerArt.js";
+import EngravingLayer from "./EngravingLayer.jsx";
 
 // ---------------------------------------------------------------------------
 // The composed hat, shared by the builder stage and the cart thumbnails so
@@ -137,13 +138,15 @@ const slot = (step, z, blend, children) => (
 
 /**
  * @param config  a hat config (see pricing.js): baseId, featherId, cordId,
- *                cordColor, budSize, budColor, matchesColor (+ brand fields,
- *                used only while BRANDS_ENABLED)
+ *                cordColor, budSize, budColor, matchesColor, engraving (+ brand
+ *                fields, used only while BRANDS_ENABLED)
  * @param alt     accessible description of the composed hat
+ * @param engravingAnchors  optional anchors overriding catalog.js, for the
+ *                calibration tool only
  */
-export default function HatStack({ config, alt }) {
+export default function HatStack({ config, alt, engravingAnchors }) {
   const c = config || {};
-  // wool only for now: a type without artwork draws no base rather than the wrong felt
+  // the base of the config's own type (catalog.js maps every type's bases)
   const base = baseArtFor(c);
   const byStep = Object.fromEntries(accessoryLayers(c).map((l) => [l.step, l]));
 
@@ -158,6 +161,9 @@ export default function HatStack({ config, alt }) {
     <div role="img" aria-label={alt} style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
       {slot("base", Z_INDEX.base, BLEND.base, <FadeImg src={base?.layerImg} />)}
       {brandLayer}
+      {c.engraving?.length > 0 && (
+        <EngravingLayer engraving={c.engraving} hatType={c.hatType ?? "wool"} anchors={engravingAnchors} z={Z_INDEX.brand} />
+      )}
       {ACCESSORY_STEPS.map((step) => {
         const l = byStep[step];
         return slot(step, Z_INDEX[step], BLEND[step], <FadeImg src={l ? layerUrl(l.key) : null} />);
