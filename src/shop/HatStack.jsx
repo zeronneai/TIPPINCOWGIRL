@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { BASES, BLEND, BRANDS, BRANDS_ENABLED, BRAND_TEXT, Z_INDEX, accessoryLayers, findIn } from "./catalog.js";
+import { BLEND, BRANDS, BRANDS_ENABLED, BRAND_TEXT, Z_INDEX, accessoryLayers, baseArtFor, findIn } from "./catalog.js";
 import { layerUrl } from "./layerArt.js";
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,8 @@ const slot = (step, z, blend, children) => (
  */
 export default function HatStack({ config, alt }) {
   const c = config || {};
-  const base = findIn(BASES, c.baseId);
+  // wool only for now: a type without artwork draws no base rather than the wrong felt
+  const base = baseArtFor(c);
   const byStep = Object.fromEntries(accessoryLayers(c).map((l) => [l.step, l]));
 
   let brandLayer = null;

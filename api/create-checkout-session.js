@@ -7,7 +7,7 @@
 // bundles that file into the deployed function. There is exactly one price
 // list in this project and it lives in src/shop/pricing.js.
 //
-// Request body: { cart: [ { baseId, featherId, cordId, cordColor,
+// Request body: { cart: [ { hatType, baseId, featherId, cordId, cordColor,
 // stitchingNote, budSize, budColor, matchesColor, size, quantity }, ... ] }
 // (the exact field list is CONFIG_FIELDS in pricing.js; brand fields are
 // accepted and ignored while BRANDS_ENABLED is off)

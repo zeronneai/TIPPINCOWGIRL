@@ -10,11 +10,19 @@
 // the longest record is about 90 characters; a note is capped at
 // STITCHING_NOTE_MAX_LEN (120) and clipped to 500 again here regardless.
 //
-// FORMAT v2 (builder v2), one record per hat, pipe separated:
+// FORMAT v3 (hat types), one record per hat, pipe separated, WRITTEN now:
 //
-//   hat_1      = "v2|ivory|natural|stitching|raspberry|large|teal|turquoise|none||M|1"
+//   hat_1      = "v3|wool|ivory|natural|stitching|raspberry|large|teal|turquoise|none||M|1"
 //   hat_1_note = "a bit lighter please"          (only when there is a note)
 //
+//   fields: v3 | hatType | base | feather | cord | cordColor | budSize |
+//           budColor | matches | brand | brandText | size | quantity
+//
+// Suede sizes travel as "S-M" and "L-XL": a hyphen, never a pipe.
+//
+// FORMAT v2 (builder v2, before hat types), still READ, as wool:
+//
+//   hat_1 = "v2|ivory|natural|stitching|raspberry|large|teal|turquoise|none||M|1"
 //   fields: v2 | base | feather | cord | cordColor | budSize | budColor |
 //           matches | brand | brandText | size | quantity
 //
@@ -24,9 +32,9 @@
 // Every field is a catalog id or the brand word, whose charset has no pipe;
 // the note is free text, which is exactly why it gets its own key.
 //
-// FORMAT v1 (the first builder), still READ so a payment made before the
-// switch, and delivered or retried by Stripe after it, still produces a
-// readable work order:
+// FORMAT v1 (the first builder), still READ, as wool, so a payment made
+// before a switch, and delivered or retried by Stripe after it, still
+// produces a readable work order:
 //
 //   hat_1 = "chocolate|leather|star||M|1"
 //   fields: base | band | brand | customText | size | quantity
@@ -54,7 +62,8 @@ export function encodeOrderMetadata(order) {
     const n = i + 1;
     md[`hat_${n}`] = clip(
       [
-        "v2",
+        "v3",
+        c.hatType,
         c.baseId ?? "",
         c.featherId,
         c.cordId,
@@ -73,13 +82,15 @@ export function encodeOrderMetadata(order) {
   return md;
 }
 
+const V3_FIELDS = 13;
 const V2_FIELDS = 12;
 const V1_FIELDS = 6;
 
 /**
  * Read the hats back out of session metadata, v2 or v1.
  *
- * v2 lines come back as normalized configs plus quantity.
+ * v3 and v2 lines come back as normalized configs plus quantity; a v2 line
+ * (and a v1 line) is wool, since both predate hat types.
  * v1 lines come back as { legacy: true, baseId, bandId, brandId, customText,
  * size, quantity }: their band and brand no longer exist in the catalog, so
  * they are shown as recorded rather than priced or drawn.
@@ -117,14 +128,18 @@ export function parseCartFromMetadata(metadata) {
     }
     const parts = raw.split("|");
 
-    if (parts[0] === "v2") {
-      if (parts.length !== V2_FIELDS) {
+    // v3 carries its type; v2 predates types and is wool.
+    if (parts[0] === "v3" || parts[0] === "v2") {
+      const v3 = parts[0] === "v3";
+      if (parts.length !== (v3 ? V3_FIELDS : V2_FIELDS)) {
         problems.push(`Hat ${i} could not be read: ${raw}`);
         continue;
       }
-      const [, baseId, featherId, cordId, cordColor, budSize, budColor, matchesColor, brandId, customText, size, quantity] =
-        parts;
+      const fields = v3 ? parts.slice(1) : ["wool", ...parts.slice(1)];
+      const [hatType, baseId, featherId, cordId, cordColor, budSize, budColor, matchesColor, brandId, customText, size, quantity] =
+        fields;
       const config = normalizeConfig({
+        hatType,
         baseId,
         featherId,
         cordId,
@@ -138,6 +153,7 @@ export function parseCartFromMetadata(metadata) {
         // sizes are stored uppercase in the metadata, lowercase in the catalog
         size: String(size || "").toLowerCase(),
       });
+      if (config.hatType !== hatType) problems.push(`Hat ${i} has an unknown hat type: ${hatType}`);
       if (!config.baseId) problems.push(`Hat ${i} has an unknown base: ${baseId}`);
       cart.push({ ...config, quantity: quantityOf(quantity, i) });
       continue;
@@ -147,6 +163,7 @@ export function parseCartFromMetadata(metadata) {
       const [baseId, bandId, brandId, customText, size, quantity] = parts;
       cart.push({
         legacy: true,
+        hatType: "wool",
         baseId,
         bandId,
         brandId,

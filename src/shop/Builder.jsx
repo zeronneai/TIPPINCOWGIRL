@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BASES, BRANDS, BRANDS_ENABLED, BRAND_TEXT, SIZES, SIZE_GUIDE, findIn, thumbKey } from "./catalog.js";
+import { BASES, BRANDS, BRANDS_ENABLED, BRAND_TEXT, SIZE_GUIDE, baseArtFor, findIn, sizeGuideRows, thumbKey } from "./catalog.js";
 import HatStack, { BrandTextLayer } from "./HatStack.jsx";
 import { preloadLayer, thumbUrl } from "./layerArt.js";
 import { useCart } from "./cart.jsx";
@@ -16,8 +16,10 @@ import {
   buildOrder,
   buildPermalinkQuery,
   describeConfig,
+  enabledHatTypes,
   findBudSize,
   findCord,
+  findHatType,
   formatCents,
   normalizeConfig,
   parsePermalink,
@@ -294,9 +296,11 @@ function BrandStep({ value, text, onPick, onText, textHint }) {
 }
 
 // --- Find-your-size modal ----------------------------------------------------
-function SizeModal({ open, onClose, onPick, returnRef }) {
+function SizeModal({ open, onClose, onPick, returnRef, typeId }) {
   const panelRef = useRef(null);
   useDialog(open, onClose, panelRef, returnRef);
+  const rows = sizeGuideRows(typeId);
+  const hasUs = rows.some((r) => r.us);
   if (!open) return null;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: "var(--z-overlay)", display: "grid", placeItems: "center", padding: 16 }}>
@@ -348,59 +352,70 @@ function SizeModal({ open, onClose, onPick, returnRef }) {
             </li>
           ))}
         </ol>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-          <thead>
-            <tr>
-              {["Size", "Centimeters", "Inches", ""].map((h, i) => (
-                <th
-                  key={i}
-                  scope="col"
-                  style={{
-                    textAlign: "left",
-                    padding: "8px 10px",
-                    fontSize: 11,
-                    letterSpacing: ".1em",
-                    textTransform: "uppercase",
-                    color: "#6f4526",
-                    borderBottom: "2px solid rgba(43,26,16,.3)",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {SIZE_GUIDE.rows.map((r) => (
-              <tr key={r.size}>
-                <td style={{ padding: "9px 10px", fontWeight: 800, borderBottom: "1px solid rgba(43,26,16,.14)" }}>{r.size}</td>
-                <td style={{ padding: "9px 10px", borderBottom: "1px solid rgba(43,26,16,.14)", color: "#4a3a2c" }}>{r.cm}</td>
-                <td style={{ padding: "9px 10px", borderBottom: "1px solid rgba(43,26,16,.14)", color: "#4a3a2c" }}>{r.inches}</td>
-                <td style={{ padding: "9px 6px", borderBottom: "1px solid rgba(43,26,16,.14)", textAlign: "right" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onPick(r.size.toLowerCase());
-                      onClose();
-                    }}
+        {/* one table per hat type, from the sizes in pricing.js; the size
+            itself is the button, which keeps four columns inside a phone */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <thead>
+              <tr>
+                {["Size", ...(hasUs ? ["US size"] : []), "Head (in)", "Head (cm)"].map((h) => (
+                  <th
+                    key={h}
+                    scope="col"
                     style={{
-                      border: "2px solid rgba(43,26,16,.35)",
-                      borderRadius: 7,
-                      background: "#fffaf0",
-                      color: "var(--coral-deep)",
-                      fontWeight: 800,
-                      fontSize: 11.5,
-                      padding: "5px 10px",
-                      cursor: "pointer",
+                      textAlign: "left",
+                      padding: "8px 6px",
+                      fontSize: 11,
+                      letterSpacing: ".08em",
+                      textTransform: "uppercase",
+                      color: "#6f4526",
+                      borderBottom: "2px solid rgba(43,26,16,.3)",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    Pick {r.size}
-                  </button>
-                </td>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ padding: "8px 6px", borderBottom: "1px solid rgba(43,26,16,.14)" }}>
+                    <button
+                      type="button"
+                      aria-label={`Pick size ${r.size}`}
+                      onClick={() => {
+                        onPick(r.id);
+                        onClose();
+                      }}
+                      style={{
+                        border: "2px solid rgba(43,26,16,.35)",
+                        borderRadius: 7,
+                        background: "#fffaf0",
+                        color: "var(--coral-deep)",
+                        fontWeight: 800,
+                        fontSize: 13,
+                        padding: "5px 10px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {r.size}
+                    </button>
+                  </td>
+                  {hasUs && (
+                    <td style={{ padding: "8px 6px", borderBottom: "1px solid rgba(43,26,16,.14)", color: "#4a3a2c", whiteSpace: "nowrap" }}>
+                      {r.us}
+                    </td>
+                  )}
+                  <td style={{ padding: "8px 6px", borderBottom: "1px solid rgba(43,26,16,.14)", color: "#4a3a2c" }}>{r.inches}</td>
+                  <td style={{ padding: "8px 6px", borderBottom: "1px solid rgba(43,26,16,.14)", color: "#4a3a2c" }}>{r.cm}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -477,13 +492,28 @@ export default function Builder() {
       const im = new Image();
       im.src = u;
     };
-    warm(findIn(BASES, design.baseId)?.layerImg);
+    warm(baseArtFor(design)?.layerImg);
     const t = setTimeout(() => BASES.forEach((b) => warm(b.layerImg)), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---- step handlers: each keeps the draft valid as it changes -------------------
+  // Switching type keeps what still fits the new type and resets the rest:
+  // its first color when the color is not offered, no size when the size is
+  // not offered. Accessories the type does not take drop to none in
+  // normalizeConfig.
+  const pickType = (id) => {
+    const t = findHatType(id);
+    if (!t?.enabled) return;
+    setDraft((d) => ({
+      ...d,
+      hatType: t.id,
+      baseId: t.colors.some((c) => c.id === d.baseId) ? d.baseId : t.colors[0].id,
+      size: t.sizes.some((z) => z.id === d.size) ? d.size : null,
+    }));
+  };
+
   const pickCord = (id) => {
     const cord = findCord(id);
     set({ cordId: id, cordColor: cord?.colors ? design.cordColor || firstColor(cord.colors) : null });
@@ -626,7 +656,11 @@ export default function Builder() {
   };
 
   // ---- current values for the step headings ---------------------------------------
-  const base = findIn(BASES, design.baseId);
+  const type = findHatType(design.hatType);
+  const takes = (step) => type.accessories.includes(step);
+  const base = type.colors.find((c) => c.id === design.baseId);
+  // The selector appears only once there is a real choice to make.
+  const types = enabledHatTypes();
   const feather = FEATHER_OPTIONS.find((o) => o.id === design.featherId);
   const cord = findCord(design.cordId);
   const bud = findBudSize(design.budSize);
@@ -778,17 +812,35 @@ export default function Builder() {
 
           {/* --- steps --- */}
           <div className="tc-builder-panel">
+            {types.length > 1 && (
+              <Step num={next()} id="type" label="Hat" value={type.label}>
+                <div className="tc-opt-grid">
+                  {types.map((t) => (
+                    <Tile
+                      key={t.id}
+                      testId={`type-${t.id}`}
+                      label={t.name}
+                      price={fmt(t.basePrice)}
+                      thumb={null}
+                      selected={design.hatType === t.id}
+                      onPick={() => pickType(t.id)}
+                    />
+                  ))}
+                </div>
+              </Step>
+            )}
+
             <Step num={next()} id="base" label="Base" value={base?.name}>
               <div className="tc-opt-grid">
-                {BASES.map((b) => (
+                {type.colors.map((c) => (
                   <Tile
-                    key={b.id}
-                    testId={`base-${b.id}`}
-                    label={b.name}
-                    price={fmt(b.price)}
-                    thumb={b.layerImg}
-                    selected={design.baseId === b.id}
-                    onPick={() => set({ baseId: b.id })}
+                    key={c.id}
+                    testId={`base-${c.id}`}
+                    label={c.name}
+                    price={fmt(type.basePrice)}
+                    thumb={baseArtFor({ hatType: type.id, baseId: c.id })?.layerImg ?? null}
+                    selected={design.baseId === c.id}
+                    onPick={() => set({ baseId: c.id })}
                   />
                 ))}
               </div>
@@ -809,6 +861,7 @@ export default function Builder() {
               </Step>
             )}
 
+            {takes("feather") && (
             <Step num={next()} id="feather" label="Feather" value={feather?.id === "none" ? "None" : feather?.name}>
               <div className="tc-opt-grid">
                 {FEATHER_OPTIONS.map((f) => {
@@ -828,7 +881,9 @@ export default function Builder() {
                 })}
               </div>
             </Step>
+            )}
 
+            {takes("cord") && (
             <Step num={next()} id="cord" label="Cord" value={cordValue}>
               <div className="tc-opt-grid">
                 {CORD_OPTIONS.map((c) => {
@@ -895,7 +950,9 @@ export default function Builder() {
                 </>
               )}
             </Step>
+            )}
 
+            {takes("bud") && (
             <Step num={next()} id="bud" label="Brim bud" value={budValue}>
               <div className="tc-opt-grid">
                 {BUD_SIZES.map((b) => {
@@ -926,7 +983,9 @@ export default function Builder() {
                 />
               )}
             </Step>
+            )}
 
+            {takes("matches") && (
             <Step num={next()} id="matches" label={MATCHES.name} value={matchesValue}>
               <div className="tc-opt-grid">
                 <Tile
@@ -960,6 +1019,7 @@ export default function Builder() {
                 />
               )}
             </Step>
+            )}
 
             {/* --- size (required) --- */}
             <fieldset ref={sizeRowRef} data-step="size" style={{ border: 0, margin: "0 0 22px", padding: 0, minWidth: 0 }}>
@@ -986,7 +1046,7 @@ export default function Builder() {
                 </button>
               </legend>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {SIZES.map((s) => (
+                {type.sizes.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -1085,6 +1145,7 @@ export default function Builder() {
           setSizeHint(false);
         }}
         returnRef={sizeBtnRef}
+        typeId={design.hatType}
       />
     </section>
   );

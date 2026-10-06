@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { MAX_CART_QUANTITY, MAX_QUANTITY, MIN_QUANTITY, countHats, normalizeConfig, validateConfig } from "./pricing.js";
+import { clampQuantity, newLineId, reviveLine } from "./cartLine.js";
+import { MAX_CART_QUANTITY, MIN_QUANTITY, countHats } from "./pricing.js";
 
 // ---------------------------------------------------------------------------
 // The cart: a list of hat designs, each with its own quantity, persisted in
@@ -18,39 +19,9 @@ import { MAX_CART_QUANTITY, MAX_QUANTITY, MIN_QUANTITY, countHats, normalizeConf
 const STORAGE_KEY = "tc_cart_v2";
 const RETIRED_KEYS = ["tc_cart_v1"];
 
-/** Local row identifier. Never a Stripe id: it only exists to edit and remove. */
-export function newLineId() {
-  try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  } catch {
-    /* fall through to the manual id */
-  }
-  return `line_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-const clampQuantity = (value) => {
-  const n = Number(value);
-  if (!Number.isInteger(n)) return MIN_QUANTITY;
-  return Math.min(MAX_QUANTITY, Math.max(MIN_QUANTITY, n));
-};
-
-/**
- * Normalize one stored line against the CURRENT catalog. Returns null when
- * the line references anything that no longer exists, so a cart saved before
- * an option was retired simply loses that row instead of breaking the page.
- */
-export function reviveLine(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  // Strict first: a stored value that is present but unknown (a retired
-  // color, say) drops the row instead of silently becoming "none".
-  const candidate = { ...raw, quantity: clampQuantity(raw.quantity) };
-  if (!validateConfig(candidate).valid) return null;
-  return {
-    id: typeof raw.id === "string" && raw.id ? raw.id : newLineId(),
-    ...normalizeConfig(candidate),
-    quantity: candidate.quantity,
-  };
-}
+// The pure part of a cart line (id, quantity clamp, revival against the
+// catalog) lives in cartLine.js, so it runs and is tested outside the browser.
+export { newLineId, reviveLine };
 
 function loadCart() {
   try {

@@ -117,16 +117,16 @@ function hatRows(line) {
   if (line.legacy) {
     // an order from the first builder, paid before the switch
     const base = findBase(line.baseId);
-    if (base) rows.push(["Hat", base.name]);
+    if (base) rows.push(["Hat", `Wool Hat, ${base.name}`]);
   } else {
     for (const p of hatParts(line)) {
-      if (p.step === "base") rows.push(["Hat", p.name]);
+      if (p.step === "base") rows.push(["Hat", `${p.label}, ${p.name}`]);
       else rows.push([p.label, p.detail ? `${p.name}, ${p.detail}` : p.name]);
       if (p.step === "cord" && line.stitchingNote) rows.push(["Your color note", line.stitchingNote]);
     }
   }
 
-  const size = findSize(line.size);
+  const size = findSize(line.size, line.hatType);
   if (size) rows.push(["Size", size.name]);
 
   if (line.quantity > 1) rows.push(["Quantity", String(line.quantity)]);
@@ -194,7 +194,7 @@ export function buildCustomerEmail({ session }) {
         .join("");
 
       const imageUrl = buildHatImageUrl(line, { width: HAT_IMAGE_WIDTH });
-      const base = findBase(line.baseId);
+      const base = findBase(line.baseId, line.hatType);
       // With images blocked this alt text is the whole picture, so it says
       // what the hat is rather than "hat image".
       const alt = base ? `${base.name} hat` : "Your hat";

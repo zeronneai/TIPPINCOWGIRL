@@ -52,14 +52,25 @@ takes a color and an optional note), Brim bud (size, then color) and
 Matches (color). Where things live:
 
 - `src/shop/pricing.js`: ids, names, prices in cents, validation, the
-  permalink format. Base prices are marked `TODO(price)`, accessory names
-  `TODO(names)`. The burned brand is kept but off: `BRANDS_ENABLED = false`.
+  permalink format, and the hat types (`HAT_TYPES`): Wool ($140, the only
+  one enabled), Faux Suede and Straw ($80 each, defined but disabled until
+  their images exist). Each type sets its colors, sizes, which accessories it
+  takes and whether it can be branded; flip `enabled` to put one on sale. The
+  type selector in the builder appears by itself once two types are enabled.
+  The burned brand is kept but off: `BRANDS_ENABLED = false`.
 - `src/shop/catalog.js`: stacking order (base 10, feather 20, cord 30, bud 40,
   matches 50, all normal blend). Server safe.
 - `src/shop/layers/` and `layers/thumbs/`: the accessory PNGs (1600px) and
   JPG thumbnails, turned into URLs by `src/shop/layerArt.js` (browser only).
-- `src/shop/orderMetadata.js`: the Stripe metadata format, v2, with v1
-  orders still readable.
+- `src/shop/orderMetadata.js`: the Stripe metadata format, v3 (with the hat
+  type), with v2 and v1 orders still readable as wool.
+- `src/shop/cartLine.js`: one cart line, revived against the current catalog.
+  A line saved before hat types is read as wool.
+
+Run the shop tests with `npm test` (Node's own test runner, no
+dependencies). They cover prices per type, validation, the cart, permalinks,
+the metadata, both emails, and the real checkout handler with Stripe
+replaced by a recorder, so they need no key and no network.
 
 The order emails flatten the hat with Cloudinary overlays, and the accessory
 PNGs are not on Cloudinary yet, so a hat with accessories goes out without a

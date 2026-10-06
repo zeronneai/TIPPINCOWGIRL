@@ -23,9 +23,9 @@
 // the one that was charged. describeConfig's one line summary is used for
 // the hat image's alt text, which is all a reader sees when their client
 // blocks remote images.
-import { ACCESSORY_PUBLIC_IDS, BASES, CLOUDINARY_CLOUD, accessoryLayers, findIn } from "./catalog.js";
+import { ACCESSORY_PUBLIC_IDS, CLOUDINARY_CLOUD, accessoryLayers, baseArtFor } from "./catalog.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
-import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts } from "./pricing.js";
+import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
 
 export { parseCartFromMetadata };
 
@@ -78,7 +78,8 @@ export function buildHatImageUrl(config, { width = 240 } = {}) {
   try {
     const c = config || {};
     if (c.legacy) return null;
-    const base = findIn(BASES, c.baseId);
+    // Cloudinary only holds the wool bases; another type gets no picture.
+    const base = baseArtFor(c);
     if (!base?.publicId || !base?.layerFile) return null;
 
     const w = Number.isInteger(width) && width > 0 ? width : 240;
@@ -136,14 +137,31 @@ const partValue = (p) => {
 };
 
 /**
+ * The size as the maker reads it: the label plus the US hat size, or, for
+ * doubled sizes that have no US size (suede S/M, L/XL), the head range.
+ */
+function sizeText(line) {
+  const size = findSize(line.size, line.hatType);
+  if (!size) return `Unknown (${line.size || "blank"})`;
+  return size.us ? `${size.name} (US ${size.us})` : `${size.name} (${size.inches})`;
+}
+
+/**
  * Human readable rows for one hat, skipping every step left at "none", so a
  * bare hat never shows an empty row or the word "none".
+ *
+ * Every hat opens with the same three rows, together: what kind of hat,
+ * its color, its size. Then the accessories, then the quantity.
  */
 export function hatRows(line) {
-  const rows = [];
+  const type = hatTypeOf(line) || hatTypeOf({});
+  const base = findBase(line.baseId, type.id);
+  const rows = [
+    ["Hat", type.label],
+    ["Color", base ? base.name : `Unknown (${line.baseId || "blank"})`],
+    ["Size", sizeText({ ...line, hatType: type.id })],
+  ];
   if (line.legacy) {
-    const base = findBase(line.baseId);
-    rows.push(["Base", base ? base.name : `Unknown (${line.baseId || "blank"})`]);
     const band = LEGACY_BAND_NAMES[line.bandId];
     if (band) rows.push(["Band (first builder)", band]);
     else if (line.bandId && line.bandId !== "none") rows.push(["Band (first builder)", line.bandId]);
@@ -151,15 +169,13 @@ export function hatRows(line) {
     if (brand && brand.id !== "none") rows.push(["Brand (first builder)", brand.custom ? "Your word" : brand.name]);
     if (brand?.custom && line.customText) rows.push(["Custom text", String(line.customText).toUpperCase()]);
   } else {
-    const parts = hatParts(line);
-    if (!parts.some((p) => p.step === "base")) rows.push(["Base", `Unknown (${line.baseId || "blank"})`]);
-    for (const p of parts) {
+    // the base is already in the three rows above
+    for (const p of hatParts(line)) {
+      if (p.step === "base") continue;
       rows.push([p.label, partValue(p)]);
       if (p.step === "cord" && line.stitchingNote) rows.push(["Color note", line.stitchingNote]);
     }
   }
-  const size = findSize(line.size);
-  rows.push(["Size", size ? size.name : `Unknown (${line.size || "blank"})`]);
   rows.push(["Quantity", String(line.quantity)]);
   return rows;
 }

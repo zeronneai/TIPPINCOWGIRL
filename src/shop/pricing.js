@@ -12,17 +12,23 @@
 //
 // ALL AMOUNTS ARE INTEGER CENTS. Never store money as a float.
 //
-// THE HAT (builder v2). A base plus optional stacked accessories:
+// THE HAT (builder v2). A hat type, a base color, plus optional stacked
+// accessories:
 //
 //   step       rule                          config fields
-//   base       exactly one, required         baseId
+//   type       wool, suede or straw; only    hatType (missing means wool)
+//              enabled types can be ordered
+//   base       one color OF THAT TYPE        baseId
 //   feather    none or one                   featherId
 //   cord       none or one; Suede Stitching  cordId, cordColor, stitchingNote
 //              also takes a color and an
 //              optional free text note
 //   brim bud   none, or a size then a color  budSize, budColor
 //   matches    none or one color             matchesColor
-//   size       required                      size
+//   size       required, a size OF THAT TYPE size
+//
+// Each hat type (HAT_TYPES below) sets its own base price, colors, sizes,
+// which accessories it takes and whether it can be branded.
 //
 // "none" is a real value for every optional step, so a config always says
 // what was chosen, including "nothing".
@@ -37,17 +43,39 @@ export const CURRENCY = "USD";
 // to true to bring the step back exactly as it was.
 export const BRANDS_ENABLED = false;
 
-// --- prices ---------------------------------------------------------------
-// The base hat is $140, confirmed by the owner, and the same for every felt
-// color: the color never changes the price.
-export const BASE_PRICE = 14000;
+// --- base colors ----------------------------------------------------------
+// The price lives on the hat type (HAT_TYPES), never on a color: within a
+// type every color costs the same.
+//
+// WOOL keeps the original six ids, because they are in carts, links, past
+// orders and the Cloudinary layer files; only the visible names changed
+// (ivory reads "Silver Belly", pink "Soft Pink", wine "Burgundy").
+export const BASE_PRICE = 14000; // wool, confirmed by the owner
 export const BASE_OPTIONS = [
-  { id: "ivory", name: "Ivory", price: BASE_PRICE },
+  { id: "ivory", name: "Silver Belly", price: BASE_PRICE },
   { id: "black", name: "Black", price: BASE_PRICE },
   { id: "chocolate", name: "Chocolate", price: BASE_PRICE },
-  { id: "pink", name: "Dusty Pink", price: BASE_PRICE },
-  { id: "wine", name: "Wine", price: BASE_PRICE },
+  { id: "pink", name: "Soft Pink", price: BASE_PRICE },
+  { id: "wine", name: "Burgundy", price: BASE_PRICE },
   { id: "turquoise", name: "Turquoise", price: BASE_PRICE },
+];
+export const WOOL_COLORS = BASE_OPTIONS;
+
+// Defined ahead of their artwork; the types are disabled until it exists.
+export const SUEDE_COLORS = [
+  { id: "cream", name: "Cream" },
+  { id: "black", name: "Black" },
+  { id: "brown", name: "Brown" },
+  { id: "camel", name: "Camel" },
+  { id: "burgundy", name: "Burgundy" },
+  { id: "navy", name: "Navy" },
+  { id: "olive", name: "Olive" },
+  { id: "gray", name: "Gray" },
+  { id: "tobacco", name: "Tobacco" },
+];
+export const STRAW_COLORS = [
+  { id: "cream", name: "Cream" },
+  { id: "black", name: "Black" },
 ];
 
 // NAMES. `name` is the creative catalog name every customer sees (builder,
@@ -139,12 +167,69 @@ export const BRAND_OPTIONS = [
   { id: "custom", name: "Your word", price: 1200, custom: true },
 ];
 
-export const SIZE_OPTIONS = [
-  { id: "s", name: "S", cm: "54 to 55 cm" },
-  { id: "m", name: "M", cm: "56 to 57 cm" },
-  { id: "l", name: "L", cm: "58 to 59 cm" },
-  { id: "xl", name: "XL", cm: "60 to 61 cm" },
+// --- sizes -----------------------------------------------------------------
+// Head measured all the way around, just above the eyebrows and ears.
+// `us` is the US hat size; suede comes in doubled sizes, which have none.
+export const STANDARD_SIZES = [
+  { id: "s", name: "S", us: "6 7/8", inches: "21 to 21 7/8 in", cm: "54 to 55 cm" },
+  { id: "m", name: "M", us: "7 1/8", inches: "22 to 22 3/4 in", cm: "56 to 57 cm" },
+  { id: "l", name: "L", us: "7 3/8", inches: "22 7/8 to 23 1/2 in", cm: "58 to 59 cm" },
+  { id: "xl", name: "XL", us: "7 5/8", inches: "23 5/8 to 24 1/4 in", cm: "60 to 61 cm" },
 ];
+export const SUEDE_SIZES = [
+  { id: "s-m", name: "S/M", us: null, inches: "21 to 22 3/4 in", cm: "54 to 57 cm" },
+  { id: "l-xl", name: "L/XL", us: null, inches: "22 7/8 to 24 1/4 in", cm: "58 to 61 cm" },
+];
+// Wool's sizes, kept under the old name for the code that predates types.
+export const SIZE_OPTIONS = STANDARD_SIZES;
+
+// --- hat types ---------------------------------------------------------------
+// The accessory steps, by the same keys catalog.js stacks them under.
+export const ACCESSORY_STEPS = ["feather", "cord", "bud", "matches"];
+
+export const DEFAULT_HAT_TYPE = "wool";
+
+// `enabled` is the switch: a disabled type is fully defined but cannot be
+// picked in the builder or ordered (validateConfig refuses it). Suede and
+// straw stay off until their artwork exists.
+export const HAT_TYPES = [
+  {
+    id: "wool",
+    name: "Wool",
+    label: "Wool Hat",
+    basePrice: BASE_PRICE,
+    sizes: STANDARD_SIZES,
+    colors: WOOL_COLORS,
+    brandingAllowed: true,
+    accessories: ACCESSORY_STEPS,
+    enabled: true,
+  },
+  {
+    id: "suede",
+    name: "Faux Suede",
+    label: "Faux Suede Hat",
+    basePrice: 8000,
+    sizes: SUEDE_SIZES,
+    colors: SUEDE_COLORS,
+    brandingAllowed: true,
+    accessories: [],
+    enabled: false,
+  },
+  {
+    id: "straw",
+    name: "Straw",
+    label: "Straw Hat",
+    basePrice: 8000,
+    sizes: STANDARD_SIZES,
+    colors: STRAW_COLORS,
+    brandingAllowed: false,
+    accessories: [],
+    enabled: false,
+  },
+];
+
+/** The types a customer can pick right now. */
+export const enabledHatTypes = () => HAT_TYPES.filter((t) => t.enabled);
 
 // --- shipping -------------------------------------------------------------
 // Flat rate carried over from the previous SHIPPING.flat ($12).
@@ -203,13 +288,18 @@ export const MAX_CART_QUANTITY = 10;
 // --- lookup helpers -------------------------------------------------------
 const byId = (options, id) => options.find((o) => o.id === id) || null;
 
-export const findBase = (id) => byId(BASE_OPTIONS, id);
+export const findHatType = (id) => byId(HAT_TYPES, id);
+/** A config's type: missing means wool (carts, links and orders from before types). */
+export const hatTypeOf = (c) => findHatType(c?.hatType ?? DEFAULT_HAT_TYPE);
+/** A base color within a type (wool when no type is given). */
+export const findBase = (id, typeId = DEFAULT_HAT_TYPE) => byId(findHatType(typeId)?.colors || [], id);
 export const findFeather = (id) => byId(FEATHER_OPTIONS, id);
 export const findCord = (id) => byId(CORD_OPTIONS, id);
 export const findBudSize = (id) => byId(BUD_SIZES, id);
 export const findMatchesColor = (id) => byId(MATCHES.colors, id);
 export const findBrand = (id) => byId(BRAND_OPTIONS, id);
-export const findSize = (id) => byId(SIZE_OPTIONS, id);
+/** A size within a type (wool when no type is given). */
+export const findSize = (id, typeId = DEFAULT_HAT_TYPE) => byId(findHatType(typeId)?.sizes || [], id);
 
 /** The color option of a cord (stitching only), or null. */
 export const findCordColor = (cordId, colorId) => byId(findCord(cordId)?.colors || [], colorId);
@@ -222,6 +312,7 @@ const orNone = (v) => (v === undefined || v === null || v === "" ? "none" : v);
 // server reads them. One list, both sides, so they cannot drift apart. Money
 // is never among them.
 export const CONFIG_FIELDS = [
+  "hatType",
   "baseId",
   "featherId",
   "cordId",
@@ -259,23 +350,30 @@ export const pickConfig = (obj, { withQuantity = true } = {}) => {
  */
 export function normalizeConfig(raw) {
   const c = raw || {};
-  const base = findBase(c.baseId);
+  // Missing type means wool. An unknown type also lands on wool here, so this
+  // never throws; validateConfig is what refuses it before any charge.
+  const type = hatTypeOf(c) || findHatType(DEFAULT_HAT_TYPE);
+  // A step the type does not take is always "none", whatever was sent.
+  const takes = (step) => type.accessories.includes(step);
+  const base = findBase(c.baseId, type.id);
 
-  const feather = findFeather(orNone(c.featherId)) || findFeather("none");
+  const feather = (takes("feather") && findFeather(orNone(c.featherId))) || findFeather("none");
 
-  const cord = findCord(orNone(c.cordId)) || findCord("none");
+  const cord = (takes("cord") && findCord(orNone(c.cordId))) || findCord("none");
   const cordColor = cord.colors ? findCordColor(cord.id, c.cordColor)?.id ?? null : null;
   const stitchingNote = cord.id === "stitching" ? sanitizeNote(c.stitchingNote) || null : null;
 
-  const bud = findBudSize(orNone(c.budSize)) || findBudSize("none");
+  const bud = (takes("bud") && findBudSize(orNone(c.budSize))) || findBudSize("none");
   const budColor = bud.id === "none" ? null : findBudColor(bud.id, c.budColor)?.id ?? null;
 
-  const matchesColor = findMatchesColor(c.matchesColor)?.id ?? "none";
+  const matchesColor = takes("matches") ? findMatchesColor(c.matchesColor)?.id ?? "none" : "none";
 
-  const brand = BRANDS_ENABLED ? findBrand(orNone(c.brandId)) || findBrand("none") : findBrand("none");
+  const brand =
+    BRANDS_ENABLED && type.brandingAllowed ? findBrand(orNone(c.brandId)) || findBrand("none") : findBrand("none");
   const customText = brand.custom ? sanitizeBrandText(c.customText).trim() || null : null;
 
   return {
+    hatType: type.id,
     baseId: base?.id ?? null,
     featherId: feather.id,
     cordId: cord.id,
@@ -286,7 +384,7 @@ export function normalizeConfig(raw) {
     matchesColor,
     brandId: brand.id,
     customText,
-    size: findSize(c.size)?.id ?? null,
+    size: findSize(c.size, type.id)?.id ?? null,
   };
 }
 
@@ -295,6 +393,7 @@ export function normalizeConfig(raw) {
 // "See this hat" link in the work order email. A permalink describes ONE
 // hat design, never a cart, so quantity is deliberately absent.
 export const PARAM_KEYS = {
+  hatType: "t", // written only when the type is not wool
   base: "b",
   feather: "f",
   cord: "c",
@@ -316,6 +415,8 @@ export const LEGACY_PARAM_KEYS = ["bd", "charm", "ch", "q", ...(BRANDS_ENABLED ?
 export function buildPermalinkQuery(config) {
   const c = normalizeConfig(config);
   const q = new URLSearchParams();
+  // Wool is the default, so a wool link looks exactly as it did before types.
+  if (c.hatType !== DEFAULT_HAT_TYPE) q.set(PARAM_KEYS.hatType, c.hatType);
   if (c.baseId) q.set(PARAM_KEYS.base, c.baseId);
   if (c.featherId !== "none") q.set(PARAM_KEYS.feather, c.featherId);
   if (c.cordId !== "none") {
@@ -342,6 +443,10 @@ export function buildPermalinkQuery(config) {
  * know is simply ignored, and an unknown base falls back to the default.
  * A color that does not belong to its size or cord falls back to that
  * size's or cord's first color, so a hand edited link never shows nothing.
+ *
+ * No `t` means wool, so every link made before hat types opens unchanged.
+ * A type that is unknown or not enabled yet also opens as wool: a link must
+ * never put the builder in a state the customer cannot order.
  */
 export function parsePermalink(search, defaults = { baseId: "ivory" }) {
   let q;
@@ -352,13 +457,18 @@ export function parsePermalink(search, defaults = { baseId: "ivory" }) {
   }
   const get = (k) => q.get(PARAM_KEYS[k]);
 
+  const requested = findHatType(get("hatType"));
+  const type = requested?.enabled ? requested : findHatType(DEFAULT_HAT_TYPE);
+  const defaultBase = type.id === DEFAULT_HAT_TYPE ? defaults.baseId : type.colors[0].id;
+
   const cordId = findCord(get("cord"))?.id ?? "none";
   const cord = findCord(cordId);
   const budSize = findBudSize(get("budSize"))?.id ?? "none";
   const bud = findBudSize(budSize);
 
   return normalizeConfig({
-    baseId: findBase(get("base"))?.id ?? defaults.baseId,
+    hatType: type.id,
+    baseId: findBase(get("base"), type.id)?.id ?? defaultBase,
     featherId: get("feather"),
     cordId,
     cordColor: cord.colors ? findCordColor(cordId, get("cordColor"))?.id ?? cord.colors[0].id : null,
@@ -397,7 +507,25 @@ export function validateConfig(config) {
   const push = (field, message) => errors.push({ field, message });
   const show = (v) => JSON.stringify(v ?? null);
 
-  if (!findBase(c.baseId)) push("baseId", `Unknown base: ${show(c.baseId)}`);
+  // The type first: everything after it is checked against what THAT type
+  // offers. A line with no type at all is wool (it predates types).
+  const type = hatTypeOf(c);
+  if (!type) push("hatType", `Unknown hat type: ${show(c.hatType)}`);
+  else if (!type.enabled) push("hatType", `The ${type.label} is not available yet`);
+  const typeId = type?.id ?? DEFAULT_HAT_TYPE;
+
+  if (!findBase(c.baseId, typeId))
+    push("baseId", type ? `${show(c.baseId)} is not a ${type.label} color` : `Unknown base: ${show(c.baseId)}`);
+
+  // An accessory the type does not take is refused, never quietly dropped:
+  // dropping it would charge for a different hat than the one on screen.
+  if (type) {
+    const sent = { feather: c.featherId, cord: c.cordId, bud: c.budSize, matches: c.matchesColor };
+    const field = { feather: "featherId", cord: "cordId", bud: "budSize", matches: "matchesColor" };
+    for (const step of ACCESSORY_STEPS)
+      if (orNone(sent[step]) !== "none" && !type.accessories.includes(step))
+        push(field[step], `A ${type.label} does not take a ${step === "bud" ? "brim bud" : step}`);
+  }
 
   if (!findFeather(orNone(c.featherId))) push("featherId", `Unknown feather: ${show(c.featherId)}`);
 
@@ -431,6 +559,7 @@ export function validateConfig(config) {
   if (BRANDS_ENABLED) {
     const brand = findBrand(orNone(c.brandId));
     if (!brand) push("brandId", `Unknown brand: ${show(c.brandId)}`);
+    else if (brand.id !== "none" && type && !type.brandingAllowed) push("brandId", `A ${type.label} cannot be branded`);
     if (brand?.custom) {
       const text = typeof c.customText === "string" ? c.customText.trim() : "";
       if (!text) push("customText", "Custom text is required for the Your word brand");
@@ -440,7 +569,8 @@ export function validateConfig(config) {
     }
   }
 
-  if (!findSize(c.size)) push("size", `Unknown size: ${show(c.size)}`);
+  if (!findSize(c.size, typeId))
+    push("size", type ? `${show(c.size)} is not a ${type.label} size` : `Unknown size: ${show(c.size)}`);
 
   const qty = c.quantity;
   if (!Number.isInteger(qty) || qty < MIN_QUANTITY || qty > MAX_QUANTITY)
@@ -504,8 +634,10 @@ function normalizeQuantity(value) {
 export function hatParts(config) {
   const c = normalizeConfig(config);
   const parts = [];
-  const base = findBase(c.baseId);
-  if (base) parts.push({ step: "base", label: "Base", name: base.name, detail: null, plain: null, price: base.price });
+  const type = findHatType(c.hatType);
+  const base = findBase(c.baseId, c.hatType);
+  // The price is the TYPE's, never the color's: "Wool Hat: Silver Belly".
+  if (base) parts.push({ step: "base", label: type.label, name: base.name, detail: null, plain: null, price: type.basePrice });
 
   if (c.featherId !== "none") {
     const f = findFeather(c.featherId);
@@ -542,17 +674,18 @@ const partText = (p) => (p.detail ? `${p.name}, ${p.detail}` : p.name);
 
 /**
  * Short human description of one hat, for cart rows and image alt text:
- * "Ivory, Prairie Pheasant, Saddle Stitch in Raspberry Rodeo, Full Bloom in
- * Turquoise Sky, Strike It Up in Red, size M". Catalog names are kept exactly
- * as written, never lowercased.
+ * "Silver Belly Wool Hat, Prairie Pheasant, Saddle Stitch in Raspberry Rodeo,
+ * Full Bloom in Turquoise Sky, Strike It Up in Red, size M". Catalog names
+ * are kept exactly as written, never lowercased.
  */
 export function describeConfig(config) {
   const c = normalizeConfig(config);
   const words = hatParts(c).map((p) => {
+    if (p.step === "base") return `${p.name} ${p.label}`;
     if (p.step === "matches") return `${p.label} in ${p.name}`;
     return p.detail ? `${p.name} in ${p.detail}` : p.name;
   });
-  const size = findSize(c.size);
+  const size = findSize(c.size, c.hatType);
   if (size) words.push(`size ${size.name}`);
   return words.join(", ");
 }

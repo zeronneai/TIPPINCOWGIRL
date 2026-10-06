@@ -25,7 +25,16 @@
 //   matches  z=50  normal   layers/matches-*.png
 // ---------------------------------------------------------------------------
 
-import { BASE_OPTIONS, BRANDS_ENABLED, BRAND_OPTIONS, BRAND_TEXT_MAX_LEN, SIZE_OPTIONS, normalizeConfig } from "./pricing.js";
+import {
+  BASE_OPTIONS,
+  BRANDS_ENABLED,
+  BRAND_OPTIONS,
+  BRAND_TEXT_MAX_LEN,
+  DEFAULT_HAT_TYPE,
+  SIZE_OPTIONS,
+  findHatType,
+  normalizeConfig,
+} from "./pricing.js";
 
 export const CANVAS = { w: 1600, h: 1600 };
 
@@ -56,6 +65,9 @@ const withArt = (options, art) =>
     publicId: art[o.id] ? publicIdOf(art[o.id]) : null,
   }));
 
+// Base artwork exists for WOOL only. Suede and straw are defined in
+// pricing.js but disabled until their images exist; baseArtFor() returns
+// null for them so a suede "black" can never be drawn with the wool felt.
 export const BASES = withArt(BASE_OPTIONS, {
   ivory: "v1789658517/base-ivory_bcsh3a.png",
   black: "v1789658517/base-black_rfptm8.png",
@@ -64,6 +76,10 @@ export const BASES = withArt(BASE_OPTIONS, {
   wine: "v1789658517/base-wine_zssnd7.png",
   turquoise: "v1789658518/base-turquoise_x0zmnn.png",
 });
+
+/** The Cloudinary base layer for a config, or null when its type has no art yet. */
+export const baseArtFor = (config) =>
+  (config?.hatType ?? DEFAULT_HAT_TYPE) === DEFAULT_HAT_TYPE ? findIn(BASES, config?.baseId) : null;
 
 // ---- accessories -----------------------------------------------------------
 /**
@@ -133,20 +149,32 @@ export const BRAND_TEXT = {
 
 export const SIZES = SIZE_OPTIONS;
 
+// The size guide, one table per hat type, built from the sizes in pricing.js
+// so the guide and the size buttons can never disagree.
 export const SIZE_GUIDE = {
   title: "Find your size",
   howTo: [
     "Take a soft measuring tape (or a piece of string you can measure after).",
     "Wrap it around your head just above your eyebrows and ears, where a hat naturally sits.",
-    "Keep it snug but comfortable, not tight. Note the number in centimeters.",
+    "Keep it snug but comfortable, not tight. Note the number in inches or centimeters.",
     "Between two sizes? Go with the larger one. Felt settles in as you wear it.",
   ],
-  rows: [
-    { size: "S", cm: "54 to 55 cm", inches: "21.3 to 21.7 in" },
-    { size: "M", cm: "56 to 57 cm", inches: "22.0 to 22.4 in" },
-    { size: "L", cm: "58 to 59 cm", inches: "22.8 to 23.2 in" },
-    { size: "XL", cm: "60 to 61 cm", inches: "23.6 to 24.0 in" },
-  ],
 };
+
+// A measurement must never wrap in the middle: "21 7/8 in" split over two
+// lines reads as "21" and "7/8", which is a different size. Join a number to
+// its fraction and to its unit with non breaking spaces.
+const keepTogether = (text) =>
+  text == null ? text : String(text).replace(/(\d) (\d+\/\d+)/g, "$1\u00a0$2").replace(/ (in|cm)$/, "\u00a0$1");
+
+/** Rows for a type's size table: size, US size (or null), head in inches and cm. */
+export const sizeGuideRows = (typeId = DEFAULT_HAT_TYPE) =>
+  (findHatType(typeId)?.sizes || []).map((s) => ({
+    id: s.id,
+    size: s.name,
+    us: keepTogether(s.us),
+    inches: keepTogether(s.inches),
+    cm: keepTogether(s.cm),
+  }));
 
 export const findIn = (options, id) => options.find((o) => o.id === id) || null;

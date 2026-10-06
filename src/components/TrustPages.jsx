@@ -268,7 +268,8 @@ export const TRUST_ROUTES = {
         <h3 style={H3}>How do I know my size?</h3>
         <p style={P}>
           Wrap a soft tape (or a string) around your head just above your eyebrows and ears, and match the
-          centimeters to the size chart in the builder. Between two sizes? Go with the larger one.
+          measurement, in inches or centimeters, to the size chart in the builder. Between two sizes? Go with the
+          larger one.
         </p>
 
         <h3 style={H3}>How does shipping work?</h3>
