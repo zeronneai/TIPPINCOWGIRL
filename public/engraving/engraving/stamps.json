@@ -1,0 +1,455 @@
+{
+ "note": "sizeInches as printed on Deborah sheet (first x second, unit inches)",
+ "stamps": [
+  {
+   "id": "arrowhead",
+   "label": "Arrowhead",
+   "file": "stamps/arrowhead.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.6
+    ],
+    "small": [
+     0.75,
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "crossed-guns",
+   "label": "Crossed Guns",
+   "file": "stamps/crossed-guns.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "longhorn",
+   "label": "Longhorn",
+   "file": "stamps/longhorn.svg",
+   "sizeInches": {
+    "large": [
+     0.6,
+     1.2
+    ],
+    "small": [
+     0.6,
+     0.9
+    ]
+   }
+  },
+  {
+   "id": "horse",
+   "label": "Horse",
+   "file": "stamps/horse.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.7
+    ],
+    "small": [
+     0.75,
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "bison",
+   "label": "Bison",
+   "file": "stamps/bison.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.7
+    ],
+    "small": [
+     0.75,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "horse-head",
+   "label": "Horse Head",
+   "file": "stamps/horse-head.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.7
+    ],
+    "small": [
+     0.75,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "rising-sun",
+   "label": "Rising Sun",
+   "file": "stamps/rising-sun.svg",
+   "sizeInches": {
+    "large": [
+     0.5,
+     1.1
+    ],
+    "small": [
+     0.4,
+     0.8
+    ]
+   }
+  },
+  {
+   "id": "mountains",
+   "label": "Mountains",
+   "file": "stamps/mountains.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.5
+    ],
+    "small": [
+     0.75,
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "bucking-bronco",
+   "label": "Bucking Bronco",
+   "file": "stamps/bucking-bronco.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "cowboy-boot",
+   "label": "Cowboy Boot",
+   "file": "stamps/cowboy-boot.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.8
+    ],
+    "small": [
+     0.75,
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "cowboy-hat",
+   "label": "Cowboy Hat",
+   "file": "stamps/cowboy-hat.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.6
+    ],
+    "small": [
+     0.75,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "cross",
+   "label": "Cross",
+   "file": "stamps/cross.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.8
+    ],
+    "small": [
+     0.75,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "horseshoe",
+   "label": "Horseshoe",
+   "file": "stamps/horseshoe.svg",
+   "sizeInches": {
+    "large": [
+     0.9,
+     0.9
+    ],
+    "small": [
+     0.7,
+     0.7
+    ]
+   }
+  },
+  {
+   "id": "medium-star",
+   "label": "Medium Star",
+   "file": "stamps/medium-star.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "snake",
+   "label": "Snake",
+   "file": "stamps/snake.svg",
+   "sizeInches": {
+    "large": [
+     1.1,
+     0.5
+    ],
+    "small": [
+     0.8,
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "cactus",
+   "label": "Cactus",
+   "file": "stamps/cactus.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.6
+    ],
+    "small": [
+     0.75,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "heart-outline",
+   "label": "Heart Outline",
+   "file": "stamps/heart-outline.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1.1
+    ],
+    "small": [
+     0.75,
+     0.8
+    ]
+   }
+  },
+  {
+   "id": "heart-silhouette",
+   "label": "Heart Silhouette",
+   "file": "stamps/heart-silhouette.svg",
+   "sizeInches": {
+    "large": [
+     0.8,
+     0.9
+    ],
+    "small": [
+     0.5,
+     0.5
+    ]
+   }
+  },
+  {
+   "id": "feather",
+   "label": "Feather",
+   "file": "stamps/feather.svg",
+   "sizeInches": {
+    "large": [
+     1.2,
+     0.4
+    ],
+    "small": [
+     0.9,
+     0.3
+    ]
+   }
+  },
+  {
+   "id": "lightning-bolt",
+   "label": "Lightning Bolt",
+   "file": "stamps/lightning-bolt.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.6
+    ],
+    "small": [
+     0.75,
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "spade",
+   "label": "Spade",
+   "file": "stamps/spade.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.9
+    ],
+    "small": [
+     0.75,
+     0.8
+    ]
+   }
+  },
+  {
+   "id": "arrow",
+   "label": "Arrow",
+   "file": "stamps/arrow.svg",
+   "sizeInches": {
+    "large": [
+     0.3,
+     1
+    ],
+    "small": [
+     0.2,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "simple-cross",
+   "label": "Simple Cross",
+   "file": "stamps/simple-cross.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     0.75
+    ],
+    "small": [
+     0.75,
+     0.6
+    ]
+   }
+  },
+  {
+   "id": "wave",
+   "label": "Wave",
+   "file": "stamps/wave.svg",
+   "sizeInches": {
+    "large": [
+     1.5,
+     0.5
+    ],
+    "small": [
+     1.1,
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "star-outline",
+   "label": "Star Outline",
+   "file": "stamps/star-outline.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "antler-left",
+   "label": "Antler Left",
+   "file": "stamps/antler-left.svg",
+   "sizeInches": {
+    "large": [
+     0.7,
+     1
+    ],
+    "small": [
+     0.5,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "antler-right",
+   "label": "Antler Right",
+   "file": "stamps/antler-right.svg",
+   "sizeInches": {
+    "large": [
+     0.7,
+     1
+    ],
+    "small": [
+     0.5,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "crescent-moon",
+   "label": "Crescent Moon",
+   "file": "stamps/crescent-moon.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  },
+  {
+   "id": "olive-branch",
+   "label": "Olive Branch",
+   "file": "stamps/olive-branch.svg",
+   "sizeInches": {
+    "large": [
+     1.5,
+     0.5
+    ],
+    "small": [
+     1.2,
+     0.4
+    ]
+   }
+  },
+  {
+   "id": "longhorn-skull",
+   "label": "Longhorn Skull",
+   "file": "stamps/longhorn-skull.svg",
+   "sizeInches": {
+    "large": [
+     1,
+     1
+    ],
+    "small": [
+     0.75,
+     0.75
+    ]
+   }
+  }
+ ]
+}
