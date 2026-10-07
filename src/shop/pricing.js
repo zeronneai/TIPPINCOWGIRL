@@ -100,12 +100,13 @@ export const STRAW_COLORS = [
 
 export const FEATHER_OPTIONS = [
   { id: "none", name: "No feather", price: 0 },
-  { id: "natural", name: "Prairie Pheasant", plain: "natural pheasant feather band", price: 5000 },
+  { id: "natural", name: "Prairie Pheasant", plain: "feather band with feather rosette", price: 5000 },
   { id: "bronze", name: "Midnight Outlaw", plain: "bronze pheasant feather band", price: 5000 },
   { id: "guinea", name: "Dusty Trail", plain: "guinea fowl feather band", price: 5000 },
   { id: "magenta", name: "Pink Outlaw", plain: "magenta mix feather band", price: 5000 },
   { id: "polka", name: "Polka Dot Posse", plain: "black polka dot feather band", price: 5000 },
   { id: "turquoise", name: "Turquoise Queen", plain: "feather band with turquoise concho", price: 5000 },
+  { id: "cream", name: "Snow Quail", plain: "cream and white feather band", price: 5000 },
 ];
 
 export const STITCHING_COLORS = [
@@ -125,8 +126,11 @@ export const CORD_OPTIONS = [
   { id: "stitching", name: "Saddle Stitch", plain: "suede stitching", price: 1000, colors: STITCHING_COLORS },
   { id: "leather-rope", name: "Ranch Hand Rope", plain: "leather rope", price: 1000 },
   { id: "barbed-wire", name: "Barbed & Beautiful", plain: "leather barbed wire", price: 1000 },
-  { id: "rhinestone", name: "Rhinestone Sass", plain: "rhinestone chain", price: 1500 },
-  { id: "turquoise", name: "Turquoise Trail", plain: "turquoise stone", price: 1500 },
+  { id: "rhinestone", name: "Rhinestone Sass", plain: "double row crystal band", price: 1500 },
+  { id: "turquoise", name: "Turquoise Trail", plain: "turquoise seed bead strands with silver chain", price: 1500 },
+  { id: "concho-turquoise", name: "Turquoise Concho", plain: "silver concho chain with turquoise stones", price: 1500 },
+  { id: "concho-silver", name: "Silver Sundance", plain: "stamped silver square concho chain", price: 1500 },
+  { id: "heishi", name: "Desert Heishi", plain: "earth tone heishi bead strand", price: 1500 },
 ];
 
 // The brim bud is chosen size first, then color. The colors differ by size.

@@ -58,7 +58,12 @@ export const brandCounterText = (engraving) => {
   return n > FREE_BRAND_COUNT ? `Unlimited branding +${formatCents(ENGRAVING_FEE)}` : `${n} of ${FREE_BRAND_COUNT} free brands`;
 };
 
-export default function EngravingStep({ engraving, typeId, maxWidths = ENGRAVING_MAX_WIDTH, onChange }) {
+// The Prairie Pheasant band has a feather rosette on the front of the crown,
+// over anything burned there. A hint, never a block.
+export const ROSETTE_NOTE = "The feather rosette covers the front. Try the left side.";
+const ROSETTE_FEATHERS = ["natural"];
+
+export default function EngravingStep({ engraving, typeId, featherId, maxWidths = ENGRAVING_MAX_WIDTH, onChange }) {
   useEngravingVersion();
   useEffect(loadAllEngravingFonts, []);
 
@@ -103,6 +108,24 @@ export default function EngravingStep({ engraving, typeId, maxWidths = ENGRAVING
       <p data-testid="brand-counter" aria-live="polite" style={{ margin: "0 0 12px", fontWeight: 800, fontSize: 14, color: "var(--coral-deep)" }}>
         {brandCounterText(engraving)}
       </p>
+      {ROSETTE_FEATHERS.includes(featherId) && engraving.some((e) => e.position === "front") && (
+        <p
+          data-testid="rosette-note"
+          role="note"
+          style={{
+            margin: "0 0 12px",
+            padding: "8px 12px",
+            border: "1.5px solid rgba(43,26,16,.25)",
+            borderRadius: 8,
+            background: "#fffaf0",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#6f4526",
+          }}
+        >
+          {ROSETTE_NOTE}
+        </p>
+      )}
 
       <div style={sub}>Where</div>
       <Toggle label="Where" name="position" options={ENGRAVING_POSITIONS} value={position} onPick={(id) => (setPosition(id), setMessage(""))} />

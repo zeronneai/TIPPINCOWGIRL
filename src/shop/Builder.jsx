@@ -948,6 +948,7 @@ export default function Builder() {
                     <EngravingStep
                       engraving={design.engraving}
                       typeId={design.hatType}
+                      featherId={design.featherId}
                       maxWidths={cal?.maxWidths}
                       onChange={(engraving) => set({ engraving })}
                     />

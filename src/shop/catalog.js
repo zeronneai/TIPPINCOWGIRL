@@ -10,6 +10,12 @@
 // The accessory PNGs live in src/shop/layers/ and are turned into URLs by
 // layerArt.js, which only the browser loads.
 //
+// A layer's file is named after its option id (feather-cream.png for the
+// feather `cream`, cord-concho-silver.png for the cord `concho-silver`), with
+// its thumbnail under the same name in layers/thumbs/, so adding an
+// accessory is its entry in pricing.js plus those two files; nothing here
+// lists them one by one (see accessoryLayers and thumbKey below).
+//
 // Every layer is a 1600x1600 transparent PNG drawn on the same canvas, so
 // they stack at the same position with no per layer offsets or scaling.
 // The contact shadows are baked into each PNG as translucent black.
