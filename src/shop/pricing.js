@@ -74,8 +74,8 @@ export const BASE_OPTIONS = [
 ];
 export const WOOL_COLORS = BASE_OPTIONS;
 
-// Their artwork is on Cloudinary (catalog.js); the types stay disabled for
-// sale until the owner turns them on.
+// Their artwork is on Cloudinary (catalog.js). Faux Suede is on sale;
+// straw stays off until the owner turns it on.
 export const SUEDE_COLORS = [
   { id: "cream", name: "Cream" },
   { id: "black", name: "Black" },
@@ -360,8 +360,8 @@ export const ACCESSORY_STEPS = ["feather", "cord", "bud", "matches"];
 export const DEFAULT_HAT_TYPE = "wool";
 
 // `enabled` is the switch: a disabled type is fully defined but cannot be
-// picked in the builder or ordered (validateConfig refuses it). Suede and
-// straw stay off until the owner puts them on sale. The builder can show
+// picked in the builder or ordered (validateConfig refuses it). Wool and
+// Faux Suede are on sale; straw stays off until the owner puts it on sale. The builder can show
 // them under ?preview=types, but only to look at: the server still refuses
 // any order for a disabled type.
 export const HAT_TYPES = [
@@ -384,8 +384,9 @@ export const HAT_TYPES = [
     sizes: SUEDE_SIZES,
     colors: SUEDE_COLORS,
     brandingAllowed: true,
-    accessories: [],
-    enabled: false,
+    // every wool accessory, drawn from its own suede-* layers (catalog.js)
+    accessories: ACCESSORY_STEPS,
+    enabled: true,
   },
   {
     id: "straw",

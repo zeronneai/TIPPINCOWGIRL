@@ -9,7 +9,7 @@ import {
   basesFor,
   findIn,
   sizeGuideRows,
-  thumbKey,
+  layerKeys,
 } from "./catalog.js";
 import HatStack, { BrandTextLayer } from "./HatStack.jsx";
 import { preloadLayer, thumbUrl } from "./layerArt.js";
@@ -32,6 +32,7 @@ import {
   buildOrder,
   buildPermalinkQuery,
   describeConfig,
+  hatParts,
   enabledHatTypes,
   findBudSize,
   findCord,
@@ -504,6 +505,7 @@ export default function Builder() {
   const preview = useMemo(previewFlags, []);
   const previewTypes = preview.types;
   const [brandOpen, setBrandOpen] = useState(false);
+  const [typeNote, setTypeNote] = useState("");
 
   // Calibration only (&calibrate=1): the tool owns the tuned anchors and
   // widths and reports them here, so the stage and the fit check follow.
@@ -569,17 +571,28 @@ export default function Builder() {
   // not offered. Accessories the type does not take drop to none in
   // normalizeConfig.
   // `any`: the calibration tool switches to a type on sale or not
+  //
+  // Accessories keep their ids across types (wool and suede take the same
+  // ones). A piece the new type does not take is removed from the draft for
+  // good, not just hidden, and named in a short note under the type step.
   const pickType = (id, any = false) => {
     const t = findHatType(id);
     if (!t || (!t.enabled && !previewTypes && !any)) return;
-    setDraft((d) => ({
-      ...d,
+    const next = normalizeConfig({
+      ...draft,
       hatType: t.id,
-      baseId: t.colors.some((c) => c.id === d.baseId) ? d.baseId : t.colors[0].id,
-      size: t.sizes.some((z) => z.id === d.size) ? d.size : null,
+      baseId: t.colors.some((c) => c.id === draft.baseId) ? draft.baseId : t.colors[0].id,
+      size: t.sizes.some((z) => z.id === draft.size) ? draft.size : null,
       // a type that cannot be branded (straw) clears the engraving for good
-      engraving: t.brandingAllowed ? d.engraving : [],
-    }));
+      engraving: t.brandingAllowed ? draft.engraving : [],
+    });
+    const kept = new Set(hatParts(next).map((p) => p.step));
+    const lost = hatParts(design)
+      .filter((p) => p.step !== "base" && !kept.has(p.step))
+      // matches are named by their color, so say what they are
+      .map((p) => (p.step === "engraving" ? "the branding" : p.step === "matches" ? p.label : p.name));
+    setTypeNote(lost.length ? `The ${t.label} does not take ${lost.join(", ")}, so we took ${lost.length > 1 ? "them" : "it"} off.` : "");
+    setDraft((d) => ({ ...d, ...next, customText: d.customText }));
   };
 
 
@@ -736,6 +749,8 @@ export default function Builder() {
   // ---- current values for the step headings ---------------------------------------
   const type = findHatType(design.hatType);
   const takes = (step) => type.accessories.includes(step);
+  // layer and thumbnail files of this type (suede draws its own)
+  const keys = layerKeys(design.hatType);
   // an engraved hat cannot be ordered while engraving is off
   const engravedPreview = !ENGRAVING_ENABLED && design.engraving.length > 0;
   const brands = brandCount(design.engraving);
@@ -922,6 +937,11 @@ export default function Builder() {
                     />
                   ))}
                 </div>
+                {typeNote && (
+                  <p role="status" data-testid="type-note" style={{ margin: "10px 0 0", fontSize: 13, fontWeight: 700, color: "var(--coral-deep)" }}>
+                    {typeNote}
+                  </p>
+                )}
               </Step>
             )}
 
@@ -994,7 +1014,7 @@ export default function Builder() {
             <Step num={next()} id="feather" label="Feather" value={feather?.id === "none" ? "None" : feather?.name}>
               <div className="tc-opt-grid">
                 {FEATHER_OPTIONS.map((f) => {
-                  const key = f.id === "none" ? null : thumbKey.feather(f.id);
+                  const key = f.id === "none" ? null : keys.feather(f.id);
                   return (
                     <Tile
                       key={f.id}
@@ -1017,7 +1037,7 @@ export default function Builder() {
               <div className="tc-opt-grid">
                 {CORD_OPTIONS.map((c) => {
                   const color = c.colors ? design.cordColor || firstColor(c.colors) : null;
-                  const key = c.id === "none" ? null : thumbKey.cord(c.id, color);
+                  const key = c.id === "none" ? null : keys.cord(c.id, color);
                   return (
                     <Tile
                       key={c.id}
@@ -1039,7 +1059,7 @@ export default function Builder() {
                     step="cord"
                     colors={cord.colors}
                     value={design.cordColor}
-                    keyFor={(id) => thumbKey.cord("stitching", id)}
+                    keyFor={(id) => keys.cord("stitching", id)}
                     onPick={(id) => set({ cordColor: id })}
                   />
                   <div style={{ marginTop: 12 }}>
@@ -1086,7 +1106,7 @@ export default function Builder() {
               <div className="tc-opt-grid">
                 {BUD_SIZES.map((b) => {
                   const color = b.id === design.budSize ? design.budColor : firstColor(b.colors);
-                  const key = b.id === "none" ? null : thumbKey.bud(b.id, color);
+                  const key = b.id === "none" ? null : keys.bud(b.id, color);
                   return (
                     <Tile
                       key={b.id}
@@ -1107,7 +1127,7 @@ export default function Builder() {
                   step="bud"
                   colors={bud.colors}
                   value={design.budColor}
-                  keyFor={(id) => thumbKey.bud(design.budSize, id)}
+                  keyFor={(id) => keys.bud(design.budSize, id)}
                   onPick={(id) => set({ budColor: id })}
                 />
               )}
@@ -1130,10 +1150,10 @@ export default function Builder() {
                   label={MATCHES.name}
                   price={priceTag(MATCHES.price)}
                   thumb={thumbUrl(
-                    thumbKey.matches(design.matchesColor !== "none" ? design.matchesColor : firstColor(MATCHES.colors))
+                    keys.matches(design.matchesColor !== "none" ? design.matchesColor : firstColor(MATCHES.colors))
                   )}
                   selected={design.matchesColor !== "none"}
-                  warm={() => preloadLayer(thumbKey.matches(firstColor(MATCHES.colors)))}
+                  warm={() => preloadLayer(keys.matches(firstColor(MATCHES.colors)))}
                   onPick={() => pickMatches(true)}
                 />
               </div>
@@ -1143,7 +1163,7 @@ export default function Builder() {
                   step="matches"
                   colors={MATCHES.colors}
                   value={design.matchesColor}
-                  keyFor={(id) => thumbKey.matches(id)}
+                  keyFor={(id) => keys.matches(id)}
                   onPick={(id) => set({ matchesColor: id })}
                 />
               )}

@@ -94,10 +94,10 @@ test("an engraved wool hat is accepted", () => {
   assert.deepEqual(errorsOf({}), [], "missing is no engraving");
 });
 
-test("an engraved suede hat is refused while suede is not on sale", () => {
-  const errors = P.validateConfig({ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }).errors;
-  assert.deepEqual(errors.map((e) => e.field), ["hatType"], "refused for the type, the engraving itself is fine on suede");
-  assert.equal(P.findHatType("suede").enabled, false);
+test("an engraved suede hat is accepted, $80 plus the engraving", () => {
+  assert.deepEqual(P.validateConfig({ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }).errors, []);
+  assert.equal(P.buildOrder([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }]).subtotal, 9000);
+  assert.equal(P.buildOrder([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: [text("DEB")] }]).subtotal, 8000);
 });
 
 test("invalid text is refused", () => {
@@ -257,7 +257,7 @@ test("the calibrated anchors and widths", () => {
 });
 
 // ---- the real checkout handler ----------------------------------------------------------------------
-test("checkout charges the engraving on wool, and refuses straw and types not on sale, without Stripe", async () => {
+test("checkout charges the engraving on wool and suede, and refuses straw, without Stripe for a refused hat", async () => {
   const calls = [];
   mock.module("stripe", {
     defaultExport: class Stripe {
@@ -296,14 +296,21 @@ test("checkout charges the engraving on wool, and refuses straw and types not on
   assert.equal(calls[1].line_items.length, 1);
   assert.equal(calls[1].metadata.hat_1_engr, "lt.d.DEBS*");
 
-  // straw cannot be branded, suede is not on sale: refused, preview or not
+  // suede is on sale: its engraving is charged like wool's, on the suede price
+  r = await post([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }]);
+  assert.equal(r.code, 200, JSON.stringify(r.body));
+  assert.deepEqual(calls[2].line_items.map((l) => [l.price_data.product_data.name, l.price_data.unit_amount]), [
+    ["Faux Suede Hat: Camel", 8000],
+    ["Branding: Unlimited (5 brands)", 1000],
+  ]);
+  assert.equal(calls[2].metadata.hat_1_engr, "lt.d.DEB_ls.longhorn*ss.horseshoe");
+
+  // straw cannot be branded, and is not on sale: refused, preview or not
   calls.length = 0;
   r = await post([{ hatType: "straw", baseId: "cream", size: "m", quantity: 1, engraving: [stamp("cactus")] }], "/api/create-checkout-session?preview=types,engraving", { preview: "types,engraving" });
   assert.equal(r.code, 400);
   assert.ok(r.body.errors.some((e) => e.field === "engraving" && e.message === "A Straw Hat cannot be branded"));
-  r = await post([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, engraving: DEB }], "/api/create-checkout-session?preview=types,engraving", { preview: "types,engraving" });
-  assert.equal(r.code, 400);
-  assert.ok(r.body.errors.some((e) => e.field === "hatType" && e.index === 0));
+  assert.ok(r.body.errors.some((e) => e.field === "hatType" && e.index === 0), "straw is refused for its type too");
   // a bad piece is refused too
   r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: [stamp("unicorn")] }]);
   assert.equal(r.code, 400);

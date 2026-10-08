@@ -14,7 +14,12 @@
 // feather `cream`, cord-concho-silver.png for the cord `concho-silver`), with
 // its thumbnail under the same name in layers/thumbs/, so adding an
 // accessory is its entry in pricing.js plus those two files; nothing here
-// lists them one by one (see accessoryLayers and thumbKey below).
+// lists them one by one (see accessoryLayers and layerKeys below).
+//
+// Each hat type draws the same pieces on its own crown, so a type can have
+// its own set of files: the same names with the type's prefix from
+// LAYER_PREFIX (suede-feather-cream.png). Same id, price and z-index; only
+// the picture differs.
 //
 // Every layer is a 1600x1600 transparent PNG drawn on the same canvas, so
 // they stack at the same position with no per layer offsets or scaling.
@@ -132,7 +137,8 @@ export const baseArtFor = (config) => findIn(basesFor(config?.hatType ?? DEFAULT
 export function accessoryLayers(config) {
   const c = normalizeConfig(config);
   const out = [];
-  const add = (step, key) => out.push({ step, key, z: Z_INDEX[step], blend: BLEND[step] });
+  const prefix = LAYER_PREFIX[c.hatType] ?? "";
+  const add = (step, key) => out.push({ step, key: `${prefix}${key}`, z: Z_INDEX[step], blend: BLEND[step] });
   if (c.featherId !== "none") add("feather", `feather-${c.featherId}`);
   if (c.cordId === "stitching" && c.cordColor) add("cord", `cord-stitching-${c.cordColor}`);
   else if (c.cordId !== "none" && c.cordId !== "stitching") add("cord", `cord-${c.cordId}`);
@@ -141,7 +147,11 @@ export function accessoryLayers(config) {
   return out;
 }
 
-/** The file stem that draws one option on its own, for its thumbnail. */
+// The file prefix of each hat type's accessory layers. Wool has none (its
+// files predate types); a type missing here would draw the wool files.
+export const LAYER_PREFIX = { wool: "", suede: "suede-" };
+
+/** The file stem that draws one option on its own, for its thumbnail (wool). */
 export const thumbKey = {
   feather: (id) => `feather-${id}`,
   cord: (id, color) => (id === "stitching" ? `cord-stitching-${color}` : `cord-${id}`),
@@ -149,12 +159,19 @@ export const thumbKey = {
   matches: (color) => `matches-${color}`,
 };
 
+/** thumbKey for a hat type: the same stems with that type's prefix. */
+export const layerKeys = (typeId = DEFAULT_HAT_TYPE) => {
+  const prefix = LAYER_PREFIX[typeId] ?? "";
+  return Object.fromEntries(Object.entries(thumbKey).map(([step, f]) => [step, (...a) => `${prefix}${f(...a)}`]));
+};
+
 // Where the accessory layers live on Cloudinary, for the order emails. The
 // emails flatten the hat with Cloudinary overlays, so a layer that is not
 // on Cloudinary cannot be drawn there.
 //
-// TODO(email-image): EMPTY until the 27 PNGs in src/shop/layers/ are
-// uploaded to Cloudinary. Fill it as { "feather-natural": "<public id>", ... }.
+// TODO(email-image): EMPTY until the PNGs in src/shop/layers/ (wool and
+// suede-*) are uploaded to Cloudinary. Fill it by layer key, prefix
+// included: { "feather-natural": "<public id>", "suede-feather-natural": ... }.
 // Until every layer a hat uses is listed, the emails show no picture for that
 // hat rather than a picture missing pieces, which would not match what the
 // customer ordered. Base only hats still get their picture.

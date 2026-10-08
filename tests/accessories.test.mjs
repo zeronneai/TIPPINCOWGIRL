@@ -66,15 +66,13 @@ test("the four new pieces are valid on wool at their price", () => {
   assert.equal(order({ featherId: "cream", cordId: "heishi" }).subtotal, 20500);
 });
 
-test("the four new pieces are refused on suede and straw", () => {
-  for (const [hatType, baseId, size] of [["suede", "camel", "s-m"], ["straw", "cream", "m"]]) {
-    for (const [line, field] of [[{ featherId: "cream" }, "featherId"], [{ cordId: "concho-turquoise" }, "cordId"], [{ cordId: "concho-silver" }, "cordId"], [{ cordId: "heishi" }, "cordId"]]) {
-      const errors = P.validateConfig({ hatType, baseId, size, quantity: 1, ...line }).errors;
-      assert.ok(errors.some((e) => e.field === field && /does not take/.test(e.message)), `${hatType} ${JSON.stringify(line)}: ${JSON.stringify(errors)}`);
-    }
-    assert.deepEqual(P.findHatType(hatType).accessories, [], `${hatType} still takes nothing`);
-    assert.equal(P.findHatType(hatType).enabled, false);
+test("the four new pieces are refused on straw", () => {
+  for (const [line, field] of [[{ featherId: "cream" }, "featherId"], [{ cordId: "concho-turquoise" }, "cordId"], [{ cordId: "concho-silver" }, "cordId"], [{ cordId: "heishi" }, "cordId"]]) {
+    const errors = P.validateConfig({ hatType: "straw", baseId: "cream", size: "m", quantity: 1, ...line }).errors;
+    assert.ok(errors.some((e) => e.field === field && /does not take/.test(e.message)), `straw ${JSON.stringify(line)}: ${JSON.stringify(errors)}`);
   }
+  assert.deepEqual(P.findHatType("straw").accessories, [], "straw still takes nothing");
+  assert.equal(P.findHatType("straw").enabled, false);
 });
 
 test("every accessory has its layer and thumbnail, named after its id", () => {

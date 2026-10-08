@@ -30,9 +30,10 @@ test("three hat types with their price, sizes, branding, accessories and switch"
   assert.deepEqual(t.suede.sizes.map((s) => [s.id, s.name]), [["s-m", "S/M"], ["l-xl", "L/XL"]]);
   assert.deepEqual([t.wool.brandingAllowed, t.suede.brandingAllowed, t.straw.brandingAllowed], [true, true, false]);
   assert.deepEqual(t.wool.accessories, ["feather", "cord", "bud", "matches"]);
-  assert.deepEqual([t.suede.accessories, t.straw.accessories], [[], []]);
-  assert.deepEqual([t.wool.enabled, t.suede.enabled, t.straw.enabled], [true, false, false]);
-  assert.deepEqual(P.enabledHatTypes().map((x) => x.id), ["wool"]);
+  assert.deepEqual(t.suede.accessories, ["feather", "cord", "bud", "matches"]);
+  assert.deepEqual(t.straw.accessories, []);
+  assert.deepEqual([t.wool.enabled, t.suede.enabled, t.straw.enabled], [true, true, false]);
+  assert.deepEqual(P.enabledHatTypes().map((x) => x.id), ["wool", "suede"]);
 });
 
 test("colors per type, in builder order; the original wool ids are kept", () => {
@@ -45,7 +46,7 @@ test("colors per type, in builder order; the original wool ids are kept", () => 
   assert.deepEqual(ids("suede"), ["cream", "black", "brown", "camel", "tobacco", "burgundy", "navy", "olive", "gray"]);
   assert.deepEqual(names("straw"), ["Cream", "Black"]);
   assert.deepEqual(ids("straw"), ["cream", "black"]);
-  assert.ok(P.HAT_TYPES.every((t) => t.id === "wool" ? t.enabled : !t.enabled), "only wool is on sale");
+  assert.deepEqual(P.HAT_TYPES.filter((t) => t.enabled).map((t) => t.id), ["wool", "suede"], "wool and suede on sale, straw off");
   const all = P.HAT_TYPES.flatMap((t) => t.colors.map((c) => c.name));
   for (const old of ["Ivory", "Dusty Pink", "Wine"]) assert.ok(!all.includes(old), `old label ${old} still shown`);
 });
@@ -76,7 +77,7 @@ test("shipping rule untouched", () => {
 // ---- validation ---------------------------------------------------------------
 test("rejects an unknown type and a disabled type", () => {
   assert.deepEqual(fields({ hatType: "leather", baseId: "ivory" }), ["hatType"]);
-  assert.ok(fields({ hatType: "suede", baseId: "camel", size: "s-m" }).includes("hatType"));
+  assert.deepEqual(fields({ hatType: "suede", baseId: "camel", size: "s-m" }), [], "suede is on sale");
   assert.ok(fields({ hatType: "straw", baseId: "cream" }).includes("hatType"));
 });
 
@@ -99,7 +100,7 @@ test("a line with no hatType is wool and valid", () => {
 });
 
 test("validateCart reports the offending line by index", () => {
-  const r = P.validateCart([{ baseId: "ivory", size: "m", quantity: 1 }, { hatType: "suede", baseId: "camel", size: "s-m", quantity: 1 }]);
+  const r = P.validateCart([{ baseId: "ivory", size: "m", quantity: 1 }, { hatType: "straw", baseId: "cream", size: "m", quantity: 1 }]);
   assert.equal(r.valid, false);
   assert.ok(r.errors.every((e) => e.index === 1));
 });
@@ -126,8 +127,10 @@ test("an old permalink with no type opens as wool", () => {
   assert.deepEqual(P.parsePermalink("b=chocolate&bd=leather&br=star&charm=boot&sz=m").hatType, "wool");
 });
 
-test("a permalink to a disabled or unknown type opens as wool", () => {
-  for (const q of ["t=suede&b=camel&sz=s-m", "t=straw&b=cream", "t=velvet&b=ivory"]) {
+test("a permalink to a disabled or unknown type opens as wool; suede opens as suede", () => {
+  const suede = P.parsePermalink("t=suede&b=camel&sz=s-m");
+  assert.deepEqual([suede.hatType, suede.baseId, suede.size], ["suede", "camel", "s-m"]);
+  for (const q of ["t=straw&b=cream", "t=velvet&b=ivory"]) {
     const c = P.parsePermalink(q);
     assert.equal(c.hatType, "wool", q);
     assert.ok(P.findBase(c.baseId, "wool"), q);
@@ -202,20 +205,19 @@ test("a new wool color is valid, at the wool price, and survives the metadata", 
   assert.deepEqual([back.problems, back.cart[0].hatType, back.cart[0].baseId, back.cart[0].size], [[], "wool", "cotton-candy-pink", "xl"]);
 });
 
-test("a suede color is refused while suede is disabled", () => {
-  for (const baseId of ["cream", "camel", "tobacco"]) {
-    const v = P.validateConfig({ hatType: "suede", baseId, size: "s-m", quantity: 1 });
-    assert.equal(v.valid, false, baseId);
-    assert.deepEqual(v.errors.map((e) => e.field), ["hatType"], baseId);
+test("every suede color is valid now that suede is on sale; straw is still refused", () => {
+  for (const baseId of P.findHatType("suede").colors.map((c) => c.id)) {
+    assert.deepEqual(P.validateConfig({ hatType: "suede", baseId, size: "s-m", quantity: 1 }).errors, [], baseId);
   }
-  assert.equal(P.validateConfig({ hatType: "straw", baseId: "black", size: "m", quantity: 1 }).valid, false);
+  const straw = P.validateConfig({ hatType: "straw", baseId: "black", size: "m", quantity: 1 });
+  assert.deepEqual(straw.errors.map((e) => e.field), ["hatType"]);
 });
 
 test("?preview=types opens a disabled type only in the builder's preview", () => {
-  const preview = P.parsePermalink("t=suede&b=camel&sz=s-m", undefined, { previewTypes: true });
-  assert.deepEqual([preview.hatType, preview.baseId, preview.size], ["suede", "camel", "s-m"]);
+  const preview = P.parsePermalink("t=straw&b=black&sz=m", undefined, { previewTypes: true });
+  assert.deepEqual([preview.hatType, preview.baseId, preview.size], ["straw", "black", "m"]);
   // the same link without the preview, and anything a page could send, stays wool or is refused
-  assert.equal(P.parsePermalink("t=suede&b=camel&sz=s-m&preview=types").hatType, "wool");
+  assert.equal(P.parsePermalink("t=straw&b=black&sz=m&preview=types").hatType, "wool");
   assert.equal(P.validateConfig({ ...preview, quantity: 1, preview: "types", previewTypes: true }).valid, false);
   assert.equal(reviveLine({ ...preview, id: "x", quantity: 1, preview: "types" }), null, "never reaches the cart");
 });
@@ -324,9 +326,9 @@ test("checkout recomputes every amount on the server and refuses disabled types"
   assert.equal(calls[0].metadata.order_total, "25700");
   assert.ok(calls[0].metadata.hat_1.startsWith("v3|wool|wine|"));
 
-  // a forged browser asks for the cheaper suede hat, which is not on sale yet
+  // a forged browser asks for the straw hat, which is not on sale
   calls.length = 0;
-  r = await post([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, price: 100 }]);
+  r = await post([{ hatType: "straw", baseId: "cream", size: "m", quantity: 1, price: 100 }]);
   assert.equal(r.code, 400);
   assert.ok(r.body.errors.some((e) => e.field === "hatType" && e.index === 0));
   assert.equal(calls.length, 0, "Stripe is never called");
@@ -338,7 +340,7 @@ test("checkout recomputes every amount on the server and refuses disabled types"
   assert.equal(calls.length, 0);
 
   // ?preview=types has no effect on the server: not in the URL, not in the body, not on the line
-  r = await post([{ hatType: "suede", baseId: "camel", size: "s-m", quantity: 1, preview: "types", previewTypes: true }], {
+  r = await post([{ hatType: "straw", baseId: "cream", size: "m", quantity: 1, preview: "types", previewTypes: true }], {
     url: "/api/create-checkout-session?preview=types",
     extra: { preview: "types", previewTypes: true },
   });
