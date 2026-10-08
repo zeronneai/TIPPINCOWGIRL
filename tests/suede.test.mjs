@@ -1,5 +1,5 @@
 // Faux Suede on sale: every wool accessory, drawn from its own suede-*
-// layers, at $80 plus the pieces; straw still refused.
+// layers, at $80 plus the pieces. Straw (on sale too) is in straw.test.mjs.
 //
 //   npm test
 import assert from "node:assert/strict";
@@ -27,15 +27,14 @@ const EVERY_PIECE = [
   ...P.MATCHES.colors.map((c) => [{ matchesColor: c.id }, P.MATCHES.price, thumbKey.matches(c.id)]),
 ];
 
-test("Faux Suede is on sale: $80, S/M and L/XL, its 9 colors, every accessory, branding; straw is not", () => {
+test("Faux Suede is on sale: $80, S/M and L/XL, its 9 colors, every accessory, branding", () => {
   const t = P.findHatType("suede");
   assert.deepEqual([t.enabled, t.basePrice, t.label], [true, 8000, "Faux Suede Hat"]);
   assert.deepEqual(t.sizes.map((s) => s.name), ["S/M", "L/XL"]);
   assert.equal(t.colors.length, 9);
   assert.deepEqual(t.accessories, P.findHatType("wool").accessories);
   assert.equal(t.brandingAllowed, true);
-  assert.deepEqual(P.enabledHatTypes().map((x) => x.id), ["wool", "suede"]);
-  assert.deepEqual([P.findHatType("straw").enabled, P.findHatType("straw").accessories], [false, []]);
+  assert.ok(P.enabledHatTypes().some((x) => x.id === "suede"));
 });
 
 test("suede takes every accessory and color, at $80 plus the piece", () => {
@@ -71,7 +70,7 @@ test("suede draws its own suede-* layers: same pieces, same z-index", () => {
   assert.deepEqual(s.map((l) => [l.step, l.z, l.blend]), w.map((l) => [l.step, l.z, l.blend]));
   assert.equal(layerKeys("suede").cord("stitching", "rust"), "suede-cord-stitching-rust");
   assert.equal(layerKeys("wool").matches("turquoise"), "matches-turquoise");
-  assert.deepEqual(LAYER_PREFIX, { wool: "", suede: "suede-" });
+  assert.deepEqual(LAYER_PREFIX, { wool: "", suede: "suede-", straw: "straw-" });
 });
 
 test("every suede layer and thumbnail is on disk, named after the wool id", () => {
@@ -83,7 +82,7 @@ test("every suede layer and thumbnail is on disk, named after the wool id", () =
   assert.ok(!existsSync(layer("suede-matches-teal")) && !existsSync(thumb("suede-matches-teal")));
 });
 
-test("switching type keeps the accessories (same ids); straw drops them", () => {
+test("switching type keeps the accessories (same ids); straw drops only the matches", () => {
   const wool = { hatType: "wool", baseId: "black", featherId: "polka", cordId: "stitching", cordColor: "teal", budSize: "small", budColor: "yellow", matchesColor: "red", size: "m" };
   const asSuede = P.normalizeConfig({ ...wool, hatType: "suede" });
   for (const k of ["featherId", "cordId", "cordColor", "budSize", "budColor", "matchesColor"]) assert.equal(asSuede[k], wool[k], k);
@@ -92,7 +91,7 @@ test("switching type keeps the accessories (same ids); straw drops them", () => 
   const back = P.normalizeConfig({ ...asSuede, hatType: "wool" });
   assert.equal(back.featherId, "polka");
   const straw = P.normalizeConfig({ ...wool, hatType: "straw" });
-  assert.deepEqual([straw.featherId, straw.cordId, straw.budSize, straw.matchesColor], ["none", "none", "none", "none"]);
+  assert.deepEqual([straw.featherId, straw.cordId, straw.cordColor, straw.budSize, straw.matchesColor], ["polka", "stitching", "teal", "small", "none"]);
 });
 
 test("a suede permalink with accessories round trips", () => {
@@ -108,12 +107,6 @@ test("a suede permalink with accessories round trips", () => {
   assert.equal(P.buildPermalinkQuery(P.parsePermalink("b=wine&f=natural&c=rhinestone&sz=l")), "b=wine&f=natural&c=rhinestone&sz=l");
 });
 
-test("straw is still refused, with or without accessories", () => {
-  const fields = (patch) => P.validateConfig({ hatType: "straw", baseId: "cream", size: "m", quantity: 1, ...patch }).errors.map((e) => e.field);
-  assert.deepEqual(fields({}), ["hatType"]);
-  assert.deepEqual(fields({ featherId: "natural" }), ["hatType", "featherId"]);
-  assert.deepEqual(fields({ cordId: "heishi", matchesColor: "red" }), ["hatType", "cordId", "matchesColor"]);
-});
 
 test("the order: metadata, work order rows and the hat picture use suede", () => {
   const hat = suede({ featherId: "cream", cordId: "heishi", size: "l-xl" });

@@ -74,8 +74,7 @@ export const BASE_OPTIONS = [
 ];
 export const WOOL_COLORS = BASE_OPTIONS;
 
-// Their artwork is on Cloudinary (catalog.js). Faux Suede is on sale;
-// straw stays off until the owner turns it on.
+// Their artwork is on Cloudinary (catalog.js).
 export const SUEDE_COLORS = [
   { id: "cream", name: "Cream" },
   { id: "black", name: "Black" },
@@ -360,8 +359,8 @@ export const ACCESSORY_STEPS = ["feather", "cord", "bud", "matches"];
 export const DEFAULT_HAT_TYPE = "wool";
 
 // `enabled` is the switch: a disabled type is fully defined but cannot be
-// picked in the builder or ordered (validateConfig refuses it). Wool and
-// Faux Suede are on sale; straw stays off until the owner puts it on sale. The builder can show
+// picked in the builder or ordered (validateConfig refuses it). Wool, Faux
+// Suede and Straw are all on sale. The builder can show
 // them under ?preview=types, but only to look at: the server still refuses
 // any order for a disabled type.
 export const HAT_TYPES = [
@@ -395,9 +394,14 @@ export const HAT_TYPES = [
     basePrice: 8000,
     sizes: STANDARD_SIZES,
     colors: STRAW_COLORS,
+    // never branded: no Brand it step, no engraving and no engraving charge
     brandingAllowed: false,
-    accessories: [],
-    enabled: false,
+    // Every accessory but Strike It Up (matches), which stays off straw until
+    // the straw-matches-* layers are approved. To switch it on, add
+    // "matches" here (or use ACCESSORY_STEPS); a test then checks that all
+    // four straw-matches-{color} files exist.
+    accessories: ["feather", "cord", "bud"],
+    enabled: true,
   },
 ];
 

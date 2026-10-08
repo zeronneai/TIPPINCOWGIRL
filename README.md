@@ -52,15 +52,16 @@ takes a color and an optional note), Brim bud (size, then color) and
 Matches (color). Where things live:
 
 - `src/shop/pricing.js`: ids, names, prices in cents, validation, the
-  permalink format, and the hat types (`HAT_TYPES`): Wool ($140, 12
-  colors) and Faux Suede ($80, 9 colors, S/M and L/XL) on sale, Straw ($80)
-  defined but disabled. Each type sets its colors, sizes, which accessories
+  permalink format, and the hat types (`HAT_TYPES`), all on sale: Wool
+  ($140, 12 colors), Faux Suede ($80, 9 colors, S/M and L/XL) and Straw
+  ($80, Cream and Black, S to XL, never branded, and no Strike It Up until
+  its straw layers are approved: add "matches" to straw's `accessories`). Each type sets its colors, sizes, which accessories
   it takes and whether it can be branded; flip `enabled` to put one on sale.
   The type selector appears by itself once two types are enabled.
 - Accessory layers per type: the same ids, prices and z-index, but each
   type can draw its own files, named with its prefix (`LAYER_PREFIX` in
-  `catalog.js`: suede uses `suede-feather-cream.png` and so on, thumbnails
-  too). Wool has no prefix.
+  `catalog.js`: suede uses `suede-feather-cream.png`, straw
+  `straw-feather-cream.png`, thumbnails too). Wool has no prefix.
 - Private preview: add `?preview=types` to the site address to see every
   type in the builder (suede and straw without accessories). It only looks:
   the button reads "Preview only", nothing goes in the cart, and the server

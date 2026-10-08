@@ -18,8 +18,8 @@
 //
 // Each hat type draws the same pieces on its own crown, so a type can have
 // its own set of files: the same names with the type's prefix from
-// LAYER_PREFIX (suede-feather-cream.png). Same id, price and z-index; only
-// the picture differs.
+// LAYER_PREFIX (suede-feather-cream.png, straw-feather-cream.png). Same id,
+// price and z-index; only the picture differs.
 //
 // Every layer is a 1600x1600 transparent PNG drawn on the same canvas, so
 // they stack at the same position with no per layer offsets or scaling.
@@ -149,7 +149,7 @@ export function accessoryLayers(config) {
 
 // The file prefix of each hat type's accessory layers. Wool has none (its
 // files predate types); a type missing here would draw the wool files.
-export const LAYER_PREFIX = { wool: "", suede: "suede-" };
+export const LAYER_PREFIX = { wool: "", suede: "suede-", straw: "straw-" };
 
 /** The file stem that draws one option on its own, for its thumbnail (wool). */
 export const thumbKey = {
@@ -169,8 +169,8 @@ export const layerKeys = (typeId = DEFAULT_HAT_TYPE) => {
 // emails flatten the hat with Cloudinary overlays, so a layer that is not
 // on Cloudinary cannot be drawn there.
 //
-// TODO(email-image): EMPTY until the PNGs in src/shop/layers/ (wool and
-// suede-*) are uploaded to Cloudinary. Fill it by layer key, prefix
+// TODO(email-image): EMPTY until the PNGs in src/shop/layers/ (wool,
+// suede-* and straw-*) are uploaded to Cloudinary. Fill it by layer key, prefix
 // included: { "feather-natural": "<public id>", "suede-feather-natural": ... }.
 // Until every layer a hat uses is listed, the emails show no picture for that
 // hat rather than a picture missing pieces, which would not match what the

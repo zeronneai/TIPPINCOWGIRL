@@ -1,7 +1,6 @@
 // The engraving (burned stamps and letters): the model, the price rule, the
 // codes in the permalink and the Stripe metadata, the emails, and the real
-// checkout handler charging it on wool and refusing it on straw and on any
-// type that is not on sale.
+// checkout handler charging it on wool and suede and refusing it on straw.
 //
 //   npm test
 import assert from "node:assert/strict";
@@ -149,7 +148,8 @@ test("the engraving code in the permalink, read without any preview", () => {
   assert.equal(q, "b=ivory&e=lt.d.DEB_ls.longhorn*ss.horseshoe_st.s.A+B&sz=m");
   const back = P.parsePermalink(q);
   assert.deepEqual(back.engraving, P.normalizeEngraving([...DEB, text("A B", "soft", "small", "left")]));
-  assert.equal(P.parsePermalink(`t=straw&${q}`).engraving.length, 4, "a straw link (straw is off) opens as wool, engraving kept");
+  const straw = P.parsePermalink(`t=straw&${q}`);
+  assert.deepEqual([straw.hatType, straw.engraving], ["straw", []], "a straw link opens straw, never engraved");
   // a hand edited code keeps what it can read
   assert.deepEqual(P.parseEngraving("ls.longhorn_xx.nope*").engraving, [stamp("longhorn")]);
   assert.deepEqual(P.parseEngraving("ls.longhorn_xx.nope*").problems, ["Unreadable engraving piece: xx.nope"]);
@@ -305,12 +305,12 @@ test("checkout charges the engraving on wool and suede, and refuses straw, witho
   ]);
   assert.equal(calls[2].metadata.hat_1_engr, "lt.d.DEB_ls.longhorn*ss.horseshoe");
 
-  // straw cannot be branded, and is not on sale: refused, preview or not
+  // straw cannot be branded: refused, preview or not, and never charged
   calls.length = 0;
   r = await post([{ hatType: "straw", baseId: "cream", size: "m", quantity: 1, engraving: [stamp("cactus")] }], "/api/create-checkout-session?preview=types,engraving", { preview: "types,engraving" });
   assert.equal(r.code, 400);
   assert.ok(r.body.errors.some((e) => e.field === "engraving" && e.message === "A Straw Hat cannot be branded"));
-  assert.ok(r.body.errors.some((e) => e.field === "hatType" && e.index === 0), "straw is refused for its type too");
+  assert.deepEqual(r.body.errors.map((e) => e.field), ["engraving"], "refused for the engraving only: straw itself is on sale");
   // a bad piece is refused too
   r = await post([{ baseId: "ivory", size: "m", quantity: 1, engraving: [stamp("unicorn")] }]);
   assert.equal(r.code, 400);
