@@ -32,6 +32,7 @@
 
 import { saveOrder } from "../api/_lib/orders.js";
 import { buildOrderRecord } from "../src/shop/orderRecord.js";
+import { isDirectRun, listNames, projectHost, redact } from "./lib/cli.js";
 
 const money = (cents, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: String(currency).toUpperCase() }).format((Number(cents) || 0) / 100);
@@ -83,41 +84,69 @@ export async function backfill({ stripe, db, dryRun = false, log = console.log }
       else totals.existed += 1;
     } catch (err) {
       totals.skipped += 1;
-      log(`skipped ${session.id}: the database refused it (${err?.message || "unknown error"})`);
+      log(`skipped ${session.id}: the database refused it (${redact(err?.message || "unknown error")})`);
     }
   }
+  // the one line summary always comes last
   if (dryRun) {
-    log(`Dry run: ${totals.wouldInsert} paid orders would be inserted (any already stored are left untouched), ${totals.skipped} skipped. Nothing was written.`);
     for (const l of lines) log(`  ${l}`);
+    log(`Dry run: ${totals.wouldInsert} paid orders would be inserted (any already stored are left untouched), ${totals.skipped} skipped. Nothing was written.`);
   } else {
     log(`Done: ${totals.inserted} inserted, ${totals.existed} already existed, ${totals.skipped} skipped.`);
   }
   return totals;
 }
 
-async function main() {
-  const dryRun = process.argv.includes("--dry-run");
-  const missing = ["STRIPE_SECRET_KEY", ...(dryRun ? [] : ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"])].filter((k) => !process.env[k]);
+/**
+ * The whole command, with its outputs passed in. Always prints a first line
+ * (what it is about to do) and a last line (the summary, or the exact
+ * error), and returns the exit code: a silent run is impossible.
+ */
+export async function main({ argv = process.argv, env = process.env, out = console.log, err = console.error, clients } = {}) {
+  const dryRun = argv.includes("--dry-run");
+  out(
+    dryRun
+      ? "Backfill orders (dry run): listing the paid Stripe checkouts that would be copied into the staff portal. Nothing is written."
+      : "Backfill orders: copying every paid Stripe checkout into the staff portal. No email is sent."
+  );
+  const missing = ["STRIPE_SECRET_KEY", ...(dryRun ? [] : ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"])].filter((k) => !env[k]);
   if (missing.length) {
     // names only, never values
-    console.error(`Missing ${missing.join(", ")}. Put them in .env and run: npm run backfill:orders${dryRun ? " -- --dry-run" : ""}`);
-    process.exit(1);
+    err(`Missing ${listNames(missing)}. Set ${missing.length > 1 ? "them" : "it"} in .env (or the shell) and run it again: npm run backfill:orders${dryRun ? " -- --dry-run" : ""}. Nothing was changed.`);
+    return 1;
   }
-  const { default: Stripe } = await import("stripe");
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  let db = null;
-  if (!dryRun) {
-    const { supabaseAdmin } = await import("../api/_lib/orders.js");
-    db = supabaseAdmin();
+  try {
+    let stripe;
+    let db = null;
+    if (clients) ({ stripe, db } = clients(env));
+    else {
+      const { default: Stripe } = await import("stripe");
+      stripe = new Stripe(env.STRIPE_SECRET_KEY);
+      if (!dryRun) {
+        const { createClient } = await import("@supabase/supabase-js");
+        db = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+      }
+    }
+    out(`Stripe ${env.STRIPE_SECRET_KEY.startsWith("sk_live_") ? "live" : "test"} mode${dryRun ? "" : `, Supabase project ${projectHost(env.SUPABASE_URL)}`}.`);
+    await backfill({ stripe, db, dryRun, log: out });
+    return 0;
+  } catch (e) {
+    // Stripe names a rejected key in its message: redact() takes it out
+    err(`Backfill stopped: ${redact(e?.message || e)}`);
+    return 1;
   }
-  console.log(`Reading paid checkouts from Stripe (${process.env.STRIPE_SECRET_KEY.startsWith("sk_live_") ? "live" : "test"} mode)${dryRun ? ", dry run" : ""}...`);
-  await backfill({ stripe, db, dryRun });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((err) => {
-    // a Stripe or network error message never carries the key
-    console.error("Backfill stopped:", err?.message || err);
-    process.exit(1);
-  });
+// exitCode, not exit(): on Windows a pipe is written asynchronously and
+// process.exit() can cut the last lines off.
+if (isDirectRun(import.meta.url)) {
+  main().then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (e) => {
+      console.error(`Backfill stopped: ${redact(e?.message || e)}`);
+      process.exitCode = 1;
+    }
+  );
 }

@@ -26,6 +26,7 @@
 // the box without stretching it.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { isDirectRun } from "./lib/cli.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const SRC = `${root}public/engraving`;
@@ -85,7 +86,7 @@ export const ENGRAVING_STAMP_IDS = ${JSON.stringify(data.map((s) => s.id))};
 `;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isDirectRun(import.meta.url)) {
   const data = buildStampData();
   const files = [
     [OUT, renderModule(data)],

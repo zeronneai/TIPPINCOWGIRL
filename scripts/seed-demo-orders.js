@@ -1,10 +1,14 @@
 // ---------------------------------------------------------------------------
 // Six demo orders for trying the staff portal, in every status.
 //
-//   node --env-file=.env scripts/seed-demo-orders.js            add them
-//   node --env-file=.env scripts/seed-demo-orders.js --delete   remove them
+//   npm run seed:demo            add them
+//   npm run seed:demo:delete     remove them
 //
-// (npm run seed:demo and npm run seed:demo:delete do the same.)
+// (or node --env-file=.env scripts/seed-demo-orders.js [--delete])
+//
+// It always prints what it is about to do first and the result last (or
+// the exact error). It runs on Windows too: see scripts/lib/cli.js for why
+// the "was I run directly" check compares real paths.
 //
 // Run by hand only. It needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY and
 // refuses to run when NODE_ENV is "production". Every demo order has a
@@ -21,6 +25,7 @@ import { createClient } from "@supabase/supabase-js";
 import { encodeOrderMetadata } from "../src/shop/orderMetadata.js";
 import { buildOrderRecord } from "../src/shop/orderRecord.js";
 import { buildOrder } from "../src/shop/pricing.js";
+import { isDirectRun, listNames, projectHost, redact } from "./lib/cli.js";
 
 export const DEMO_EMAIL_SUFFIX = "@demo.tippin";
 const DAY = 86400;
@@ -144,25 +149,30 @@ export function demoSession(demo, index, now = Math.floor(Date.now() / 1000)) {
   };
 }
 
-function client() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (for example in .env, then run with node --env-file=.env).");
-    process.exit(1);
-  }
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
+// A Supabase error as one line: its message, code and hint. The error
+// object never carries the key, and nothing else is printed from it.
+export const describeError = (error) =>
+  redact(
+    [error?.message || String(error || "unknown error"), error?.code ? `(code ${error.code})` : "", error?.hint ? `Hint: ${error.hint}` : ""]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+class SupabaseError extends Error {}
+const fail = (error, what) => {
+  throw new SupabaseError(`${what}: ${describeError(error)}`);
+};
 
 async function removeDemo(db) {
   const { data, error } = await db.from("orders").delete().like("customer_email", `%${DEMO_EMAIL_SUFFIX}`).select("id");
-  if (error) throw new Error(error.message);
-  console.log(`Removed ${data.length} demo orders (and their history).`);
+  if (error) fail(error, "Supabase refused the delete");
+  return data.length;
 }
 
-async function seed(db) {
+async function seed(db, out) {
   const now = Math.floor(Date.now() / 1000);
   let added = 0;
+  let existing = 0;
   for (const [i, demo] of DEMO_ORDERS.entries()) {
     const session = demoSession(demo, i, now);
     const { row } = buildOrderRecord(session);
@@ -170,9 +180,10 @@ async function seed(db) {
       .from("orders")
       .upsert({ ...row, status: demo.status, tracking_number: demo.tracking || null, internal_notes: demo.note || null }, { onConflict: "stripe_session_id", ignoreDuplicates: true })
       .select("id");
-    if (error) throw new Error(error.message);
+    if (error) fail(error, `Supabase refused ${demo.name}'s order after ${added} added`);
     if (!data.length) {
-      console.log(`  already there: ${demo.name}`);
+      existing += 1;
+      out(`  already there: ${demo.name}`);
       continue;
     }
     // the history a real order would have built up, a few hours apart
@@ -186,26 +197,63 @@ async function seed(db) {
     const { error: evError } = await db.from("order_events").insert(
       events.map(({ at, ...e }) => ({ ...e, order_id: data[0].id, created_at: new Date(Math.min(at, now) * 1000).toISOString() }))
     );
-    if (evError) throw new Error(evError.message);
+    if (evError) fail(evError, `Supabase stored ${demo.name}'s order but refused its history`);
     added += 1;
-    console.log(`  added: ${demo.name} (${demo.status})`);
+    out(`  added: ${demo.name} (${demo.status})`);
   }
-  console.log(`Done: ${added} demo orders added. Remove them with: npm run seed:demo:delete`);
+  return { added, existing };
 }
 
-async function main() {
-  if (process.env.NODE_ENV === "production") {
-    console.error("Refusing to run: NODE_ENV is production. Demo orders are for a test project.");
-    process.exit(1);
+/**
+ * The whole command, with its outputs passed in. Always prints a first line
+ * (what it is about to do) and a last line (the count, or the exact error),
+ * and returns the exit code: a silent run is impossible.
+ */
+export async function main({ argv = process.argv, env = process.env, out = console.log, err = console.error, connect } = {}) {
+  const remove = argv.includes("--delete");
+  out(
+    remove
+      ? `Seed demo orders: deleting every order whose email ends in ${DEMO_EMAIL_SUFFIX}.`
+      : `Seed demo orders: adding ${DEMO_ORDERS.length} demo orders (emails ending in ${DEMO_EMAIL_SUFFIX}).`
+  );
+  if (env.NODE_ENV === "production") {
+    err("Refusing to run: NODE_ENV is production. Demo orders are for a test project.");
+    return 1;
   }
-  const db = client();
-  if (process.argv.includes("--delete")) await removeDemo(db);
-  else await seed(db);
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((k) => !env[k]);
+  if (missing.length) {
+    // names only, never values
+    err(`Missing ${listNames(missing)}. Set ${missing.length > 1 ? "them" : "it"} in .env (or the shell) and run it again. Nothing was changed.`);
+    return 1;
+  }
+  out(`Supabase project: ${projectHost(env.SUPABASE_URL)}`);
+  try {
+    const db = connect ? connect(env) : createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    if (remove) {
+      const n = await removeDemo(db);
+      out(`Done: deleted ${n} demo order${n === 1 ? "" : "s"} (and their history).`);
+    } else {
+      const { added, existing } = await seed(db, out);
+      out(`Done: ${added} demo order${added === 1 ? "" : "s"} added, ${existing} already there. Remove them with: npm run seed:demo:delete`);
+    }
+    return 0;
+  } catch (e) {
+    err(`Failed: ${e instanceof SupabaseError ? e.message : describeError(e)}`);
+    return 1;
+  }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((err) => {
-    console.error("Seeding failed:", err.message);
-    process.exit(1);
-  });
+// exitCode, not exit(): on Windows a pipe is written asynchronously and
+// process.exit() can cut the last lines off, which would make the run look
+// silent again.
+if (isDirectRun(import.meta.url)) {
+  main().then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (e) => {
+      console.error(`Failed: ${describeError(e)}`);
+      process.exitCode = 1;
+    }
+  );
 }

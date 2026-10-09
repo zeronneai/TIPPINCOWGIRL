@@ -175,9 +175,10 @@ test("--dry-run prints the count and one line each, and never touches the databa
   const out = [];
   const t = await backfill({ stripe: fakeStripe([...GOOD, BAD[0]]), db: untouchable, dryRun: true, log: (l) => out.push(l) });
   assert.deepEqual([t.wouldInsert, t.skipped, t.inserted], [3, 1, 0]);
-  assert.equal(out[1], "Dry run: 3 paid orders would be inserted (any already stored are left untouched), 1 skipped. Nothing was written.");
-  assert.equal(out[2], `  ${new Date(GOOD[0].created * 1000).toISOString().slice(0, 10)}  Customer cs_1  $202.00  (cs_1)`);
+  assert.equal(out[0], "skipped cs_4: No hat records were found in the session metadata.");
+  assert.equal(out[1], `  ${new Date(GOOD[0].created * 1000).toISOString().slice(0, 10)}  Customer cs_1  $202.00  (cs_1)`);
   assert.equal(out.length, 5);
+  assert.equal(out.at(-1), "Dry run: 3 paid orders would be inserted (any already stored are left untouched), 1 skipped. Nothing was written.", "the summary is always last");
 });
 
 test("it sends no email and prints no key", () => {

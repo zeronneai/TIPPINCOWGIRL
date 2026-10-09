@@ -165,6 +165,22 @@ delete from public.orders where customer_email like '%@demo.tippin';
 Their history goes with them. The script refuses to run when `NODE_ENV` is
 `production`.
 
+Both scripts (this one and the backfill) work the same on Windows,
+macOS and Linux. Every run prints what it is about to do on its first line
+and the result on its last (how many were added, deleted or skipped, or the
+exact error), so a run that prints nothing means it did not start. On
+Windows PowerShell, instead of a `.env` file you can set the variables for
+the session first:
+
+```
+$env:SUPABASE_URL = "https://xxxx.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "the service_role key"
+npm run seed:demo
+```
+
+Note: the line `.env not found. Continuing without it.` only means there is
+no `.env` file; the variables set in the shell are still used.
+
 ## What is protected, and how
 
 - **Row Level Security is on** for `orders`, `order_events` and `staff`.
