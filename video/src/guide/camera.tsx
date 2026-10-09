@@ -389,7 +389,7 @@ export const Camera: React.FC<{ keys: CamKeys; blurAbove?: number }> = ({ keys, 
   const v = Math.max(speed(f, keys), speed(f + 1, keys));
   // more sub-frames on the fastest moves, so the blur is a smear, not copies
   return v > blurAbove ? (
-    <CameraMotionBlur shutterAngle={180} samples={v > 90 ? 14 : 9}>
+    <CameraMotionBlur shutterAngle={180} samples={v > 90 ? 16 : 10}>
       <Shot keys={keys} />
     </CameraMotionBlur>
   ) : (

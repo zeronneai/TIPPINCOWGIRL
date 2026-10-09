@@ -54,7 +54,7 @@ const WhipOut: React.FC<{ from: number; to: number; dx?: number; dy?: number; ch
   const f = useCurrentFrame();
   const inner = <WhipInner from={from} to={to} dx={dx} dy={dy}>{children}</WhipInner>;
   return f >= from && f <= to ? (
-    <CameraMotionBlur shutterAngle={200} samples={8}>
+    <CameraMotionBlur shutterAngle={220} samples={16}>
       {inner}
     </CameraMotionBlur>
   ) : (
@@ -207,7 +207,7 @@ export const Arrival: React.FC<{ clock: number }> = ({ clock }) => {
     clock,
     surface: [[0, "home"]],
     // already rising into the frame on its first frame: the hook whips up, the phone follows
-    y: [{ f: P.phoneIn.from, v: 820 }, { f: P.phoneIn.to, v: 0, ease: "glide" }],
+    y: [{ f: P.phoneIn.from, v: 520 }, { f: P.phoneIn.to, v: 0, ease: "glide" }],
     tiltX: [{ f: P.phoneIn.from, v: 16 }, { f: P.phoneIn.to + 8, v: 0 }],
     tiltY: [{ f: P.phoneIn.from, v: -8 }, { f: P.phoneIn.to + 8, v: 0 }],
     zoom: [{ f: P.push.from, v: 1 }, { f: P.push.to, v: ARRIVAL_ZOOM }],
@@ -560,7 +560,7 @@ export const Bookings: React.FC<{ clock: number }> = ({ clock }) => {
   const keys: CamKeys = {
     clock,
     surface: [[0, "home"]],
-    x: [{ f: P.swing.from, v: 900 }, { f: P.swing.to, v: 0 }],
+    x: [{ f: P.swing.from, v: 620 }, { f: P.swing.to, v: 0 }],
     tiltY: [{ f: P.swing.from, v: -18 }, { f: P.swing.to + 6, v: 0 }],
     zoom: [{ f: P.push.from, v: 1 }, { f: P.push.to, v: 1.6 }, { f: P.pull.from, v: 1.6 }, { f: P.pull.to, v: 1.12 }],
     fx: [{ f: 0, v: 195 }],
