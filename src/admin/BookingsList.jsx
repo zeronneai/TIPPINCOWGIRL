@@ -1,85 +1,163 @@
-import { useEffect, useMemo, useState } from "react";
-import { BOOKING_STATUSES, bookingStatusOf, eventDay, searchTerm, shortDate } from "./format.js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import BookingDetail from "./BookingDetail.jsx";
+import { BOOKING_STATUSES, bookingStatusOf, eventDay, excludeDemo, searchTerm, shortDate } from "./format.js";
 import { supabase } from "./supabase.js";
-import { StatusBadge, ui } from "./ui.jsx";
+import { Empty, Icon, PageHead, Panel, Skeleton, StatusBadge, useDemo } from "./ui.jsx";
 
-// Booking requests: a list (newest first, status filter, search by name or
-// email) or a month calendar of event dates with a dot per request, colored
-// by status. ?view=calendar&month=2026-11 keeps the view across reloads.
+// Booking requests as a list (status filter, search, sort, pages of 50) or
+// a board with one column per status. On the board a card moves with its
+// "Move to" menu or by dragging it to another column; both go through
+// staff_set_booking_status, the same function as the detail screen.
+// ?view=board&sort=event keeps the choice across reloads.
 
 const PAGE = 50;
-const ymd = (d) => d.toISOString().slice(0, 10);
-const monthKey = (d) => d.toISOString().slice(0, 7);
+const COLS = "id, created_at, name, email, event_type, event_date, status, proposed_date";
+const SORTS = { received: "Received, newest first", event: "Event date, soonest first" };
 
 function readQuery() {
   const q = new URLSearchParams(window.location.search);
-  const month = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") : monthKey(new Date());
-  return { view: q.get("view") === "calendar" ? "calendar" : "list", month };
+  return { view: q.get("view") === "board" ? "board" : "list", sort: q.get("sort") === "event" ? "event" : "received" };
 }
 
-function writeQuery(view, month) {
-  const q = new URLSearchParams();
-  if (view === "calendar") {
-    q.set("view", "calendar");
-    q.set("month", month);
-  }
-  const qs = q.toString();
-  window.history.replaceState(null, "", `/admin/bookings${qs ? `?${qs}` : ""}`);
+/** The shared parts of every bookings query: search, demo rows, sort. */
+function scoped(q, { term, includeDemo, sort }) {
+  // "*" is PostgREST's ilike wildcard; searchTerm() strips it and every
+  // other separator from what was typed
+  if (term) q = q.or(`name.ilike.*${term}*,email.ilike.*${term}*`);
+  if (!includeDemo) q = excludeDemo(q, "email");
+  if (sort === "event") q = q.order("event_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false });
+  else if (sort) q = q.order("created_at", { ascending: false });
+  return q;
 }
 
-export default function BookingsList() {
+export default function BookingsList({ onChanged }) {
   const initial = useMemo(readQuery, []);
+  const { includeDemo } = useDemo();
   const [view, setView] = useState(initial.view);
-  const [month, setMonth] = useState(initial.month);
-  useEffect(() => writeQuery(view, month), [view, month]);
+  const [sort, setSort] = useState(initial.sort);
+  const [status, setStatus] = useState("all");
+  const [query, setQuery] = useState("");
+  const [term, setTerm] = useState("");
+  const [counts, setCounts] = useState(null);
+  const [tick, setTick] = useState(0);
+  const [open, setOpen] = useState(null);
+
+  useEffect(() => {
+    const q = new URLSearchParams();
+    if (view === "board") q.set("view", "board");
+    if (sort === "event") q.set("sort", "event");
+    const qs = q.toString();
+    window.history.replaceState(null, "", `/admin/bookings${qs ? `?${qs}` : ""}`);
+  }, [view, sort]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(searchTerm(query)), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // the counts on the filter chips follow the search and the demo switch
+  useEffect(() => {
+    let alive = true;
+    scoped(supabase.from("bookings").select("status"), { term, includeDemo })
+      .limit(5000)
+      .then(({ data, error }) => {
+        if (!alive || error) return;
+        const c = { all: data.length };
+        for (const r of data) c[r.status] = (c[r.status] || 0) + 1;
+        setCounts(c);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [term, includeDemo, tick]);
+
+  const refresh = useCallback(() => {
+    setTick((n) => n + 1);
+    onChanged?.();
+  }, [onChanged]);
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 14px", flexWrap: "wrap" }}>
-        <h1 style={{ ...ui.h1, margin: 0 }}>Bookings</h1>
-        <div role="group" aria-label="View" style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          {[
-            ["list", "List"],
-            ["calendar", "Calendar"],
-          ].map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={view === id} data-view={id} onClick={() => setView(id)} style={ui.chip(view === id)}>
-              {label}
-            </button>
-          ))}
+      <PageHead
+        title="Bookings"
+        sub="Every request from the site's booking form."
+        actions={
+          <div className="ad-seg" role="group" aria-label="View">
+            {[
+              ["list", "List", "bookings"],
+              ["board", "Board", "dashboard"],
+            ].map(([id, label, icon]) => (
+              <button key={id} type="button" aria-pressed={view === id} data-view={id} onClick={() => setView(id)}>
+                <Icon name={icon} size={16} />
+                {label}
+              </button>
+            ))}
+          </div>
+        }
+      />
+
+      <div className="ad-toolbar">
+        <div className="ad-toolbar-row">
+          <label className="ad-search">
+            <span className="ad-sr">Search by name or email</span>
+            <Icon name="search" size={18} />
+            <input id="booking-search" type="search" className="ad-input" placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </label>
+          <label>
+            <span className="ad-sr">Sort</span>
+            <select className="ad-select" value={sort} onChange={(e) => setSort(e.target.value)} data-sort>
+              {Object.entries(SORTS).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        {view === "list" && (
+          <div className="ad-chips" role="group" aria-label="Filter by status">
+            {[{ id: "all", name: "All" }, ...BOOKING_STATUSES].map((s) => (
+              <button key={s.id} type="button" className="ad-fchip" aria-pressed={status === s.id} data-filter={s.id} onClick={() => setStatus(s.id)}>
+                {s.color && <span className="ad-dot" style={{ background: s.color }} aria-hidden />}
+                {s.name}
+                <span className="ad-fchip-n" data-count>
+                  {counts ? counts[s.id] || 0 : "·"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {view === "calendar" ? <Calendar month={month} setMonth={setMonth} /> : <List />}
+
+      {view === "list" ? (
+        <List status={status} term={term} sort={sort} includeDemo={includeDemo} tick={tick} />
+      ) : (
+        <Board term={term} sort={sort} includeDemo={includeDemo} tick={tick} onChanged={refresh} onOpen={setOpen} />
+      )}
+
+      {open && (
+        <Panel title="Booking" onClose={() => setOpen(null)}>
+          <BookingDetail id={open} panel onChanged={refresh} />
+        </Panel>
+      )}
     </>
   );
 }
 
-function BookingRow({ b }) {
+export function BookingRow({ b }) {
   return (
-    <a
-      href={`/admin/bookings/${b.id}`}
-      data-booking={b.id}
-      style={{
-        ...ui.card,
-        boxShadow: "0 3px 0 var(--ink)",
-        padding: "12px 14px",
-        display: "grid",
-        gridTemplateColumns: "1fr auto",
-        gap: "4px 12px",
-        color: "var(--ink)",
-        textDecoration: "none",
-      }}
-    >
-      <span style={{ fontWeight: 800, fontSize: 15.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>
-      <span style={{ fontWeight: 800, fontSize: 14, textAlign: "right", whiteSpace: "nowrap" }}>{b.event_date ? eventDay(b.event_date, { month: "short", day: "numeric", year: "numeric" }) : "No date"}</span>
-      <span style={{ fontSize: 13, color: "#7a6553", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {[b.event_type, b.email].filter(Boolean).join(" · ")}
+    <a href={`/admin/bookings/${b.id}`} data-booking={b.id} className="ad-card ad-row">
+      <span className="ad-row-title">{b.name}</span>
+      <span className="ad-row-right" style={{ fontWeight: 800, fontSize: 14 }}>
+        {b.event_date ? eventDay(b.event_date, { month: "short", day: "numeric", year: "numeric" }) : "No date"}
       </span>
-      <span style={{ fontSize: 12.5, color: "#7a6553", textAlign: "right", whiteSpace: "nowrap" }}>sent {shortDate(b.created_at)}</span>
+      <span className="ad-row-meta">{[b.event_type, b.email].filter(Boolean).join(" · ")}</span>
+      <span className="ad-row-right ad-row-meta">received {shortDate(b.created_at)}</span>
       <span>
         <StatusBadge kind="booking" status={b.status} />
       </span>
       {b.status === "rescheduled" && b.proposed_date ? (
-        <span style={{ fontSize: 12.5, color: "#7a6553", textAlign: "right" }}>proposed {eventDay(b.proposed_date, { month: "short", day: "numeric" })}</span>
+        <span className="ad-row-right ad-row-meta">proposed {eventDay(b.proposed_date, { month: "short", day: "numeric" })}</span>
       ) : (
         <span />
       )}
@@ -87,32 +165,17 @@ function BookingRow({ b }) {
   );
 }
 
-function List() {
-  const [status, setStatus] = useState("all");
-  const [query, setQuery] = useState("");
-  const [term, setTerm] = useState("");
+function List({ status, term, sort, includeDemo, tick }) {
   const [rows, setRows] = useState([]);
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const t = setTimeout(() => setTerm(searchTerm(query)), 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
   const load = async (offset = 0) => {
     setLoading(true);
     setError("");
-    let q = supabase
-      .from("bookings")
-      .select("id, created_at, name, email, event_type, event_date, status, proposed_date")
-      .order("created_at", { ascending: false })
-      .range(offset, offset + PAGE - 1);
+    let q = scoped(supabase.from("bookings").select(COLS), { term, includeDemo, sort }).range(offset, offset + PAGE - 1);
     if (status !== "all") q = q.eq("status", status);
-    // "*" is PostgREST's ilike wildcard; searchTerm() strips it and every
-    // other separator from what was typed
-    if (term) q = q.or(`name.ilike.*${term}*,email.ilike.*${term}*`);
     const { data, error: err } = await q;
     setLoading(false);
     if (err) return setError("The bookings could not be loaded. Try again in a moment.");
@@ -124,43 +187,41 @@ function List() {
   useEffect(() => {
     load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, term]);
+  }, [status, term, sort, includeDemo, tick]);
 
   return (
     <>
-      <label htmlFor="booking-search" style={ui.label}>
-        Search
-      </label>
-      <input id="booking-search" type="search" placeholder="Name or email" value={query} onChange={(e) => setQuery(e.target.value)} style={ui.input} />
-      <div role="group" aria-label="Filter by status" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "14px 16px 6px", margin: "0 -16px" }}>
-        {[{ id: "all", name: "All" }, ...BOOKING_STATUSES].map((s) => (
-          <button key={s.id} type="button" aria-pressed={status === s.id} data-filter={s.id} onClick={() => setStatus(s.id)} style={ui.chip(status === s.id)}>
-            {s.name}
-          </button>
-        ))}
-      </div>
       {error && (
-        <p role="alert" style={ui.error}>
+        <p role="alert" className="ad-msg-err">
           {error}
         </p>
       )}
-      <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "grid", gap: 10 }} aria-busy={loading}>
-        {rows.map((b) => (
-          <li key={b.id}>
-            <BookingRow b={b} />
-          </li>
-        ))}
-      </ul>
-      {!loading && !error && rows.length === 0 && (
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 30 }}>{term || status !== "all" ? "No bookings match." : "No booking requests yet."}</p>
+      {loading && !rows.length ? (
+        <div className="ad-rows" role="status" aria-label="Loading">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} h={74} r={16} />
+          ))}
+        </div>
+      ) : (
+        <ul className="ad-rows" aria-busy={loading} style={{ opacity: loading ? 0.6 : 1 }}>
+          {rows.map((b) => (
+            <li key={b.id}>
+              <BookingRow b={b} />
+            </li>
+          ))}
+        </ul>
       )}
-      {loading && (
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 20 }} role="status">
-          Loading
-        </p>
+      {!loading && !error && rows.length === 0 && (
+        <div className="ad-card">
+          {term || status !== "all" ? (
+            <Empty icon="search" title="No bookings match">Try another name, or another status.</Empty>
+          ) : (
+            <Empty icon="bookings" title="No booking requests yet">When someone sends the form on the site, it shows up here.</Empty>
+          )}
+        </div>
       )}
       {more && !loading && (
-        <button type="button" className="tc-btn tc-btn--ghost" style={{ width: "100%", marginTop: 16 }} onClick={() => load(rows.length)}>
+        <button type="button" className="ad-btn ad-btn--ghost" style={{ width: "100%", marginTop: 16 }} onClick={() => load(rows.length)}>
           Show more
         </button>
       )}
@@ -168,152 +229,153 @@ function List() {
   );
 }
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function Calendar({ month, setMonth }) {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+function Board({ term, sort, includeDemo, tick, onChanged, onOpen }) {
+  const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
-  const [picked, setPicked] = useState(null);
-
-  const [y, m] = month.split("-").map(Number);
-  const first = new Date(Date.UTC(y, m - 1, 1));
-  const next = new Date(Date.UTC(y, m, 1));
-  const shift = (n) => {
-    setPicked(null);
-    setMonth(monthKey(new Date(Date.UTC(y, m - 1 + n, 1))));
-  };
+  const [over, setOver] = useState(null);
+  const [pending, setPending] = useState(null); // { id, date } while picking a proposed date
+  const [busy, setBusy] = useState(null);
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    setError("");
-    supabase
-      .from("bookings")
-      .select("id, name, event_type, event_date, status")
-      .gte("event_date", ymd(first))
-      .lt("event_date", ymd(next))
-      .order("event_date", { ascending: true })
+    scoped(supabase.from("bookings").select(COLS), { term, includeDemo, sort })
+      .limit(500)
       .then(({ data, error: err }) => {
         if (!alive) return;
-        setLoading(false);
-        if (err) setError("The calendar could not be loaded. Try again in a moment.");
+        if (err) setError("The board could not be loaded. Try again in a moment.");
         else setRows(data);
       });
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [term, sort, includeDemo, tick]);
 
-  const byDay = useMemo(() => {
-    const map = {};
-    for (const b of rows) (map[b.event_date] ||= []).push(b);
-    return map;
-  }, [rows]);
+  const move = async (b, to, proposed = null) => {
+    if (to === b.status) return;
+    if (to === "rescheduled" && !proposed && !b.proposed_date) {
+      setPending({ id: b.id, date: "" });
+      return;
+    }
+    setBusy(b.id);
+    setError("");
+    const { error: err } = await supabase.rpc("staff_set_booking_status", {
+      p_booking_id: b.id,
+      p_status: to,
+      p_proposed_date: to === "rescheduled" ? proposed || null : null,
+      p_note: null,
+    });
+    setBusy(null);
+    setPending(null);
+    if (err) return setError(err.code === "22023" ? err.message : "That booking could not be moved. Try again.");
+    // move it here at once, then reload in the background
+    setRows((rs) => rs.map((r) => (r.id === b.id ? { ...r, status: to, proposed_date: proposed || r.proposed_date } : r)));
+    onChanged();
+    return undefined;
+  };
 
-  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const lead = first.getUTCDay();
-  const today = ymd(new Date());
-  const cells = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
-  const title = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
-
-  return (
-    <section aria-label={`Bookings in ${title}`}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button type="button" onClick={() => shift(-1)} aria-label="Previous month" style={ui.chip(false)} data-cal="prev">
-          ‹
-        </button>
-        <h2 style={{ ...ui.h2, margin: 0, flex: 1, textAlign: "center" }} data-cal="title">
-          {title}
-        </h2>
-        <button type="button" onClick={() => shift(1)} aria-label="Next month" style={ui.chip(false)} data-cal="next">
-          ›
-        </button>
-      </div>
-
-      <div style={{ ...ui.card, padding: 8 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4 }}>
-          {WEEKDAYS.map((d) => (
-            <div key={d} aria-hidden style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#7a6553", padding: "4px 0" }}>
-              {d}
-            </div>
-          ))}
-          {cells.map((day, i) => {
-            if (!day) return <div key={`x${i}`} />;
-            const list = byDay[day] || [];
-            const on = picked === day;
-            return (
-              <button
-                key={day}
-                type="button"
-                data-day={day}
-                onClick={() => setPicked(on ? null : day)}
-                aria-pressed={on}
-                aria-label={`${eventDay(day)}: ${list.length ? `${list.length} booking${list.length === 1 ? "" : "s"}` : "no bookings"}`}
-                style={{
-                  minHeight: 50,
-                  padding: "4px 2px",
-                  borderRadius: 8,
-                  border: on ? "2px solid var(--ink)" : day === today ? "1.5px solid var(--coral)" : "1px solid rgba(43,26,16,.12)",
-                  background: list.length ? "#fff" : "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 4,
-                  fontFamily: "inherit",
-                  color: "var(--ink)",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: day === today ? 800 : 600 }}>{Number(day.slice(8))}</span>
-                <span style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 3, maxWidth: 34 }}>
-                  {list.slice(0, 4).map((b) => (
-                    <span key={b.id} data-dot={b.status} style={{ width: 7, height: 7, borderRadius: "50%", background: bookingStatusOf(b.status).color }} />
-                  ))}
-                  {list.length > 4 && <span style={{ fontSize: 9.5, fontWeight: 800, lineHeight: "7px" }}>+{list.length - 4}</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div aria-label="Status colors" style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", margin: "10px 2px 0", fontSize: 12.5, color: "#7a6553" }}>
+  if (!rows && !error)
+    return (
+      <div className="ad-board" role="status" aria-label="Loading">
         {BOOKING_STATUSES.map((s) => (
-          <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-            {s.name}
-          </span>
+          <div className="ad-col" key={s.id}>
+            <Skeleton h={18} w="50%" />
+            <Skeleton h={70} />
+            <Skeleton h={70} />
+          </div>
         ))}
       </div>
+    );
 
+  return (
+    <>
       {error && (
-        <p role="alert" style={ui.error}>
+        <p role="alert" className="ad-msg-err" style={{ marginBottom: 10 }}>
           {error}
         </p>
       )}
-      {loading && (
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 14 }} role="status">
-          Loading
-        </p>
-      )}
-
-      {!loading && (
-        <div style={{ marginTop: 16 }}>
-          <h3 style={{ ...ui.label, marginBottom: 8 }} data-cal="picked">
-            {picked ? eventDay(picked, { weekday: "long", month: "long", day: "numeric" }) : `${rows.length} event${rows.length === 1 ? "" : "s"} this month`}
-          </h3>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
-            {(picked ? byDay[picked] || [] : rows).map((b) => (
-              <li key={b.id}>
-                <BookingRow b={b} />
-              </li>
-            ))}
-          </ul>
-          {picked && !(byDay[picked] || []).length && <p style={ui.muted}>Nothing on this day.</p>}
-        </div>
-      )}
-    </section>
+      <div className="ad-board" data-board>
+        {BOOKING_STATUSES.map((s) => {
+          const list = (rows || []).filter((r) => r.status === s.id);
+          return (
+            <section
+              key={s.id}
+              className="ad-col"
+              data-column={s.id}
+              data-over={over === s.id}
+              aria-label={`${s.name}, ${list.length}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOver(s.id);
+              }}
+              onDragLeave={() => setOver((o) => (o === s.id ? null : o))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setOver(null);
+                const b = rows.find((r) => r.id === e.dataTransfer.getData("text/plain"));
+                if (b) move(b, s.id);
+              }}
+            >
+              <div className="ad-col-h">
+                <span className="ad-dot" style={{ background: s.color }} aria-hidden />
+                {s.name}
+                <span className="ad-fchip-n" data-column-count>
+                  {list.length}
+                </span>
+              </div>
+              {list.map((b) => (
+                <article
+                  key={b.id}
+                  className="ad-bcard"
+                  style={{ "--c": s.color, opacity: busy === b.id ? 0.55 : 1 }}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", b.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  data-card={b.id}
+                >
+                  <button type="button" className="ad-bcard-open" onClick={() => onOpen(b.id)} aria-label={`Open ${b.name}`}>
+                    <b>{b.name}</b>
+                    <small>
+                      {[b.event_type, b.event_date ? eventDay(b.event_date, { month: "short", day: "numeric", year: "numeric" }) : "No date"].filter(Boolean).join(" · ")}
+                    </small>
+                    {b.status === "rescheduled" && b.proposed_date && <small>Proposed {eventDay(b.proposed_date, { month: "short", day: "numeric" })}</small>}
+                    <small>Received {shortDate(b.created_at)}</small>
+                  </button>
+                  {pending?.id === b.id ? (
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <label className="ad-label" htmlFor={`pd-${b.id}`} style={{ margin: 0 }}>
+                        Proposed date
+                      </label>
+                      <input id={`pd-${b.id}`} type="date" className="ad-input" style={{ fontSize: 14, padding: "6px 8px" }} value={pending.date} onChange={(e) => setPending({ id: b.id, date: e.target.value })} data-pending-date />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button type="button" className="ad-btn ad-btn--sm ad-btn--coral" disabled={!pending.date || busy} onClick={() => move(b, "rescheduled", pending.date)} data-pending-save>
+                          Reschedule
+                        </button>
+                        <button type="button" className="ad-btn ad-btn--sm ad-btn--ghost" onClick={() => setPending(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label>
+                      <span className="ad-sr">Move {b.name} to</span>
+                      <select className="ad-select" value={b.status} onChange={(e) => move(b, e.target.value)} disabled={busy === b.id} data-move={b.id}>
+                        {BOOKING_STATUSES.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.id === b.status ? t.name : `Move to ${t.name}`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </article>
+              ))}
+              {!list.length && <p className="ad-col-empty">No {bookingStatusOf(s.id).name.toLowerCase()} bookings.</p>}
+            </section>
+          );
+        })}
+      </div>
+    </>
   );
 }

@@ -183,9 +183,9 @@ Phase 2: booking requests. The "Book the bar" form still posts to the
 Google Apps Script (the Sheet) exactly as before; it also fires an
 unawaited copy to `/api/booking`, which validates it and stores it in
 `bookings` with the service role key. A failed copy never changes what the
-visitor sees. Staff see them at `/admin/bookings` (list, month calendar,
-status, proposed date, internal notes). No customer email is sent from the
-portal yet.
+visitor sees. Staff see them at `/admin/bookings` and `/admin/calendar`
+(status, proposed date, internal notes). No customer email is sent from
+the portal yet.
 
 - `api/booking.js` and `api/_lib/bookings.js`: the endpoint, validation,
   honeypot, and the save (answers 200 even when the database is down).
@@ -194,6 +194,18 @@ portal yet.
   Sheet's CSV export from `data/` (gitignored), `--dry-run`, `--tz=`.
 - `scripts/seed-demo-bookings.js`: `npm run seed:demo-bookings` and
   `npm run seed:demo-bookings:delete`.
+
+The portal's screens (phase 3): a dashboard at `/admin` (numbers, what
+needs attention, charts, recent activity), `/admin/orders`,
+`/admin/bookings` (list or board), `/admin/calendar` (month grid and a
+12 month strip), and booking and order pages with WhatsApp, email and call
+buttons that only open apps on the staff member's device. An "Include demo
+data" switch in the top bar (off by default, remembered in the browser)
+decides whether `@demo.tippin` rows count. The charts are hand built SVG
+in `src/admin/charts.jsx`; the numbers come from `src/admin/stats.js`, the
+links and message templates from `src/admin/contact.js`, the styles from
+`src/admin/admin.css`, all in the lazy /admin chunk. See
+[docs/portal-setup.md](docs/portal-setup.md).
 
 ## Structure
 
@@ -217,7 +229,11 @@ portal yet.
 - `src/styles.css` — reset, keyframes (sway / marquee / glow), hover & focus
   states, and responsive breakpoints.
 - `public/logo.png` — the brand mark (cowgirl-on-donkey), cropped from the
-  Instagram profile, used in the nav, footer and favicon.
+  Instagram profile, used in the nav and footer. The favicon set
+  (`favicon.ico`, `favicon-16/32.png`, `apple-touch-icon.png`,
+  `icon-192/512.png`, linked from `index.html` and `site.webmanifest`) is
+  its rider artwork alone on the logo's brown, since the wordmark is too fine
+  for a browser tab.
 
 ## Notes
 

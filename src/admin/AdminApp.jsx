@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
 import { navigate } from "../router.js";
-import { supabase } from "./supabase.js";
-import OrdersList from "./OrdersList.jsx";
-import OrderDetail from "./OrderDetail.jsx";
-import BookingsList from "./BookingsList.jsx";
+import "./admin.css";
 import BookingDetail from "./BookingDetail.jsx";
-import { Shell, ui } from "./ui.jsx";
+import BookingsList from "./BookingsList.jsx";
+import CalendarScreen from "./CalendarScreen.jsx";
+import Dashboard from "./Dashboard.jsx";
+import OrderDetail from "./OrderDetail.jsx";
+import OrdersList from "./OrdersList.jsx";
+import { excludeDemo } from "./format.js";
+import { supabase } from "./supabase.js";
+import { Bare, DemoProvider, Shell, logo, useDemo } from "./ui.jsx";
 
 // ---------------------------------------------------------------------------
-// The staff portal, at /admin. Phase 1: orders. Phase 2: booking requests.
+// The staff portal, at /admin.
 //
-//   /admin                  the orders, newest first
+//   /admin                  the dashboard: numbers, what needs attention,
+//                           charts, the latest changes
+//   /admin/orders           the orders, newest first
 //   /admin/orders/<id>      one order: hats, customer, status, notes
-//   /admin/bookings         booking requests: a list, or ?view=calendar
+//   /admin/bookings         booking requests: a list, or ?view=board
 //   /admin/bookings/<id>    one request: contact, event, status, notes
+//   /admin/calendar         event dates by month
 //
 // Sign in is Supabase Auth with email and password. A person who signs in
 // but is not in the `staff` table is signed straight back out with the same
@@ -35,24 +42,53 @@ export default function AdminApp({ path }) {
 
   if (!supabase) {
     return (
-      <Shell>
-        <div style={ui.card}>
-          <h1 style={ui.h1}>Staff portal</h1>
-          <p style={ui.muted}>The portal is not set up on this deployment yet. See docs/portal-setup.md.</p>
+      <Bare>
+        <div className="ad-login">
+          <div className="ad-card" style={{ maxWidth: 420 }}>
+            <h1 className="ad-h1">Staff portal</h1>
+            <p className="ad-muted" style={{ marginTop: 8 }}>
+              The portal is not set up on this deployment yet. See docs/portal-setup.md.
+            </p>
+          </div>
         </div>
-      </Shell>
+      </Bare>
     );
   }
-  return <Gate path={path} />;
+  return (
+    <DemoProvider>
+      <Gate path={path} />
+    </DemoProvider>
+  );
+}
+
+const UUID = "([0-9a-f-]{36})";
+
+function route(path) {
+  let m;
+  if ((m = path.match(new RegExp(`^/admin/orders/${UUID}$`, "i")))) return { section: "orders", screen: "order", id: m[1] };
+  if (path === "/admin/orders") return { section: "orders", screen: "orders" };
+  if ((m = path.match(new RegExp(`^/admin/bookings/${UUID}$`, "i")))) return { section: "bookings", screen: "booking", id: m[1] };
+  if (path === "/admin/bookings") return { section: "bookings", screen: "bookings" };
+  if (path === "/admin/calendar") return { section: "calendar", screen: "calendar" };
+  return { section: "dashboard", screen: "dashboard" };
 }
 
 function Gate({ path }) {
+  const { includeDemo } = useDemo();
   // undefined while the saved session is being read
   const [session, setSession] = useState(undefined);
   const [staff, setStaff] = useState(null);
   const [message, setMessage] = useState("");
   const [newBookings, setNewBookings] = useState(0);
   const [recount, setRecount] = useState(0);
+
+  // the calendar used to live at /admin/bookings?view=calendar
+  useEffect(() => {
+    if (path === "/admin/bookings" && new URLSearchParams(window.location.search).get("view") === "calendar") {
+      const month = new URLSearchParams(window.location.search).get("month");
+      navigate(`/admin/calendar${month ? `?month=${month}` : ""}`, { replace: true });
+    }
+  }, [path]);
 
   useEffect(() => {
     let alive = true;
@@ -95,23 +131,23 @@ function Gate({ path }) {
   useEffect(() => {
     if (!staff) return undefined;
     let alive = true;
-    supabase
-      .from("bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "new")
-      .then(({ count, error }) => alive && !error && setNewBookings(count || 0));
+    let q = supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "new");
+    if (!includeDemo) q = excludeDemo(q, "email");
+    q.then(({ count, error }) => alive && !error && setNewBookings(count || 0));
     return () => {
       alive = false;
     };
-  }, [staff, path, recount]);
+  }, [staff, path, recount, includeDemo]);
 
   if (session === undefined || (session && !staff)) {
     return (
-      <Shell>
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 60 }} role="status">
-          Loading
-        </p>
-      </Shell>
+      <Bare>
+        <div className="ad-login">
+          <p className="ad-muted" role="status">
+            Loading
+          </p>
+        </div>
+      </Bare>
     );
   }
   if (!session) return <Login message={message} setMessage={setMessage} />;
@@ -120,20 +156,16 @@ function Gate({ path }) {
     await supabase.auth.signOut();
     navigate("/admin");
   };
-  const order = path.match(/^\/admin\/orders\/([0-9a-f-]{36})$/i);
-  const booking = path.match(/^\/admin\/bookings\/([0-9a-f-]{36})$/i);
-  const inBookings = path === "/admin/bookings" || !!booking;
+  const r = route(path);
+  const bump = () => setRecount((n) => n + 1);
   return (
-    <Shell user={staff.email} onSignOut={signOut} section={inBookings ? "bookings" : "orders"} newBookings={newBookings}>
-      {booking ? (
-        <BookingDetail id={booking[1]} onChanged={() => setRecount((n) => n + 1)} />
-      ) : inBookings ? (
-        <BookingsList />
-      ) : order ? (
-        <OrderDetail id={order[1]} />
-      ) : (
-        <OrdersList />
-      )}
+    <Shell staff={staff} onSignOut={signOut} section={r.section} newBookings={newBookings}>
+      {r.screen === "order" && <OrderDetail id={r.id} />}
+      {r.screen === "orders" && <OrdersList />}
+      {r.screen === "booking" && <BookingDetail id={r.id} onChanged={bump} />}
+      {r.screen === "bookings" && <BookingsList onChanged={bump} />}
+      {r.screen === "calendar" && <CalendarScreen onChanged={bump} />}
+      {r.screen === "dashboard" && <Dashboard />}
     </Shell>
   );
 }
@@ -153,37 +185,34 @@ function Login({ message, setMessage }) {
   };
 
   return (
-    <Shell>
-      <form onSubmit={submit} style={{ ...ui.card, maxWidth: 420, margin: "40px auto 0" }} aria-labelledby="login-title">
-        <h1 id="login-title" style={ui.h1}>
-          Staff portal
-        </h1>
-        <p style={{ ...ui.muted, margin: "0 0 18px" }}>Sign in to see and update orders.</p>
-        <label style={ui.label} htmlFor="admin-email">
-          Email
-        </label>
-        <input id="admin-email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} style={ui.input} />
-        <label style={{ ...ui.label, marginTop: 14 }} htmlFor="admin-password">
-          Password
-        </label>
-        <input
-          id="admin-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={ui.input}
-        />
-        {message && (
-          <p role="alert" style={ui.error}>
-            {message}
+    <Bare>
+      <div className="ad-login">
+        <form onSubmit={submit} className="ad-card" aria-labelledby="login-title">
+          <img src={logo} alt="Tippin' Cowgirl" />
+          <h1 id="login-title" className="ad-h1" style={{ textAlign: "center", fontSize: 28 }}>
+            Staff portal
+          </h1>
+          <p className="ad-muted" style={{ textAlign: "center", margin: "4px 0 20px" }}>
+            Sign in to see orders and bookings.
           </p>
-        )}
-        <button type="submit" className="tc-btn" disabled={busy} style={{ width: "100%", marginTop: 18 }}>
-          {busy ? "Signing in" : "Sign in"}
-        </button>
-      </form>
-    </Shell>
+          <label className="ad-label" htmlFor="admin-email">
+            Email
+          </label>
+          <input id="admin-email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="ad-input" />
+          <label className="ad-label" style={{ marginTop: 14 }} htmlFor="admin-password">
+            Password
+          </label>
+          <input id="admin-password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="ad-input" />
+          {message && (
+            <p role="alert" className="ad-msg-err">
+              {message}
+            </p>
+          )}
+          <button type="submit" className="ad-btn ad-btn--coral" disabled={busy} style={{ width: "100%", marginTop: 20 }}>
+            {busy ? "Signing in" : "Sign in"}
+          </button>
+        </form>
+      </div>
+    </Bare>
   );
 }

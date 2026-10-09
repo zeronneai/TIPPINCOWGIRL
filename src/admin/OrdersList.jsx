@@ -1,18 +1,31 @@
-import { useEffect, useState } from "react";
-import { STATUSES, money, searchTerm, shortDate } from "./format.js";
+import { useEffect, useRef, useState } from "react";
+import HatStack from "../shop/HatStack.jsx";
+import { STATUSES, excludeDemo, money, searchTerm, shortDate } from "./format.js";
 import { supabase } from "./supabase.js";
-import { StatusBadge, ui } from "./ui.jsx";
+import { Empty, Icon, PageHead, Skeleton, StatusBadge, useDemo } from "./ui.jsx";
 
-// The orders, newest first: filter by status, search by name or email.
-// Row Level Security decides what comes back; this only asks.
+// The orders, newest first: filter by status (with counts), search by name
+// or email, a small drawing of the first hat on each row. Row Level
+// Security decides what comes back; this only asks.
 
 const PAGE = 50;
 
+/** Search and the demo switch, shared by the list and its counts. */
+function scoped(q, { term, includeDemo }) {
+  // PostgREST spells the ilike wildcard "*"; searchTerm() strips it, and
+  // every other separator, from what was typed
+  if (term) q = q.or(`customer_name.ilike.*${term}*,customer_email.ilike.*${term}*`);
+  if (!includeDemo) q = excludeDemo(q, "customer_email");
+  return q;
+}
+
 export default function OrdersList() {
+  const { includeDemo } = useDemo();
   const [status, setStatus] = useState("all");
   const [query, setQuery] = useState("");
   const [term, setTerm] = useState("");
   const [rows, setRows] = useState([]);
+  const [counts, setCounts] = useState(null);
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -23,18 +36,28 @@ export default function OrdersList() {
     return () => clearTimeout(t);
   }, [query]);
 
+  useEffect(() => {
+    let alive = true;
+    scoped(supabase.from("orders").select("status"), { term, includeDemo })
+      .limit(5000)
+      .then(({ data, error: err }) => {
+        if (!alive || err) return;
+        const c = { all: data.length };
+        for (const r of data) c[r.status] = (c[r.status] || 0) + 1;
+        setCounts(c);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [term, includeDemo]);
+
   const load = async (offset = 0) => {
     setLoading(true);
     setError("");
-    let q = supabase
-      .from("orders")
-      .select("id, created_at, customer_name, customer_email, status, total, currency, hat_count")
+    let q = scoped(supabase.from("orders").select("id, created_at, customer_name, customer_email, status, total, currency, hat_count, hats"), { term, includeDemo })
       .order("created_at", { ascending: false })
       .range(offset, offset + PAGE - 1);
     if (status !== "all") q = q.eq("status", status);
-    // PostgREST spells the ilike wildcard "*"; searchTerm() strips it, and
-    // every other separator, from what was typed
-    if (term) q = q.or(`customer_name.ilike.*${term}*,customer_email.ilike.*${term}*`);
     const { data, error: err } = await q;
     setLoading(false);
     if (err) {
@@ -48,87 +71,107 @@ export default function OrdersList() {
   useEffect(() => {
     load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, term]);
+  }, [status, term, includeDemo]);
 
   return (
     <>
-      <h1 style={{ ...ui.h1, margin: "8px 0 14px" }}>Orders</h1>
+      <PageHead title="Orders" sub="Every paid order, newest first." />
 
-      <label htmlFor="order-search" style={ui.label}>
-        Search
-      </label>
-      <input
-        id="order-search"
-        type="search"
-        placeholder="Name or email"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        style={ui.input}
-      />
-
-      <div role="group" aria-label="Filter by status" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "14px 0 6px", margin: "0 -16px", paddingLeft: 16, paddingRight: 16 }}>
-        {[{ id: "all", name: "All" }, ...STATUSES].map((s) => (
-          <button key={s.id} type="button" aria-pressed={status === s.id} data-filter={s.id} onClick={() => setStatus(s.id)} style={ui.chip(status === s.id)}>
-            {s.name}
-          </button>
-        ))}
+      <div className="ad-toolbar">
+        <label className="ad-search" style={{ maxWidth: 520 }}>
+          <span className="ad-sr">Search by name or email</span>
+          <Icon name="search" size={18} />
+          <input id="order-search" type="search" className="ad-input" placeholder="Search name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
+        <div className="ad-chips" role="group" aria-label="Filter by status">
+          {[{ id: "all", name: "All" }, ...STATUSES].map((s) => (
+            <button key={s.id} type="button" className="ad-fchip" aria-pressed={status === s.id} data-filter={s.id} onClick={() => setStatus(s.id)}>
+              {s.color && <span className="ad-dot" style={{ background: s.color }} aria-hidden />}
+              {s.name}
+              <span className="ad-fchip-n" data-count>
+                {counts ? counts[s.id] || 0 : "·"}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (
-        <p role="alert" style={ui.error}>
+        <p role="alert" className="ad-msg-err">
           {error}
         </p>
       )}
 
-      <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "grid", gap: 10 }} aria-busy={loading}>
-        {rows.map((o) => (
-          <li key={o.id}>
-            <a
-              href={`/admin/orders/${o.id}`}
-              data-order={o.id}
-              style={{
-                ...ui.card,
-                boxShadow: "0 3px 0 var(--ink)",
-                padding: "12px 14px",
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: "4px 12px",
-                color: "var(--ink)",
-                textDecoration: "none",
-              }}
-            >
-              <span style={{ fontWeight: 800, fontSize: 15.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {o.customer_name || "No name"}
-              </span>
-              <span style={{ fontWeight: 800, fontSize: 15.5, textAlign: "right" }}>{money(o.total, o.currency)}</span>
-              <span style={{ fontSize: 13, color: "#7a6553", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {o.customer_email || ""}
-              </span>
-              <span style={{ fontSize: 13, color: "#7a6553", textAlign: "right", whiteSpace: "nowrap" }}>
-                {o.hat_count} {o.hat_count === 1 ? "hat" : "hats"}
-              </span>
-              <span>
-                <StatusBadge status={o.status} />
-              </span>
-              <span style={{ fontSize: 13, color: "#7a6553", textAlign: "right" }}>{shortDate(o.created_at)}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+      {loading && !rows.length ? (
+        <div className="ad-rows" role="status" aria-label="Loading">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} h={92} r={16} />
+          ))}
+        </div>
+      ) : (
+        <ul className="ad-rows" aria-busy={loading} style={{ opacity: loading ? 0.6 : 1 }}>
+          {rows.map((o) => (
+            <li key={o.id}>
+              <OrderRow o={o} />
+            </li>
+          ))}
+        </ul>
+      )}
 
       {!loading && !error && rows.length === 0 && (
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 30 }}>{term || status !== "all" ? "No orders match." : "No orders yet."}</p>
-      )}
-      {loading && (
-        <p style={{ ...ui.muted, textAlign: "center", marginTop: 20 }} role="status">
-          Loading
-        </p>
+        <div className="ad-card">
+          {term || status !== "all" ? (
+            <Empty icon="search" title="No orders match">Try another name, or another status.</Empty>
+          ) : (
+            <Empty icon="orders" title="No orders yet">Paid orders arrive here as soon as Stripe confirms them.</Empty>
+          )}
+        </div>
       )}
       {more && !loading && (
-        <button type="button" className="tc-btn tc-btn--ghost" style={{ width: "100%", marginTop: 16 }} onClick={() => load(rows.length)}>
+        <button type="button" className="ad-btn ad-btn--ghost" style={{ width: "100%", marginTop: 16 }} onClick={() => load(rows.length)}>
           Show more
         </button>
       )}
     </>
+  );
+}
+
+function OrderRow({ o }) {
+  const hat = (Array.isArray(o.hats) ? o.hats : []).find((h) => h?.config);
+  return (
+    <a href={`/admin/orders/${o.id}`} data-order={o.id} className="ad-card ad-row ad-row--hat">
+      <span className="ad-row-thumb" aria-hidden>
+        {hat ? <LazyHat config={hat.config} /> : <span style={{ display: "grid", placeItems: "center", height: "100%", color: "#c9b293" }}><Icon name="hat" size={30} /></span>}
+      </span>
+      <span className="ad-row-title">{o.customer_name || "No name"}</span>
+      <span className="ad-row-right" style={{ fontWeight: 900, fontSize: 15.5 }}>
+        {money(o.total, o.currency)}
+      </span>
+      <span className="ad-row-meta">{o.customer_email || ""}</span>
+      <span className="ad-row-right ad-row-meta">
+        {o.hat_count} {o.hat_count === 1 ? "hat" : "hats"}
+      </span>
+      <span>
+        <StatusBadge status={o.status} />
+      </span>
+      <span className="ad-row-right ad-row-meta">{shortDate(o.created_at)}</span>
+    </a>
+  );
+}
+
+/** The hat drawing, mounted only once its row comes near the screen. */
+function LazyHat({ config }) {
+  const ref = useRef(null);
+  const [show, setShow] = useState(typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    if (show || !ref.current) return undefined;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setShow(true), { rootMargin: "200px" });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [show]);
+  return (
+    <span ref={ref} style={{ position: "absolute", inset: 0 }} data-hat-preview>
+      {show && <HatStack config={config} alt="" />}
+    </span>
   );
 }

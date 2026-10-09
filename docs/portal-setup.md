@@ -1,13 +1,51 @@
 # Staff portal setup (orders and bookings)
 
 The portal lives at **/admin** on the site. Staff sign in with an email and
-password. A switch at the top moves between the two sections:
+password. On a computer the sections are in a sidebar on the left; on a
+phone they are in a tab bar at the bottom.
 
-- **Orders**: every paid order (newest first), moved through New, In
+- **Dashboard** (the first screen): new orders, orders in production,
+  this month's revenue (what Stripe charged, cancelled orders left out),
+  new bookings and events in the next 30 days. Under them, **Needs
+  attention** lists bookings still New after 24 hours and orders still New
+  or In production after 7 days, each a link to its page. Charts show
+  revenue and orders per week (last 12 weeks), orders by status, bookings
+  by event month (next 12 months) and bookings by event type; every chart
+  has a **Table** button with the same numbers. **Recent activity** shows
+  who changed what, and when.
+- **Orders**: every paid order (newest first) with a small drawing of the
+  hat, filters by status with counts, and search. Moved through New, In
   production, Ready, Shipped, Delivered or Cancelled.
-- **Bookings**: every booking request from the site's form, as a list or a
-  month calendar, moved through New, Confirmed, Rescheduled (with a proposed
-  date), Declined or Completed. The tab shows how many are still New.
+- **Bookings**: every booking request from the site's form, as a **List**
+  (status filters with counts, search, sort by event date or by date
+  received) or a **Board** with one column per status. On the board, move a
+  card with its menu or drag it to another column. Moved through New,
+  Confirmed, Rescheduled (with a proposed date), Declined or Completed. The
+  section shows how many are still New.
+- **Calendar**: a month at a time, each day showing its bookings by name
+  and event type in their status color; a proposed new date shows as a
+  dashed chip. The strip of twelve months above it shows how many bookings
+  each month has, so the busy months stand out. Click a booking to open it
+  in a side panel without leaving the calendar. On a phone the days show
+  dots, and the bookings of the day you tap are listed underneath.
+- **Settings** is a placeholder for later.
+
+**Contact buttons.** A booking's page and an order's page have big
+**WhatsApp**, **Email** and **Call** buttons, plus ready made messages
+(for bookings: Confirm, Decline politely, Propose a new date; for orders:
+In production, Shipped with the tracking number, Ready for pickup) with the
+customer's first name and details filled in, each with **Copy message**.
+They only open WhatsApp, the mail app or the phone on your own device with
+the text ready; you can change it there before sending. Nothing is ever
+sent by the site. WhatsApp needs a usable number: a 10 digit number is
+taken as a US number (+1), a number with its country code (11 to 15
+digits) is used as it is, anything else hides the WhatsApp button. An
+order's phone is the one on its shipping address.
+
+**Include demo data.** The switch in the top bar decides whether the demo
+orders and bookings (emails ending in `@demo.tippin`) count anywhere: the
+numbers, the charts, the lists, the calendar and the New badge. It starts
+off, and this browser remembers your choice.
 
 Every change is kept in the order's or booking's history.
 

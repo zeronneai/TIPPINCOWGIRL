@@ -1,0 +1,11 @@
+{
+  "name": "Tippin Cowgirl",
+  "short_name": "Tippin Cowgirl",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#e8674a",
+  "background_color": "#faf1e2",
+  "display": "browser"
+}
