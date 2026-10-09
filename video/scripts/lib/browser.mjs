@@ -156,11 +156,11 @@ async function cachedFetch(route) {
   return route.fulfill({ status: hit.status, headers: { ...hit.headers, "access-control-allow-origin": "*" }, body: hit.body });
 }
 
-/** A phone sized page with a pinned clock; Supabase is answered by the demo fake. */
-export async function newPage(browser) {
+/** A phone sized page (2x unless `scale` says otherwise) with a pinned clock; Supabase is answered by the demo fake. */
+export async function newPage(browser, { scale = SCALE } = {}) {
   const ctx = await browser.newContext({
     viewport: VIEW,
-    deviceScaleFactor: SCALE,
+    deviceScaleFactor: scale,
     isMobile: true,
     hasTouch: true,
     locale: "en-US",

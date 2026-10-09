@@ -24,3 +24,5 @@ video/public/music.mp3
 video/public/ad/
 video/public/engraving/
 video/public/ad-music.mp3
+# the guide ad's optional music track
+video/public/guide-music.mp3

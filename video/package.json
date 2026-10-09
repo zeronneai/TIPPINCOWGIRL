@@ -2,11 +2,13 @@
   "name": "tippin-portal-demo-video",
   "private": true,
   "type": "module",
-  "description": "A vertical motion graphics demo of the Tippin' Cowgirl site and staff portal, made with Remotion. Separate from the app: nothing here ships with the site.",
+  "description": "Vertical videos for Tippin' Cowgirl made with Remotion: the staff portal demo, the hat builder ad and the guided journey ad. Separate from the app: nothing here ships with the site.",
   "scripts": {
     "shots": "node scripts/capture.mjs",
     "shots:ad": "node scripts/capture-ad.mjs",
+    "shots:guide": "node scripts/capture-guide.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
+    "sfx": "node scripts/synth-sfx.mjs",
     "prepare:ad": "node scripts/prepare-ad.mjs",
     "studio": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion studio src/index.ts",
     "render": "node scripts/fetch-fonts.mjs && remotion render src/index.ts TippinPortalDemo out/tippin-portal-demo.mp4",
@@ -15,10 +17,15 @@
     "render:ad45": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion render src/index.ts TippinAd45 out/tippin-ad-30s-4x5.mp4",
     "textures": "remotion still src/index.ts AdTextureLeather public/textures/leather.jpg --image-format=jpeg --jpeg-quality=88 && remotion still src/index.ts AdTextureGrain public/textures/grain.png --image-format=png",
     "typecheck": "tsc -p tsconfig.json",
-    "stills": "node scripts/stills.mjs"
+    "stills": "node scripts/stills.mjs",
+    "render:guide-a": "node scripts/render-guide.mjs a",
+    "render:guide-b": "node scripts/render-guide.mjs b",
+    "render:guide-c": "node scripts/render-guide.mjs c",
+    "render:guide15": "node scripts/render-guide.mjs 15"
   },
   "dependencies": {
     "@remotion/cli": "4.0.534",
+    "@remotion/motion-blur": "^4.0.534",
     "@remotion/transitions": "4.0.534",
     "react": "19.1.1",
     "react-dom": "19.1.1",

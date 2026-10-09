@@ -2,6 +2,8 @@ import React from "react";
 import { Composition, staticFile } from "remotion";
 import { AD_CUTS, type AdProps, TippinAd, adFrames } from "./ad/AdVideo";
 import { GrainTexture, LeatherTexture } from "./ad/textures";
+import { GuideAd, type GuideProps, LOGO_FALLBACK, LOGO_ICON } from "./guide/GuideAd";
+import { totalFrames } from "./guide/timeline";
 import { FPS, H, W } from "./theme";
 import { TOTAL_FRAMES, TippinPortalDemo, type VideoProps } from "./Video";
 
@@ -14,6 +16,10 @@ async function isThere(file: string): Promise<boolean> {
     return false;
   }
 }
+
+const withGuideAssets = async ({ props }: { props: GuideProps }) => ({
+  props: { ...props, hasMusic: await isThere("guide-music.mp3"), logo: (await isThere(LOGO_ICON)) ? LOGO_ICON : LOGO_FALLBACK },
+});
 
 const withAdMusic = async ({ props }: { props: AdProps }) => ({ props: { ...props, hasMusic: await isThere("ad-music.mp3") } });
 
@@ -35,6 +41,21 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="TippinAd30" component={TippinAd} width={1080} height={1920} fps={FPS} durationInFrames={adFrames(AD_CUTS.full)} defaultProps={{ cut: "full", hasMusic: false } satisfies AdProps} calculateMetadata={withAdMusic} />
     <Composition id="TippinAd15" component={TippinAd} width={1080} height={1920} fps={FPS} durationInFrames={adFrames(AD_CUTS.short)} defaultProps={{ cut: "short", hasMusic: false } satisfies AdProps} calculateMetadata={withAdMusic} />
     <Composition id="TippinAd45" component={TippinAd} width={1080} height={1350} fps={FPS} durationInFrames={adFrames(AD_CUTS.full)} defaultProps={{ cut: "full", hasMusic: false } satisfies AdProps} calculateMetadata={withAdMusic} />
+
+    {/* the guided journey ad (for customers): three 30 s hooks for A/B tests, and a 15 s cut */}
+    {(["a", "b", "c", "15"] as const).map((cut) => (
+      <Composition
+        key={cut}
+        id={`ad-guide-${cut}`}
+        component={GuideAd}
+        width={1080}
+        height={1920}
+        fps={FPS}
+        durationInFrames={totalFrames(cut)}
+        defaultProps={{ cut, hasMusic: false, logo: LOGO_FALLBACK } satisfies GuideProps}
+        calculateMetadata={withGuideAssets}
+      />
+    ))}
 
     {/* the ad's textures, rendered once by `npm run textures` */}
     <Composition id="AdTextureLeather" component={LeatherTexture} width={1080} height={1920} fps={FPS} durationInFrames={1} />
