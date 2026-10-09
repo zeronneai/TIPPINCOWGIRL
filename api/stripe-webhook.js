@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // POST /api/stripe-webhook
 //
-// Stripe tells us a checkout was paid and two emails go out from here:
+// Stripe tells us a checkout was paid. The order is stored for the staff
+// portal (api/_lib/orders.js), then two emails go out from here:
 //
 //   1. the work order to Deborah (orderEmail.js), the full build of every
 //      hat. Stripe's own receipt only says how much was paid, which is
@@ -22,12 +23,17 @@
 // refuses loudly when it is handed an already parsed object rather than
 // quietly computing a wrong signature.
 //
-// NO DEDUPLICATION. Stripe retries a delivery it considers failed, and it
-// can send the same event more than once. With no database to record
-// processed event ids, a retry means Deborah gets the same order email
-// twice. At this volume a duplicate email is a minor annoyance and a missed
-// order is not, so we take that trade. If a database ever lands here, store
-// event.id on arrival and drop events already seen.
+// THE ORDER ROW IS IDEMPOTENT, THE EMAILS ARE NOT. Stripe retries a delivery
+// it considers failed, and it can send the same event more than once. The
+// order is stored with ON CONFLICT DO NOTHING on stripe_session_id, so a
+// repeat never duplicates it or resets what the staff changed. The emails
+// are not deduplicated: a repeat delivery means Deborah gets the same order
+// email twice, a minor annoyance next to a missed order.
+//
+// The database write runs first, in its own try/catch, and its failure is
+// logged and never stops the emails (the email is still the order Deborah
+// cannot lose). To recover a missed row, resend that event from the Stripe
+// dashboard (Developers > Events): the write is idempotent.
 //
 // ALWAYS 200 ONCE THE SIGNATURE CHECKS OUT, even if the email fails. A non
 // 2xx makes Stripe retry, and retries with a broken mail provider means a
@@ -49,12 +55,17 @@
 //   PUBLIC_BASE_URL           optional. Absolute site origin used to build
 //                             the "See this hat" links. Without it the links
 //                             are left out of the email.
+//   SUPABASE_URL              optional. With the key below, every paid order
+//   SUPABASE_SERVICE_ROLE_KEY is stored for the staff portal (/admin).
+//                             Without them the orders are only emailed. The
+//                             service role key is server only: never VITE_.
 // ---------------------------------------------------------------------------
 
 import { Resend } from "resend";
 import Stripe from "stripe";
 import { buildCustomerEmail } from "../src/shop/customerEmail.js";
 import { buildOrderEmail } from "../src/shop/orderEmail.js";
+import { saveOrder } from "./_lib/orders.js";
 
 // Vercel parses JSON bodies by default. Stripe signatures do not survive
 // that, so it stays off for this function.
@@ -149,6 +160,20 @@ export default async function handler(req, res) {
   if (session.payment_status !== "paid")
     return res.status(200).json({ received: true, ignored: `payment_status ${session.payment_status}` });
 
+  // ---- 0. the order, into the staff portal's database. --------------------
+  // Its own try/catch: nothing here may stop the emails below.
+  let stored = false;
+  try {
+    const saved = await saveOrder(session);
+    if (!saved.saved) console.warn(`[webhook] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing, order ${session.id} was not stored.`);
+    else {
+      stored = true;
+      if (saved.problems?.length) console.warn(`[webhook] order ${session.id} stored with unreadable metadata:`, saved.problems.join(" | "));
+    }
+  } catch (err) {
+    console.error(`[webhook] could not store order ${session.id}:`, err?.message || err);
+  }
+
   try {
     const resendKey = process.env.RESEND_API_KEY;
     const to = process.env.ORDER_NOTIFICATION_EMAIL;
@@ -156,7 +181,7 @@ export default async function handler(req, res) {
       console.error(
         `[webhook] cannot send the order email for ${session.id}: RESEND_API_KEY or ORDER_NOTIFICATION_EMAIL is missing.`
       );
-      return res.status(200).json({ received: true, emailed: false });
+      return res.status(200).json({ received: true, stored, emailed: false });
     }
 
     const resend = new Resend(resendKey);
@@ -205,10 +230,10 @@ export default async function handler(req, res) {
       console.error(`[webhook] customer confirmation failed for ${session.id}:`, err);
     }
 
-    return res.status(200).json({ received: true, emailed, confirmed });
+    return res.status(200).json({ received: true, stored, emailed, confirmed });
   } catch (err) {
     // Swallowed on purpose: see the ALWAYS 200 note at the top.
     console.error(`[webhook] order notification failed for ${session.id}:`, err);
-    return res.status(200).json({ received: true, emailed: false });
+    return res.status(200).json({ received: true, stored, emailed: false });
   }
 }

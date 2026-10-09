@@ -161,6 +161,24 @@ Stripe retries a delivery, the same order email arrives twice. That is the
 deliberate trade for having no database: a duplicate email is cheaper than a
 lost order.
 
+## Staff portal (/admin)
+
+Phase 1: orders. Every paid order is stored in Supabase by the Stripe
+webhook (idempotent on the Stripe session id), and staff see and update
+them at `/admin`: status, tracking number, internal notes, with a history
+of every change. Setup, the four environment variables and the demo data
+are in [docs/portal-setup.md](docs/portal-setup.md); the tables and the
+security rules are in `supabase/schema.sql`.
+
+- `src/shop/orderRecord.js`: a paid session as an `orders` row (server safe).
+- `api/_lib/orders.js`: the service role client and the idempotent save
+  (server only; the underscore keeps it from being an endpoint).
+- `src/admin/`: the portal, its own lazy chunk; the browser only ever holds
+  the anon key, and supabase-js ships in its own chunk the public site
+  never loads.
+- `scripts/seed-demo-orders.js`: `npm run seed:demo` and
+  `npm run seed:demo:delete` (refuses to run with NODE_ENV=production).
+
 ## Structure
 
 - `src/App.jsx` — page shell + all static sections (nav, marquee, hero,

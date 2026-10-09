@@ -1576,6 +1576,12 @@ function Footer({ onBook }) {
 // /giveaway; the old /#/giveaway links are rewritten to it by router.js.
 const Giveaway = lazy(() => import("./components/Giveaway.jsx"));
 
+// The staff portal (/admin and /admin/orders/<id>), the same way: its own
+// chunk, no site chrome, and no analytics, so staff visits never count as
+// traffic. It is noindex (vercel.json, robots.txt).
+const AdminApp = lazy(() => import("./admin/AdminApp.jsx"));
+const isAdminPath = (p) => p === "/admin" || p.startsWith("/admin/");
+
 export default function App() {
   const path = usePath();
   // one handler for the whole app turns internal link clicks into pushState
@@ -1583,10 +1589,17 @@ export default function App() {
   useEffect(() => scrollToInitialHash(), []);
   useCanonical(path);
 
+  if (isAdminPath(path))
+    return (
+      <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--cream)" }} />}>
+        <AdminApp path={path} />
+      </Suspense>
+    );
+
   return (
     <>
-      {/* mounted once for every page, the giveaway included; it follows
-          pushState navigation on its own. See src/analytics.js. */}
+      {/* mounted once for every public page, the giveaway included; it
+          follows pushState navigation on its own. See src/analytics.js. */}
       <Analytics beforeSend={scrubEvent} />
       {path === "/giveaway" ? (
         <Suspense fallback={<div className="gw-page" />}>

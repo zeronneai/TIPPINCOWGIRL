@@ -15,6 +15,11 @@ export default defineConfig({
             // react-reconciler/zustand) is only reachable from the lazy 3D
             // import, so it belongs in the deferred chunk.
             if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "vendor";
+            // Analytics runs on every public page, so it ships with React.
+            if (/node_modules\/@vercel\/analytics\//.test(id)) return "vendor";
+            // The staff portal's client and its helpers, only reachable from
+            // the lazy /admin chunk, so public visitors never download them.
+            if (/node_modules\/(@supabase|tslib|iceberg-js)\//.test(id)) return "supabase";
             return "three";
           }
           return undefined;
