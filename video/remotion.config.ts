@@ -1,0 +1,12 @@
+// Remotion's settings for `npm run studio` and `npm run render`.
+// https://www.remotion.dev/docs/config
+import { Config } from "@remotion/cli/config";
+
+Config.setVideoImageFormat("jpeg");
+Config.setJpegQuality(92);
+Config.setOverwriteOutput(true);
+Config.setCodec("h264");
+Config.setCrf(20);
+// Remotion downloads its own headless Chrome the first time it renders.
+// To use a browser you already have instead, set REMOTION_BROWSER_EXECUTABLE.
+if (process.env.REMOTION_BROWSER_EXECUTABLE) Config.setBrowserExecutable(process.env.REMOTION_BROWSER_EXECUTABLE);

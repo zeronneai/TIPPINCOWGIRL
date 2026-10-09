@@ -1,0 +1,650 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "scale": 2
+  },
+  "shots": {
+    "site-hero": {
+      "file": "shots/site-hero.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "title": [
+          20,
+          285.2,
+          350,
+          83.6
+        ]
+      }
+    },
+    "builder-wool": {
+      "file": "shots/builder-wool.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          17.9,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "preview-wool": {
+      "file": "shots/preview-wool.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "builder-suede": {
+      "file": "shots/builder-suede.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          108.5,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "preview-suede": {
+      "file": "shots/preview-suede.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "builder-straw": {
+      "file": "shots/builder-straw.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          199,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "preview-straw": {
+      "file": "shots/preview-straw.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "builder-accessories": {
+      "file": "shots/builder-accessories.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          108.5,
+          474.7,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "preview-accessories": {
+      "file": "shots/preview-accessories.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "builder-engraving": {
+      "file": "shots/builder-engraving.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ]
+      }
+    },
+    "preview-engraving": {
+      "file": "shots/preview-engraving.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "cart": {
+      "file": "shots/cart.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "checkout": [
+          26,
+          359.4,
+          340,
+          47
+        ]
+      }
+    },
+    "order-confirmed": {
+      "file": "shots/order-confirmed.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {}
+    },
+    "booking-form": {
+      "file": "shots/booking-form.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "submit": [
+          26,
+          600,
+          340,
+          47
+        ]
+      }
+    },
+    "booking-sent": {
+      "file": "shots/booking-sent.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {}
+    },
+    "signin": {
+      "file": "shots/signin.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "form": [
+          16,
+          209.9,
+          358,
+          424.3
+        ],
+        "submit": [
+          39,
+          565.1,
+          312,
+          42
+        ]
+      }
+    },
+    "dashboard-top": {
+      "file": "shots/dashboard-top.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "toggle": [
+          234,
+          13.9,
+          94,
+          30.1
+        ],
+        "kpis": [
+          16,
+          171.5,
+          358,
+          402.4
+        ],
+        "kpiOrders": [
+          16,
+          171.5,
+          173,
+          126.1
+        ],
+        "kpiRevenue": [
+          16,
+          309.6,
+          173,
+          126.1
+        ],
+        "kpiBookings": [
+          201,
+          309.6,
+          173,
+          126.1
+        ]
+      }
+    },
+    "dashboard-charts": {
+      "file": "shots/dashboard-charts.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "weekly": [
+          16,
+          80.4,
+          358,
+          560
+        ],
+        "months": [
+          16,
+          656.4,
+          358,
+          293.4
+        ]
+      }
+    },
+    "dashboard-donut": {
+      "file": "shots/dashboard-donut.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "donut": [
+          16,
+          79.8,
+          358,
+          413.7
+        ]
+      }
+    },
+    "account": {
+      "file": "shots/account.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "menu": [
+          104,
+          55,
+          270,
+          124.4
+        ],
+        "toggle": [
+          234,
+          13.9,
+          94,
+          30.1
+        ]
+      }
+    },
+    "orders": {
+      "file": "shots/orders.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "chips": [
+          16,
+          228.7,
+          358,
+          114.5
+        ],
+        "first": [
+          16,
+          359.2,
+          358,
+          100.4
+        ]
+      }
+    },
+    "order-detail": {
+      "file": "shots/order-detail.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "hat": [
+          35,
+          262.7,
+          320,
+          320
+        ],
+        "title": [
+          16,
+          107.3,
+          247.4,
+          30.2
+        ]
+      }
+    },
+    "order-status": {
+      "file": "shots/order-status.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "card": [
+          16,
+          79.3,
+          358,
+          363.6
+        ],
+        "tracking": [
+          35,
+          238.9,
+          320,
+          45.2
+        ],
+        "save": [
+          35,
+          381.9,
+          320,
+          42
+        ]
+      }
+    },
+    "order-history": {
+      "file": "shots/order-history.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "timeline": [
+          35,
+          525,
+          320,
+          274.5
+        ]
+      }
+    },
+    "bookings-list": {
+      "file": "shots/bookings-list.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "chips": [
+          16,
+          332.2,
+          358,
+          114.5
+        ],
+        "first": [
+          16,
+          462.8,
+          358,
+          100.4
+        ]
+      }
+    },
+    "bookings-board": {
+      "file": "shots/bookings-board.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "column": [
+          16,
+          336.2,
+          250,
+          444.1
+        ]
+      }
+    },
+    "calendar": {
+      "file": "shots/calendar.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "strip": [
+          16,
+          241.8,
+          358,
+          145.7
+        ],
+        "grid": [
+          16,
+          401.5,
+          358,
+          323.9
+        ],
+        "day": [
+          172.4,
+          608.4,
+          45.1,
+          52
+        ]
+      }
+    },
+    "calendar-agenda": {
+      "file": "shots/calendar-agenda.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "day": [
+          172.4,
+          439.4,
+          45.1,
+          52
+        ],
+        "agenda": [
+          16,
+          650.8,
+          358,
+          89.3
+        ]
+      }
+    },
+    "booking-detail": {
+      "file": "shots/booking-detail.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "whatsapp": [
+          35,
+          272.3,
+          100,
+          74
+        ],
+        "email": [
+          145,
+          272.3,
+          100,
+          74
+        ],
+        "call": [
+          255,
+          272.3,
+          100,
+          74
+        ],
+        "buttons": [
+          35,
+          272.3,
+          320,
+          74
+        ]
+      }
+    },
+    "booking-templates": {
+      "file": "shots/booking-templates.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "confirm": [
+          35,
+          87.9,
+          320,
+          276.5
+        ],
+        "copy": [
+          48,
+          277.5,
+          146,
+          34
+        ],
+        "whatsapp": [
+          200,
+          277.5,
+          117.6,
+          34
+        ]
+      }
+    }
+  },
+  "data": {
+    "shippedOrder": {
+      "name": "Ximena Castillo",
+      "tracking": "9400 1112 0206 5555 0123 45"
+    },
+    "booking": {
+      "name": "Jasmine Ortega",
+      "eventType": "Bachelorette",
+      "confirmText": "Hi Jasmine! Thank you for booking Tippin' Cowgirl. Your bachelorette hat bar on Monday, November 2 is confirmed. We will be in touch soon with the details. We can't wait!\n\nTippin' Cowgirl",
+      "whatsappHref": "https://wa.me/19155550141?text=Hi%20Jasmine!%20This%20is%20Tippin'%20Cowgirl%20about%20your%20bachelorette%20request."
+    },
+    "kpis": {
+      "newOrders": 1,
+      "inProduction": 1,
+      "revenueMonth": 113900,
+      "ordersMonth": 4,
+      "monthLabel": "October",
+      "newBookings": 3,
+      "upcomingEvents": 3,
+      "upcomingConfirmed": 1
+    },
+    "weekly": [
+      {
+        "label": "Jul 20",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Jul 27",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Aug 3",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Aug 10",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Aug 17",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Aug 24",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Aug 31",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Sep 7",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Sep 14",
+        "revenue": 0,
+        "orders": 0
+      },
+      {
+        "label": "Sep 21",
+        "revenue": 22700,
+        "orders": 1
+      },
+      {
+        "label": "Sep 28",
+        "revenue": 21700,
+        "orders": 1
+      },
+      {
+        "label": "Oct 5",
+        "revenue": 92200,
+        "orders": 3
+      }
+    ],
+    "months": [
+      {
+        "key": "2026-10",
+        "label": "Oct",
+        "value": 2
+      },
+      {
+        "key": "2026-11",
+        "label": "Nov",
+        "value": 2
+      },
+      {
+        "key": "2026-12",
+        "label": "Dec",
+        "value": 1
+      },
+      {
+        "key": "2027-01",
+        "label": "Jan",
+        "value": 0
+      },
+      {
+        "key": "2027-02",
+        "label": "Feb",
+        "value": 1
+      },
+      {
+        "key": "2027-03",
+        "label": "Mar",
+        "value": 1
+      },
+      {
+        "key": "2027-04",
+        "label": "Apr",
+        "value": 0
+      },
+      {
+        "key": "2027-05",
+        "label": "May",
+        "value": 0
+      },
+      {
+        "key": "2027-06",
+        "label": "Jun",
+        "value": 0
+      },
+      {
+        "key": "2027-07",
+        "label": "Jul",
+        "value": 0
+      },
+      {
+        "key": "2027-08",
+        "label": "Aug",
+        "value": 0
+      },
+      {
+        "key": "2027-09",
+        "label": "Sep",
+        "value": 0
+      }
+    ],
+    "firstOrder": {
+      "name": "Valeria Montoya",
+      "total": 21200,
+      "hats": 1
+    },
+    "counts": {
+      "orders": 6,
+      "bookings": 9
+    }
+  },
+  "demoNow": "2026-10-09T15:30:00.000Z"
+}

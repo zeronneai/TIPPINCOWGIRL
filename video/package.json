@@ -1,0 +1,25 @@
+{
+  "name": "tippin-portal-demo-video",
+  "private": true,
+  "type": "module",
+  "description": "A vertical motion graphics demo of the Tippin' Cowgirl site and staff portal, made with Remotion. Separate from the app: nothing here ships with the site.",
+  "scripts": {
+    "shots": "node scripts/capture.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs",
+    "studio": "node scripts/fetch-fonts.mjs && remotion studio src/index.ts",
+    "render": "node scripts/fetch-fonts.mjs && remotion render src/index.ts TippinPortalDemo out/tippin-portal-demo.mp4",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "@remotion/transitions": "4.0.534",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "playwright": "1.56.1",
+    "typescript": "5.6.3"
+  }
+}

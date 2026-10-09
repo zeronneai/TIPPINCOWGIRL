@@ -11,3 +11,12 @@ dist
 
 # Customer data (CSV exports of the booking Sheet, and the like). Never commit.
 data/
+
+# Demo video (video/): its own node_modules, the app build it screenshots,
+# downloaded fonts, an optional music track and the rendered MP4.
+video/node_modules/
+video/out/
+video/.app-build/
+video/public/fonts/
+video/public/music.mp3
+video/.stills.mjs
