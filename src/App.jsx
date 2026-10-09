@@ -5,6 +5,7 @@ import { CONTACT_EMAIL, STORE_HOURS } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
+import { mirrorBooking } from "./booking/mirror.js";
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
@@ -287,6 +288,19 @@ function BookingDrawer({ open, onClose, returnRef }) {
       panelRef.current?.querySelector(`#bk-${firstBad === "eventType" ? "type" : firstBad}`)?.focus();
       return;
     }
+
+    // The staff portal's copy (api/booking.js), fire and forget: it is never
+    // awaited and cannot change anything below. The Apps Script request that
+    // follows is the real send, exactly as before.
+    mirrorBooking({
+      name: values.name.trim(),
+      email: values.email.trim(),
+      phone: values.phone.trim(),
+      eventType: values.eventType,
+      eventDate: values.eventDate,
+      notes: values.notes.trim(),
+      company: values.company,
+    });
 
     if (!BOOKING_ENDPOINT_READY) {
       console.error(

@@ -3,13 +3,17 @@ import { navigate } from "../router.js";
 import { supabase } from "./supabase.js";
 import OrdersList from "./OrdersList.jsx";
 import OrderDetail from "./OrderDetail.jsx";
+import BookingsList from "./BookingsList.jsx";
+import BookingDetail from "./BookingDetail.jsx";
 import { Shell, ui } from "./ui.jsx";
 
 // ---------------------------------------------------------------------------
-// The staff portal, at /admin. Phase 1: orders.
+// The staff portal, at /admin. Phase 1: orders. Phase 2: booking requests.
 //
 //   /admin                  the orders, newest first
 //   /admin/orders/<id>      one order: hats, customer, status, notes
+//   /admin/bookings         booking requests: a list, or ?view=calendar
+//   /admin/bookings/<id>    one request: contact, event, status, notes
 //
 // Sign in is Supabase Auth with email and password. A person who signs in
 // but is not in the `staff` table is signed straight back out with the same
@@ -47,6 +51,8 @@ function Gate({ path }) {
   const [session, setSession] = useState(undefined);
   const [staff, setStaff] = useState(null);
   const [message, setMessage] = useState("");
+  const [newBookings, setNewBookings] = useState(0);
+  const [recount, setRecount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -85,6 +91,20 @@ function Gate({ path }) {
     };
   }, [session]);
 
+  // The "new" bookings badge, refreshed on every move around the portal.
+  useEffect(() => {
+    if (!staff) return undefined;
+    let alive = true;
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new")
+      .then(({ count, error }) => alive && !error && setNewBookings(count || 0));
+    return () => {
+      alive = false;
+    };
+  }, [staff, path, recount]);
+
   if (session === undefined || (session && !staff)) {
     return (
       <Shell>
@@ -100,10 +120,20 @@ function Gate({ path }) {
     await supabase.auth.signOut();
     navigate("/admin");
   };
-  const detail = path.match(/^\/admin\/orders\/([0-9a-f-]{36})$/i);
+  const order = path.match(/^\/admin\/orders\/([0-9a-f-]{36})$/i);
+  const booking = path.match(/^\/admin\/bookings\/([0-9a-f-]{36})$/i);
+  const inBookings = path === "/admin/bookings" || !!booking;
   return (
-    <Shell user={staff.email} onSignOut={signOut}>
-      {detail ? <OrderDetail id={detail[1]} /> : <OrdersList />}
+    <Shell user={staff.email} onSignOut={signOut} section={inBookings ? "bookings" : "orders"} newBookings={newBookings}>
+      {booking ? (
+        <BookingDetail id={booking[1]} onChanged={() => setRecount((n) => n + 1)} />
+      ) : inBookings ? (
+        <BookingsList />
+      ) : order ? (
+        <OrderDetail id={order[1]} />
+      ) : (
+        <OrdersList />
+      )}
     </Shell>
   );
 }

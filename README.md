@@ -179,6 +179,22 @@ security rules are in `supabase/schema.sql`.
 - `scripts/seed-demo-orders.js`: `npm run seed:demo` and
   `npm run seed:demo:delete` (refuses to run with NODE_ENV=production).
 
+Phase 2: booking requests. The "Book the bar" form still posts to the
+Google Apps Script (the Sheet) exactly as before; it also fires an
+unawaited copy to `/api/booking`, which validates it and stores it in
+`bookings` with the service role key. A failed copy never changes what the
+visitor sees. Staff see them at `/admin/bookings` (list, month calendar,
+status, proposed date, internal notes). No customer email is sent from the
+portal yet.
+
+- `api/booking.js` and `api/_lib/bookings.js`: the endpoint, validation,
+  honeypot, and the save (answers 200 even when the database is down).
+- `src/booking/mirror.js`: the fire and forget copy from the form.
+- `scripts/import-bookings.js`: `npm run import:bookings` brings in the
+  Sheet's CSV export from `data/` (gitignored), `--dry-run`, `--tz=`.
+- `scripts/seed-demo-bookings.js`: `npm run seed:demo-bookings` and
+  `npm run seed:demo-bookings:delete`.
+
 ## Structure
 
 - `src/App.jsx` — page shell + all static sections (nav, marquee, hero,

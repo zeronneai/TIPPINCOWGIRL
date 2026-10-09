@@ -1,4 +1,4 @@
-import { statusOf } from "./format.js";
+import { bookingStatusOf, statusOf } from "./format.js";
 
 // The portal's frame and shared styles: the site's cream, ink and coral,
 // Alfa Slab One for headings and Satoshi for everything else. Built for a
@@ -51,8 +51,8 @@ export const ui = {
   link: { color: "var(--coral-deep)", fontWeight: 800, textDecoration: "none" },
 };
 
-export function StatusBadge({ status }) {
-  const s = statusOf(status);
+export function StatusBadge({ status, kind = "order" }) {
+  const s = kind === "booking" ? bookingStatusOf(status) : statusOf(status);
   return (
     <span
       data-status={s.id}
@@ -73,7 +73,51 @@ export function StatusBadge({ status }) {
   );
 }
 
-export function Shell({ user, onSignOut, children }) {
+/** Orders / Bookings, under the header. `newBookings` shows as a badge. */
+function Sections({ section, newBookings }) {
+  const tab = (href, label, on, badge) => (
+    <a
+      href={href}
+      aria-current={on ? "page" : undefined}
+      data-section={label.toLowerCase()}
+      style={{
+        flex: 1,
+        textAlign: "center",
+        padding: "10px 8px",
+        fontWeight: 800,
+        fontSize: 14.5,
+        textDecoration: "none",
+        color: on ? "var(--ink)" : "#7a6553",
+        borderBottom: on ? "3px solid var(--coral)" : "3px solid transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+      }}
+    >
+      {label}
+      {badge > 0 && (
+        <span
+          data-testid="new-bookings-badge"
+          aria-label={`${badge} new`}
+          style={{ background: "var(--coral)", color: "#fff", borderRadius: 999, fontSize: 11.5, fontWeight: 800, padding: "1px 7px", minWidth: 20 }}
+        >
+          {badge}
+        </span>
+      )}
+    </a>
+  );
+  return (
+    <nav aria-label="Portal sections" style={{ background: "#fffaf0", borderBottom: "1.5px solid rgba(43,26,16,.15)" }}>
+      <div style={{ maxWidth: 880, margin: "0 auto", display: "flex", padding: "0 8px" }}>
+        {tab("/admin", "Orders", section === "orders", 0)}
+        {tab("/admin/bookings", "Bookings", section === "bookings", newBookings)}
+      </div>
+    </nav>
+  );
+}
+
+export function Shell({ user, onSignOut, section, newBookings = 0, children }) {
   return (
     <div style={ui.page}>
       <header style={{ background: "var(--ink)", color: "#faf1e2" }}>
@@ -95,6 +139,7 @@ export function Shell({ user, onSignOut, children }) {
           )}
         </div>
       </header>
+      {user && section && <Sections section={section} newBookings={newBookings} />}
       <main style={ui.wrap}>{children}</main>
     </div>
   );

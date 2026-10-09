@@ -10,6 +10,24 @@ export const STATUSES = [
 ];
 export const statusOf = (id) => STATUSES.find((s) => s.id === id) || { id, name: id || "Unknown", color: "#9a8f86", text: "#fff" };
 
+// Booking requests have their own statuses (supabase/schema.sql, phase 2).
+export const BOOKING_STATUSES = [
+  { id: "new", name: "New", color: "#e8674a", text: "#fff" },
+  { id: "confirmed", name: "Confirmed", color: "#3fa89a", text: "#fff" },
+  { id: "rescheduled", name: "Rescheduled", color: "#e0a526", text: "#2b1a10" },
+  { id: "declined", name: "Declined", color: "#9a8f86", text: "#fff" },
+  { id: "completed", name: "Completed", color: "#3d5a80", text: "#fff" },
+];
+export const bookingStatusOf = (id) =>
+  BOOKING_STATUSES.find((s) => s.id === id) || { id, name: id || "Unknown", color: "#9a8f86", text: "#fff" };
+
+/** A calendar date ("2026-11-14", no time zone) as "Sat, Nov 14, 2026". */
+export const eventDay = (ymd, opts = { weekday: "short", month: "short", day: "numeric", year: "numeric" }) => {
+  if (!ymd) return "";
+  const [y, m, d] = String(ymd).split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d)));
+};
+
 /** Cents to "$245.00", the way an invoice reads. */
 export const money = (cents, currency = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: String(currency || "usd").toUpperCase(), minimumFractionDigits: 2 }).format(

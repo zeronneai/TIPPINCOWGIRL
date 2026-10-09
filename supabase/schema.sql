@@ -202,3 +202,171 @@ revoke all on function public.staff_set_order_status(uuid, text, text, text) fro
 grant execute on function public.staff_set_order_status(uuid, text, text, text) to authenticated;
 revoke all on function public.is_staff() from public, anon;
 grant execute on function public.is_staff() to authenticated;
+
+-- ===========================================================================
+-- Phase 2: booking requests (the "Book the bar" form).
+--
+-- Safe to run on top of everything above, and again later. Same rules as
+-- orders: the website's server inserts with the SERVICE ROLE key (and the
+-- import script, from a computer); staff read, and change only status,
+-- proposed_date and internal_notes; nobody inserts or deletes from the
+-- browser; every status change lands in booking_events.
+-- ===========================================================================
+
+create table if not exists public.bookings (
+  id             uuid primary key default gen_random_uuid(),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  name           text not null,
+  email          text,
+  phone          text,
+  event_type     text,
+  event_date     date,
+  notes          text,
+  status         text not null default 'new'
+                 check (status in ('new', 'confirmed', 'declined', 'rescheduled', 'completed')),
+  -- the new date offered when rescheduling
+  proposed_date  date,
+  internal_notes text,
+  source         text not null default 'website'
+);
+
+create index if not exists bookings_created_at_idx on public.bookings (created_at desc);
+create index if not exists bookings_status_idx on public.bookings (status);
+create index if not exists bookings_event_date_idx on public.bookings (event_date);
+create index if not exists bookings_email_idx on public.bookings (lower(email));
+
+create table if not exists public.booking_events (
+  id          bigint generated always as identity primary key,
+  booking_id  uuid not null references public.bookings (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  actor_email text,
+  from_status text,
+  to_status   text,
+  note        text
+);
+
+create index if not exists booking_events_booking_idx on public.booking_events (booking_id, created_at);
+
+-- ---- Row Level Security -----------------------------------------------------------
+
+alter table public.bookings enable row level security;
+alter table public.booking_events enable row level security;
+
+drop policy if exists "staff read bookings" on public.bookings;
+create policy "staff read bookings" on public.bookings
+  for select to authenticated using (public.is_staff());
+
+drop policy if exists "staff update bookings" on public.bookings;
+create policy "staff update bookings" on public.bookings
+  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+
+drop policy if exists "staff read booking events" on public.booking_events;
+create policy "staff read booking events" on public.booking_events
+  for select to authenticated using (public.is_staff());
+
+-- No insert or delete policy: RLS refuses both for every browser session.
+-- The grants say it again and narrow staff updates to three columns.
+revoke all on public.bookings, public.booking_events from anon;
+revoke insert, update, delete, truncate on public.bookings from authenticated;
+revoke insert, update, delete, truncate on public.booking_events from authenticated;
+grant select on public.bookings, public.booking_events to authenticated;
+grant update (status, proposed_date, internal_notes) on public.bookings to authenticated;
+
+-- ---- updated_at and history ------------------------------------------------------------
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_before_update on public.bookings;
+create trigger bookings_before_update
+  before update on public.bookings
+  for each row execute function public.set_updated_at();
+
+create or replace function public.bookings_log_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status is distinct from old.status then
+    insert into public.booking_events (booking_id, actor_email, from_status, to_status, note)
+    values (
+      new.id,
+      coalesce(auth.jwt() ->> 'email', 'system'),
+      old.status,
+      new.status,
+      nullif(current_setting('app.status_note', true), '')
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_log_status on public.bookings;
+create trigger bookings_log_status
+  after update of status on public.bookings
+  for each row execute function public.bookings_log_status();
+
+-- ---- the one way the portal changes a booking's status --------------------------------
+-- Staff only. Rescheduled needs a proposed date (passed here or already on
+-- the booking); without a note, the history row records that date.
+create or replace function public.staff_set_booking_status(
+  p_booking_id uuid,
+  p_status text,
+  p_proposed_date date default null,
+  p_note text default null
+)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result public.bookings;
+  current_proposed date;
+begin
+  if not public.is_staff() then
+    raise exception 'Not allowed' using errcode = '42501';
+  end if;
+  if p_status not in ('new', 'confirmed', 'declined', 'rescheduled', 'completed') then
+    raise exception 'Unknown status %', p_status using errcode = '22023';
+  end if;
+  select proposed_date into current_proposed from public.bookings where id = p_booking_id;
+  if p_status = 'rescheduled' and p_proposed_date is null and current_proposed is null then
+    raise exception 'A proposed date is required to mark a booking rescheduled' using errcode = '22023';
+  end if;
+
+  perform set_config(
+    'app.status_note',
+    coalesce(
+      left(nullif(btrim(coalesce(p_note, '')), ''), 500),
+      case when p_status = 'rescheduled' then 'Proposed date: ' || coalesce(p_proposed_date, current_proposed)::text end,
+      ''
+    ),
+    true
+  );
+  update public.bookings
+     set status = p_status,
+         proposed_date = coalesce(p_proposed_date, proposed_date)
+   where id = p_booking_id
+  returning * into result;
+  perform set_config('app.status_note', '', true);
+
+  if result.id is null then
+    raise exception 'Booking not found' using errcode = 'P0002';
+  end if;
+  return result;
+end;
+$$;
+
+revoke all on function public.staff_set_booking_status(uuid, text, date, text) from public, anon;
+grant execute on function public.staff_set_booking_status(uuid, text, date, text) to authenticated;

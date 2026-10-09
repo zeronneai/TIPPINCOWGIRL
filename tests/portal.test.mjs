@@ -133,7 +133,8 @@ test("saving is idempotent on stripe_session_id and never resets the staff's fie
 
 // ---- the security rules ------------------------------------------------------------------------
 const SQL = readFileSync(new URL("../supabase/schema.sql", import.meta.url), "utf8");
-const code = SQL.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").toLowerCase();
+// phase 1 only: the orders part, before the bookings section (tested in bookings.test.mjs)
+const code = SQL.split("Phase 2: booking requests")[0].split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").toLowerCase();
 
 test("schema: three tables, RLS on, the statuses match the app", () => {
   for (const t of ["orders", "order_events", "staff"]) {

@@ -8,3 +8,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# Customer data (CSV exports of the booking Sheet, and the like). Never commit.
+data/
