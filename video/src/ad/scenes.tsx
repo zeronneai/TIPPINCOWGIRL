@@ -161,7 +161,7 @@ export const Builder: Scene = ({ dur }) => {
         <PricePill p={ease(local, 4, 12)}>{fill(adCopy.builder.from, price.from)}</PricePill>
       </div>
       <Vignette strength={0.55} />
-      {local < 5 && <AbsoluteFill style={{ background: `rgba(255,236,200,${0.5 * (1 - local / 5)})`, mixBlendMode: "screen" }} />}
+      {local < 4 && <AbsoluteFill style={{ background: `rgba(255,236,200,${0.28 * (1 - local / 4)})`, mixBlendMode: "screen" }} />}
     </Leather>
   );
 };
