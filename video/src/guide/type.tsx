@@ -16,10 +16,14 @@ function parts(line: string) {
   return line.split(/(\*[^*]+\*)/).filter(Boolean).map((p) => (p.startsWith("*") ? { text: p.slice(1, -1), mark: true } : { text: p, mark: false }));
 }
 
-/** A size that fits the longest line in `width` (Alfa Slab One caps run about 0.74 em a letter). */
-export function fitSize(lines: readonly string[], width = 960, max = 118) {
+/**
+ * A size that fits the longest line in `width`, outline included (Alfa
+ * Slab One caps with the sticker edge run about 0.86 em a letter), so a
+ * line never reaches the frame's edges.
+ */
+export function fitSize(lines: readonly string[], width = 900, max = 112) {
   const longest = Math.max(...lines.map((l) => l.replace(/\*/g, "").length));
-  return Math.min(max, Math.floor(width / (longest * 0.74)));
+  return Math.min(max, Math.floor(width / (longest * 0.86)));
 }
 
 /** When each line of a headline lands (frames after `at`). */
@@ -49,8 +53,8 @@ export const Sticker: React.FC<{
       {lines.map((line, i) => {
         const p = spring({ frame: f - at - i * stagger, fps, config: { damping: 11, stiffness: 260, mass: 0.55 } });
         const appear = clamp01((f - at - i * stagger) / 2);
-        // the slap: big and light, then down with a squash, then settle
-        const sc = 1.5 - 0.5 * p;
+        // the slap: a little big and light, then down with a squash, then settle
+        const sc = 1.22 - 0.22 * p;
         const squash = Math.max(0, Math.sin(Math.PI * clamp01((f - at - i * stagger - 3) / 6))) * 0.06;
         const leave = gone * (1 + i * 0.3);
         return (
