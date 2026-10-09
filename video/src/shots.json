@@ -250,19 +250,6 @@
         ]
       }
     },
-    "dashboard-donut": {
-      "file": "shots/dashboard-donut.png",
-      "width": 390,
-      "height": 844,
-      "boxes": {
-        "donut": [
-          16,
-          79.8,
-          358,
-          413.7
-        ]
-      }
-    },
     "account": {
       "file": "shots/account.png",
       "width": 390,
@@ -352,7 +339,7 @@
       "boxes": {
         "timeline": [
           35,
-          525,
+          447,
           320,
           274.5
         ]
@@ -412,25 +399,6 @@
           608.4,
           45.1,
           52
-        ]
-      }
-    },
-    "calendar-agenda": {
-      "file": "shots/calendar-agenda.png",
-      "width": 390,
-      "height": 844,
-      "boxes": {
-        "day": [
-          172.4,
-          439.4,
-          45.1,
-          52
-        ],
-        "agenda": [
-          16,
-          650.8,
-          358,
-          89.3
         ]
       }
     },

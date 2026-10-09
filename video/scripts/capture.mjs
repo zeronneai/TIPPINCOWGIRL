@@ -102,6 +102,9 @@ async function settle(page, ms = 400) {
     await document.fonts.ready;
     const imgs = [...document.images].filter((i) => i.getBoundingClientRect().bottom > 0 && i.getBoundingClientRect().top < innerHeight);
     await Promise.all(imgs.map((i) => (i.complete ? null : new Promise((r) => ((i.onload = r), (i.onerror = r), setTimeout(r, 8000))))));
+    // drawers sliding in, fades: wait until every one has finished
+    const running = document.getAnimations().filter((a) => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity);
+    await Promise.race([Promise.all(running.map((a) => a.finished.catch(() => null))), new Promise((r) => setTimeout(r, 3000))]);
   });
   await page.waitForTimeout(ms);
 }
@@ -115,17 +118,24 @@ async function box(page, selector) {
 
 /** Scroll so `selector` starts just under the sticky header. */
 async function scrollTo(page, selector, offset = HEADER + 8) {
-  await page.evaluate(
-    ([sel, off]) => {
-      const el = document.querySelector(sel);
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior: "instant" });
-    },
-    [selector, offset]
-  );
+  // twice: pictures above it can finish loading and move it after the first
+  for (let i = 0; i < 2; i++) {
+    await settle(page, 150);
+    await page.evaluate(
+      ([sel, off]) => {
+        const el = document.querySelector(sel);
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior: "instant" });
+      },
+      [selector, offset]
+    );
+  }
   await page.waitForTimeout(300);
 }
 
 async function shot(page, name, boxes = {}, { element } = {}) {
+  // no focus ring or hover state that only shows on some runs
+  await page.evaluate(() => document.activeElement?.blur?.());
+  await page.mouse.move(-10, -10);
   await settle(page);
   const file = `${name}.png`;
   const marks = {};
@@ -218,7 +228,7 @@ async function site(browser) {
         if (!v || !v.duration) return resolve();
         v.pause();
         v.addEventListener("seeked", () => resolve(), { once: true });
-        v.currentTime = Math.min(2, v.duration / 2);
+        v.currentTime = 0.05; // the opening shot: a cowgirl in her hat
         setTimeout(resolve, 4000);
       })
   );

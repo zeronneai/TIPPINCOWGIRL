@@ -79,8 +79,11 @@ npm run shots
    highlighted button sits on its screenshot plus the numbers the
    dashboard scene counts up to.
 
-The clock is pinned to Friday, October 9, 2026 (America/Denver), so running
-it again makes the same shots; set `DEMO_NOW` to move it. Run it after the
+The clock is pinned to Friday, October 9, 2026 (America/Denver), the hero
+video is held on its first frame, and animations, focus and hover are
+settled before each shot, so running it again makes the same shots (the
+one exception: the close button of the cart drawer is a system glyph whose
+edges can render a few pixels differently). Set `DEMO_NOW` to move the date. Run it after the
 site or the portal changes, then `npm run render`. The fonts and hat
 pictures load from their CDNs, so it needs the internet.
 
