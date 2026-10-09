@@ -5,10 +5,17 @@
   "description": "A vertical motion graphics demo of the Tippin' Cowgirl site and staff portal, made with Remotion. Separate from the app: nothing here ships with the site.",
   "scripts": {
     "shots": "node scripts/capture.mjs",
+    "shots:ad": "node scripts/capture-ad.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
-    "studio": "node scripts/fetch-fonts.mjs && remotion studio src/index.ts",
+    "prepare:ad": "node scripts/prepare-ad.mjs",
+    "studio": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion studio src/index.ts",
     "render": "node scripts/fetch-fonts.mjs && remotion render src/index.ts TippinPortalDemo out/tippin-portal-demo.mp4",
-    "typecheck": "tsc -p tsconfig.json"
+    "render:ad": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion render src/index.ts TippinAd30 out/tippin-ad-30s.mp4",
+    "render:ad15": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion render src/index.ts TippinAd15 out/tippin-ad-15s.mp4",
+    "render:ad45": "node scripts/fetch-fonts.mjs && node scripts/prepare-ad.mjs && remotion render src/index.ts TippinAd45 out/tippin-ad-30s-4x5.mp4",
+    "textures": "remotion still src/index.ts AdTextureLeather public/textures/leather.jpg --image-format=jpeg --jpeg-quality=88 && remotion still src/index.ts AdTextureGrain public/textures/grain.png --image-format=png",
+    "typecheck": "tsc -p tsconfig.json",
+    "stills": "node scripts/stills.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.534",

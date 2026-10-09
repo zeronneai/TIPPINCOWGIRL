@@ -19,3 +19,8 @@ video/out/
 video/.app-build/
 video/public/fonts/
 video/public/music.mp3
+# hat art copied or downloaded for the ad by video/scripts/prepare-ad.mjs,
+# and its optional music track
+video/public/ad/
+video/public/engraving/
+video/public/ad-music.mp3

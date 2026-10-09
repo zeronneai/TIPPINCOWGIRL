@@ -1,0 +1,205 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "scale": 2
+  },
+  "shots": {
+    "hero": {
+      "file": "shots/ad/hero.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "title": [
+          20,
+          285.2,
+          350,
+          83.6
+        ],
+        "build": [
+          96.3,
+          512.5,
+          197.5,
+          47
+        ]
+      }
+    },
+    "type-straw": {
+      "file": "shots/ad/type-straw.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          199,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "type-suede": {
+      "file": "shots/ad/type-suede.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          108.5,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "type-wool": {
+      "file": "shots/ad/type-wool.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          67.8,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          17.9,
+          480.9,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "color": {
+      "file": "shots/ad/color.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          199,
+          475.2,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "feather": {
+      "file": "shots/ad/feather.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          199,
+          620,
+          82.5,
+          137.3
+        ]
+      }
+    },
+    "bud": {
+      "file": "shots/ad/bud.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          199,
+          474.6,
+          82.5,
+          122.9
+        ]
+      }
+    },
+    "engraving": {
+      "file": "shots/ad/engraving.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "add": [
+          17.9,
+          712.1,
+          354.1,
+          47
+        ]
+      }
+    },
+    "preview": {
+      "file": "shots/ad/preview.png",
+      "width": 354,
+      "height": 354,
+      "boxes": {}
+    },
+    "size": {
+      "file": "shots/ad/size.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": [
+          17.9,
+          64,
+          354.1,
+          354.1
+        ],
+        "choice": [
+          108.5,
+          474.5,
+          82.5,
+          56
+        ]
+      }
+    },
+    "cart": {
+      "file": "shots/ad/cart.png",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "checkout": [
+          26,
+          378.3,
+          340,
+          47
+        ],
+        "line": [
+          28,
+          90,
+          70,
+          70
+        ]
+      }
+    }
+  }
+}

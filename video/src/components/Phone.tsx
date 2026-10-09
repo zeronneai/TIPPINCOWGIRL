@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
 import { Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { type Box, SCREEN, shot } from "../shots";
+import { type Box, SCREEN, type ShotInfo, shot } from "../shots";
 import { C } from "../theme";
 
 // A phone holding real screenshots. Inside it, <Shot> shows one capture
@@ -52,13 +52,15 @@ export const Phone: React.FC<{
 /** One screenshot filling the screen; `zoom` eases the camera onto a box. */
 export const Shot: React.FC<{
   name: string;
+  /** a screenshot from another manifest (the ad's); default: the demo's */
+  info?: ShotInfo;
   opacity?: number;
   zoom?: { box: Box; scale: number; p: number };
   y?: number;
   children?: React.ReactNode;
-}> = ({ name, opacity = 1, zoom, y = 0, children }) => {
+}> = ({ name, info, opacity = 1, zoom, y = 0, children }) => {
   const { k, w, h } = useScreen();
-  const s = shot(name);
+  const s = info ?? shot(name);
   const contentH = (w * s.height) / s.width;
   let transform = `translateY(${-y * k}px)`;
   if (zoom) {

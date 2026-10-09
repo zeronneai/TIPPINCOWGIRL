@@ -3,8 +3,9 @@ import { continueRender, delayRender, staticFile } from "remotion";
 // Loads the fonts from public/fonts (scripts/fetch-fonts.mjs puts them
 // there). A missing file is skipped: the text falls back to a system font
 // and the render goes on.
-const FACES: [string, string, string][] = [
+const FACES: [string, string, string, string?][] = [
   ["Alfa Slab One", "alfa-slab-one.woff2", "400"],
+  ["Playfair Display", "playfair-italic.woff2", "500", "italic"],
   ["Satoshi", "satoshi-400.woff2", "400"],
   ["Satoshi", "satoshi-500.woff2", "500"],
   ["Satoshi", "satoshi-700.woff2", "700"],
@@ -17,9 +18,9 @@ export function loadFonts() {
   started = true;
   const handle = delayRender("Loading fonts");
   Promise.all(
-    FACES.map(async ([family, file, weight]) => {
+    FACES.map(async ([family, file, weight, style = "normal"]) => {
       try {
-        const face = new FontFace(family, `url(${staticFile(`fonts/${file}`)}) format("woff2")`, { weight });
+        const face = new FontFace(family, `url(${staticFile(`fonts/${file}`)}) format("woff2")`, { weight, style });
         document.fonts.add(await face.load());
       } catch {
         console.warn(`Font ${file} is missing; run npm run fonts. Using a system font.`);

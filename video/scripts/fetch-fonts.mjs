@@ -1,7 +1,8 @@
 // ---------------------------------------------------------------------------
 // The site's two fonts, downloaded once into video/public/fonts so the video
 // renders with them: Alfa Slab One (Google Fonts) for titles and Satoshi
-// (Fontshare) for everything else. Run by `npm run studio` and
+// (Fontshare) for everything else; plus Playfair Display Italic (Google
+// Fonts) for the ad's serif lines. Run by `npm run studio` and
 // `npm run render` before they start; files already there are kept.
 //
 // The font files are not committed (public/fonts is gitignored): they come
@@ -37,6 +38,13 @@ async function alfa() {
   await save(latin.match(/url\((https:[^)]+\.woff2)\)/)[1], "alfa-slab-one.woff2");
 }
 
+async function playfair() {
+  if (existsSync(path.join(DIR, "playfair-italic.woff2"))) return;
+  const css = await text("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500&display=swap");
+  const latin = css.split("/* latin */")[1] || css;
+  await save(latin.match(/url\((https:[^)]+\.woff2)\)/)[1], "playfair-italic.woff2");
+}
+
 async function satoshi() {
   const weights = [400, 500, 700, 900];
   if (weights.every((w) => existsSync(path.join(DIR, `satoshi-${w}.woff2`)))) return;
@@ -50,7 +58,7 @@ async function satoshi() {
 
 mkdirSync(DIR, { recursive: true });
 console.log("Fonts for the video (public/fonts):");
-for (const [name, get] of [["Alfa Slab One", alfa], ["Satoshi", satoshi]]) {
+for (const [name, get] of [["Alfa Slab One", alfa], ["Playfair Display Italic", playfair], ["Satoshi", satoshi]]) {
   try {
     await get();
   } catch (e) {
