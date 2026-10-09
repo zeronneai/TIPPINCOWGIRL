@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "node --test --experimental-test-module-mocks \"tests/*.test.mjs\"",
     "seed:demo": "node --env-file-if-exists=.env scripts/seed-demo-orders.js",
-    "seed:demo:delete": "node --env-file-if-exists=.env scripts/seed-demo-orders.js --delete"
+    "seed:demo:delete": "node --env-file-if-exists=.env scripts/seed-demo-orders.js --delete",
+    "backfill:orders": "node --env-file-if-exists=.env scripts/backfill-orders.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

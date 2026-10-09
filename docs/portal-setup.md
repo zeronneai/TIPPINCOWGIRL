@@ -74,17 +74,62 @@ Rules that matter:
   `VITE_` ones are read when the site is built, so a redeploy is required.
 
 From then on every paid order is saved. Orders paid **before** this was set
-up are not in the portal; they are still in Stripe and in the order emails.
-To bring one in, open it in **Stripe > Developers > Events**, find its
-`checkout.session.completed` event and click **Resend**. Saving is safe to
-repeat (it never duplicates an order), but the resend also sends the two
-order emails again.
+up are not in the portal yet; bring them all in at once with the backfill
+below (it sends no emails). Resending a single event from **Stripe >
+Developers > Events** also works, but that one does send the two order
+emails again.
 
 ## 5. Sign in
 
 Open `https://tippincowgirl.com/admin` and sign in with the email and
 password from step 3. On a phone, add it to the home screen for quick
 access (Share > Add to Home Screen).
+
+## Bring in older orders (backfill)
+
+A one-off script copies every **paid** Stripe checkout into the portal:
+the orders from before the portal existed, or any the webhook could not
+store. It builds each order exactly as the webhook does, **sends no
+email**, and is safe to run as many times as you like: an order already in
+the portal is left exactly as it is, status, tracking number and notes
+included.
+
+1. On your computer, in the repository folder, create a file named `.env`
+   (it is never committed) with:
+
+   ```
+   STRIPE_SECRET_KEY=sk_live_...
+   SUPABASE_URL=https://xxxx.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=the service_role key
+   ```
+
+   Use the **live** Stripe key for real orders (a test key reads test mode
+   checkouts).
+2. First look without writing anything:
+
+   ```
+   npm run backfill:orders -- --dry-run
+   ```
+
+   It prints how many orders it would insert and one line for each (date,
+   customer, total). Only the Stripe key is needed for this.
+3. Then run it for real:
+
+   ```
+   npm run backfill:orders
+   ```
+
+   It ends with a summary: inserted, already existed, skipped. A checkout
+   with missing or unreadable order details (one that did not come from the
+   hat builder, for example) is skipped and listed with its session id and
+   the reason; the rest still go in.
+
+Backfilled orders start as **New**, with a first history line dated on the
+day they were paid ("Paid on Stripe (added by the backfill)"). Move the ones
+already delivered to the right status in the portal.
+
+The script never prints your keys. Delete the `.env` file when you are done
+if this is a shared computer.
 
 ## Demo orders (optional, for trying it out)
 
