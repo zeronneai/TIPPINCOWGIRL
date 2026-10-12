@@ -6,7 +6,7 @@ import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import { mirrorBooking } from "./booking/mirror.js";
-import { ADDON_GROUPS, addonsSummary, money, normalizeAddons } from "./booking/addons.js";
+import { ADDON_GROUPS, addonsSummary, normalizeAddons } from "./booking/addons.js";
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
@@ -233,8 +233,9 @@ function Field({ id, label, optional, error, children }) {
 const EMPTY_ADDONS = { qty: {}, quotes: [] };
 
 // The private event menus (src/booking/addons.js): closed until asked for,
-// a stepper per item, and a running estimate. The estimate is only that:
-// Deborah confirms the total when she writes back, and nothing is charged.
+// a stepper per item, and no prices on purpose. Picking is only a request
+// for a quote: Deborah gives the final price when she writes back. The
+// prices still travel to the Sheet and the portal, for her eyes only.
 function AddOnsPicker({ value, onChange, error }) {
   const sel = normalizeAddons(value);
   const picked = sel.items.length + sel.quotes.length;
@@ -252,7 +253,7 @@ function AddOnsPicker({ value, onChange, error }) {
         <span>
           Add charcuterie or desserts
           <small>
-            {picked ? `${picked} picked${sel.estimateCents ? `, about ${money(sel.estimateCents)}` : ""}` : "Optional treats for your private event"}
+            {picked ? `${picked} picked for your quote` : "Optional treats for your private event"}
           </small>
         </span>
         <span aria-hidden style={{ fontSize: 18 }}>{open ? "−" : "+"}</span>
@@ -268,12 +269,10 @@ function AddOnsPicker({ value, onChange, error }) {
                 return (
                   <div key={it.id} className="tc-addon">
                     <b id={`bk-addon-${it.id}`}>{it.name}</b>
-                    <span className="tc-addon-price">
-                      {money(it.priceCents)} {it.unit === "each" ? "each" : `/ ${it.unit}`}
-                    </span>
+                    <span className="tc-addon-price">{it.unit === "each" ? "" : `per ${it.unit}`}</span>
                     <p>{it.detail}</p>
                     <div className="tc-addon-row">
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "#6f4526" }}>{q ? money(q * it.priceCents) : ""}</span>
+                      <span />
                       <span className="tc-stepper" role="group" aria-labelledby={`bk-addon-${it.id}`}>
                         <button type="button" aria-label={`Fewer ${it.name}`} disabled={!q} onClick={() => setQty(it, q - 1)}>
                           −
@@ -307,13 +306,9 @@ function AddOnsPicker({ value, onChange, error }) {
               )}
             </div>
           ))}
-          <div className="tc-addons-total" aria-live="polite">
-            <span>
-              Estimated add-ons
-              <small>Deborah confirms the final total. Nothing is charged now.</small>
-            </span>
-            <span>{money(sel.estimateCents)}</span>
-          </div>
+          <p className="tc-addons-quote">
+            Just for your quote. Picking add-ons does not commit you to anything and nothing is charged. Deborah will reach out with the final price.
+          </p>
         </div>
       )}
       {error && (
