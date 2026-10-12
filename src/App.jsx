@@ -6,6 +6,7 @@ import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
 import { BOOKING_ENDPOINT, BOOKING_ENDPOINT_READY, EVENTS, PROCESS_VIDEOS, REMOTE_MEDIA } from "./hat/data.js";
 import { mirrorBooking } from "./booking/mirror.js";
+import { ADDON_GROUPS, addonsSummary, money, normalizeAddons } from "./booking/addons.js";
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
@@ -146,7 +147,7 @@ function LazyVideo({ src, caption, ariaLabel, style }) {
 // Apps Script validates nothing, so the checks below are the only ones there
 // are. Focus-trapped, Escape/backdrop close, focus returns to the opener.
 // ---------------------------------------------------------------------------
-const EVENT_TYPES = ["Birthday", "Bachelorette", "Corporate", "Wedding", "Pop-up / Market", "Other"];
+const EVENT_TYPES = ["Birthday", "Bachelorette", "Corporate", "Friendsgiving", "Wedding", "Pop-up / Market", "Other"];
 
 // Caps so nobody can paste a novel into a spreadsheet cell. The inputs carry
 // maxLength too; this is the check that actually decides.
@@ -229,6 +230,101 @@ function Field({ id, label, optional, error, children }) {
   );
 }
 
+const EMPTY_ADDONS = { qty: {}, quotes: [] };
+
+// The private event menus (src/booking/addons.js): closed until asked for,
+// a stepper per item, and a running estimate. The estimate is only that:
+// Deborah confirms the total when she writes back, and nothing is charged.
+function AddOnsPicker({ value, onChange, error }) {
+  const sel = normalizeAddons(value);
+  const picked = sel.items.length + sel.quotes.length;
+  const [open, setOpen] = useState(picked > 0);
+  const setQty = (item, n) => {
+    const q = Math.max(0, Math.min(item.max, Math.floor(Number(n)) || 0));
+    onChange({ ...value, qty: { ...value.qty, [item.id]: q } });
+  };
+  const toggleQuote = (id) =>
+    onChange({ ...value, quotes: value.quotes.includes(id) ? value.quotes.filter((x) => x !== id) : [...value.quotes, id] });
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button type="button" className="tc-addons-toggle" aria-expanded={open} aria-controls="bk-addons" onClick={() => setOpen((o) => !o)}>
+        <span>
+          Add charcuterie or desserts
+          <small>
+            {picked ? `${picked} picked${sel.estimateCents ? `, about ${money(sel.estimateCents)}` : ""}` : "Optional treats for your private event"}
+          </small>
+        </span>
+        <span aria-hidden style={{ fontSize: 18 }}>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div id="bk-addons" className="tc-addons-panel">
+          {ADDON_GROUPS.map((g) => (
+            <div key={g.id} className="tc-addons-group">
+              <h3>{g.title}</h3>
+              <p className="tc-addons-note">{g.note}</p>
+              {g.items.map((it) => {
+                const q = Number(value.qty[it.id]) || 0;
+                return (
+                  <div key={it.id} className="tc-addon">
+                    <b id={`bk-addon-${it.id}`}>{it.name}</b>
+                    <span className="tc-addon-price">
+                      {money(it.priceCents)} {it.unit === "each" ? "each" : `/ ${it.unit}`}
+                    </span>
+                    <p>{it.detail}</p>
+                    <div className="tc-addon-row">
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "#6f4526" }}>{q ? money(q * it.priceCents) : ""}</span>
+                      <span className="tc-stepper" role="group" aria-labelledby={`bk-addon-${it.id}`}>
+                        <button type="button" aria-label={`Fewer ${it.name}`} disabled={!q} onClick={() => setQty(it, q - 1)}>
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={it.max}
+                          value={q}
+                          aria-label={`${it.name}, how many`}
+                          onChange={(e) => setQty(it, e.target.value)}
+                          onFocus={(e) => e.target.select()}
+                        />
+                        <button type="button" aria-label={`More ${it.name}`} disabled={q >= it.max} onClick={() => setQty(it, q + 1)}>
+                          +
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              {g.quote && (
+                <label className="tc-addon-check">
+                  <input type="checkbox" checked={value.quotes.includes(g.quote.id)} onChange={() => toggleQuote(g.quote.id)} />
+                  <span>
+                    <b>{g.quote.name}</b>
+                    <span style={{ display: "block", fontSize: 12.5, color: "#6f5b48" }}>{g.quote.detail}</span>
+                  </span>
+                </label>
+              )}
+            </div>
+          ))}
+          <div className="tc-addons-total" aria-live="polite">
+            <span>
+              Estimated add-ons
+              <small>Deborah confirms the final total. Nothing is charged now.</small>
+            </span>
+            <span>{money(sel.estimateCents)}</span>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p id="bk-addons-error" role="alert" style={{ margin: "6px 0 0", fontSize: 12.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function BookingDrawer({ open, onClose, returnRef }) {
   const panelRef = useRef(null);
   const firstFieldRef = useRef(null);
@@ -236,6 +332,7 @@ function BookingDrawer({ open, onClose, returnRef }) {
   const [status, setStatus] = useState("idle");
   const [values, setValues] = useState(EMPTY_BOOKING);
   const [errors, setErrors] = useState({});
+  const [addOns, setAddOns] = useState(EMPTY_ADDONS);
 
   const setField = (key) => (e) => {
     const { value } = e.target;
@@ -282,10 +379,14 @@ function BookingDrawer({ open, onClose, returnRef }) {
     if (status === "sending") return;
 
     const found = validateBooking(values);
+    const picked = normalizeAddons(addOns);
+    const addOnProblems = Object.values(picked.errors);
+    if (addOnProblems.length) found.addOns = addOnProblems.join(" ");
     setErrors(found);
     const firstBad = Object.keys(found)[0];
     if (firstBad) {
-      panelRef.current?.querySelector(`#bk-${firstBad === "eventType" ? "type" : firstBad}`)?.focus();
+      const target = { eventType: "type", addOns: "addons" }[firstBad] || firstBad;
+      panelRef.current?.querySelector(target === "addons" ? ".tc-addons-toggle" : `#bk-${target}`)?.focus();
       return;
     }
 
@@ -300,6 +401,7 @@ function BookingDrawer({ open, onClose, returnRef }) {
       eventDate: values.eventDate,
       notes: values.notes.trim(),
       company: values.company,
+      addOns,
     });
 
     if (!BOOKING_ENDPOINT_READY) {
@@ -324,6 +426,8 @@ function BookingDrawer({ open, onClose, returnRef }) {
           eventType: values.eventType,
           eventDate: values.eventDate,
           notes: values.notes.trim(),
+          // one readable line for the Sheet, e.g. "Charcuterie Cups x 12 ($132)"
+          addOns: addonsSummary(picked),
           // honeypot: a real person leaves this empty, and the Apps Script
           // drops anything that arrives with it filled
           company: values.company,
@@ -335,6 +439,7 @@ function BookingDrawer({ open, onClose, returnRef }) {
       const body = await res.clone().json().catch(() => null);
       if (body && (body.ok === false || body.result === "error")) throw new Error(body.message || "script error");
       setValues(EMPTY_BOOKING);
+      setAddOns(EMPTY_ADDONS);
       setErrors({});
       setStatus("done");
     } catch (err) {
@@ -461,6 +566,14 @@ function BookingDrawer({ open, onClose, returnRef }) {
                 style={fieldStyle}
               />
             </Field>
+            <AddOnsPicker
+              value={addOns}
+              onChange={(next) => {
+                setAddOns(next);
+                setErrors((prev) => (prev.addOns ? { ...prev, addOns: undefined } : prev));
+              }}
+              error={errors.addOns}
+            />
             <Field id="bk-notes" label="Notes" optional error={errors.notes}>
               <textarea
                 id="bk-notes"

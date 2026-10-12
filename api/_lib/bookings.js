@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabaseAdmin } from "./orders.js";
+import { addonsRecord, addonsSummary, normalizeAddons } from "../../src/booking/addons.js";
 
 // Same caps as the form (FIELD_LIMITS in App.jsx).
 export const BOOKING_LIMITS = { name: 80, email: 120, phone: 40, eventType: 40, eventDate: 10, notes: 1000 };
@@ -69,20 +70,31 @@ export function cleanBooking(body) {
   const eventDate = rawDate ? isoDate(rawDate) : null;
   if (rawDate && !eventDate) errors.eventDate = "not a date (YYYY-MM-DD)";
 
+  // Add-ons are checked against the menu in src/booking/addons.js: unknown
+  // items are dropped and prices come from the menu, never from the body.
+  const addOns = normalizeAddons(b.addOns);
+  const addOnErrors = Object.values(addOns.errors);
+  if (addOnErrors.length) errors.addOns = addOnErrors.join(" ");
+
   if (Object.keys(errors).length) return { ok: false, errors };
-  return {
-    ok: true,
-    row: {
-      name: name.value,
-      email: email.value.toLowerCase(),
-      phone: phone.value || null,
-      event_type: eventType.value,
-      event_date: eventDate,
-      notes: notes.value || null,
-      source: "website",
-    },
+  const row = {
+    name: name.value,
+    email: email.value.toLowerCase(),
+    phone: phone.value || null,
+    event_type: eventType.value,
+    event_date: eventDate,
+    notes: notes.value || null,
+    source: "website",
   };
+  // only present when something was picked, so a database that has not run
+  // the add_ons migration yet keeps taking every other booking untouched
+  if (!addOns.empty) row.add_ons = addonsRecord(addOns);
+  return { ok: true, row };
 }
+
+/** True when the database has no add_ons column yet (schema.sql not re-run). */
+const missingAddOnsColumn = (error) =>
+  !!error && (error.code === "42703" || error.code === "PGRST204" || /add_ons/.test(String(error.message || "")));
 
 // A visitor who sees an error from the Sheet and presses send again would
 // otherwise create a twin. The same email, type and date within this
@@ -105,7 +117,18 @@ export async function saveBooking(row, client = supabaseAdmin(), { now = Date.no
   if (dupError) throw new Error(`bookings lookup failed: ${dupError.message}`);
   if (twins?.length) return { saved: true, inserted: false, duplicate: true, id: twins[0].id };
 
-  const { data, error } = await client.from("bookings").insert(row).select("id");
+  let { data, error } = await client.from("bookings").insert(row).select("id");
+  if (error && row.add_ons && missingAddOnsColumn(error)) {
+    // The add_ons column is missing (the migration in schema.sql was not run
+    // yet). Keep the request: the add-ons go into the notes instead.
+    console.warn("[booking] bookings.add_ons is missing, run supabase/schema.sql again. Add-ons were saved in the notes.");
+    const { add_ons: picked, ...rest } = row;
+    const line = `Add-ons: ${addonsSummary({ items: picked.items, quotes: picked.quotes, estimateCents: picked.estimateCents, empty: false })}`;
+    ({ data, error } = await client
+      .from("bookings")
+      .insert({ ...rest, notes: rest.notes ? `${rest.notes}\n\n${line}` : line })
+      .select("id"));
+  }
   if (error) throw new Error(`bookings insert failed: ${error.message}`);
   const id = data?.[0]?.id ?? null;
 

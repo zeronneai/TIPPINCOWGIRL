@@ -231,6 +231,13 @@ create table if not exists public.bookings (
   source         text not null default 'website'
 );
 
+-- Add-ons picked on the form (charcuterie, desserts), as checked against
+-- src/booking/addons.js: { items: [{ id, name, unit, qty, unitPriceCents,
+-- lineCents }], quotes: [{ id, name }], estimateCents }. Null when none.
+-- Added after launch, hence its own statement: running this file again on
+-- an existing project adds it.
+alter table public.bookings add column if not exists add_ons jsonb;
+
 create index if not exists bookings_created_at_idx on public.bookings (created_at desc);
 create index if not exists bookings_status_idx on public.bookings (status);
 create index if not exists bookings_event_date_idx on public.bookings (event_date);

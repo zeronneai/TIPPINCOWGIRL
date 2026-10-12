@@ -3,6 +3,7 @@ import ContactCard from "./Contact.jsx";
 import { bookingTemplates, firstName } from "./contact.js";
 import { BOOKING_STATUSES, bookingStatusOf, dateTime, eventDay } from "./format.js";
 import { supabase } from "./supabase.js";
+import { money } from "../booking/addons.js";
 import { Icon, Skeleton, StatusBadge } from "./ui.jsx";
 
 // One booking request: how to reach them (WhatsApp, email, call, ready made
@@ -110,6 +111,7 @@ export default function BookingDetail({ id, onChanged, panel = false }) {
       <p style={{ margin: 0, whiteSpace: "pre-wrap", fontSize: 15, overflowWrap: "anywhere" }} data-booking="notes">
         {booking.notes || <span className="ad-muted">No notes.</span>}
       </p>
+      <AddOns addOns={booking.add_ons} />
     </section>
   );
   const side = (
@@ -148,6 +150,42 @@ export default function BookingDetail({ id, onChanged, panel = false }) {
         </div>
       )}
     </>
+  );
+}
+
+/** The charcuterie and dessert add-ons picked on the form, when any. */
+function AddOns({ addOns }) {
+  const items = Array.isArray(addOns?.items) ? addOns.items : [];
+  const quotes = Array.isArray(addOns?.quotes) ? addOns.quotes : [];
+  if (!items.length && !quotes.length) return null;
+  return (
+    <div data-booking="add-ons">
+      <div className="ad-label" style={{ marginTop: 16 }}>
+        Add-ons
+      </div>
+      <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 15 }}>
+        {items.map((i) => (
+          <li key={i.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0" }}>
+            <span>
+              {i.name} x {i.qty}
+              {i.unit && i.unit !== "each" ? ` ${i.unit}` : ""}
+            </span>
+            <b>{money(Number(i.lineCents) || 0)}</b>
+          </li>
+        ))}
+        {quotes.map((q) => (
+          <li key={q.id} style={{ padding: "4px 0" }}>
+            {q.name} <span className="ad-muted">(wants a quote)</span>
+          </li>
+        ))}
+      </ul>
+      {Number(addOns.estimateCents) > 0 && (
+        <p style={{ margin: "6px 0 0", fontWeight: 700, display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(0,0,0,.12)", paddingTop: 6 }}>
+          <span>Estimate (not charged)</span>
+          <span>{money(Number(addOns.estimateCents))}</span>
+        </p>
+      )}
+    </div>
   );
 }
 
