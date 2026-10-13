@@ -10,6 +10,7 @@ import { ADDON_GROUPS, addonsSummary, normalizeAddons } from "./booking/addons.j
 import Builder from "./shop/Builder.jsx";
 import CartDrawer from "./shop/CartDrawer.jsx";
 import { CartProvider, useCart } from "./shop/cart.jsx";
+import { calendarUrl, directionsUrl, upcomingEvents } from "./events/upcoming.js";
 import { installLinkInterception, navigate, scrollToInitialHash, useCanonical, usePath } from "./router.js";
 import logo from "/logo.png";
 
@@ -19,7 +20,7 @@ const GRAIN =
   "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%222%22/></filter><rect width=%22120%22 height=%22120%22 filter=%22url(%23n)%22/></svg>')";
 
 const MARQUEE_TEXT =
-  "EL PASO'S FIRST HAT BAR ⭐ CUSTOM HATS ⭐ EVENTS & POP-UPS ⭐ EL PASO'S FIRST HAT BAR ⭐ CUSTOM HATS ⭐ EVENTS & POP-UPS ⭐ ";
+  "CUSTOM HATS, BUILT BY YOU ⭐ FEATHERS, CORDS & FLORALS ⭐ SHIPPING ACROSS THE US ⭐ HAT BAR EVENTS & POP-UPS ⭐ CUSTOM HATS, BUILT BY YOU ⭐ FEATHERS, CORDS & FLORALS ⭐ SHIPPING ACROSS THE US ⭐ HAT BAR EVENTS & POP-UPS ⭐ ";
 
 const SOLANA_ADDRESS = "The Shoppes at Solana, 750 Sunland Park Dr, El Paso, TX 79912";
 const MAPS_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(SOLANA_ADDRESS)}&output=embed`;
@@ -707,7 +708,7 @@ function Nav({ onBook }) {
             <a href="/#builder" style={link}>
               Build your hat
             </a>
-            <a href="/#events" style={link}>
+            <a href="/events" style={link}>
               Events
             </a>
             <a href="/#gallery" style={link}>
@@ -737,7 +738,7 @@ function Nav({ onBook }) {
           <a href="/#deborah" style={link} onClick={() => setOpen(false)}>
             Meet Deborah
           </a>
-          <a href="/#events" style={link} onClick={() => setOpen(false)}>
+          <a href="/events" style={link} onClick={() => setOpen(false)}>
             Events & Pop-Ups
           </a>
           <a href="/#gallery" style={link} onClick={() => setOpen(false)}>
@@ -822,7 +823,7 @@ function Hero({ onBook }) {
             marginBottom: 22,
           }}
         >
-          El Paso&apos;s first hat bar
+          Custom hats, built by you
         </div>
         <h1 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(44px,8.2vw,104px)" }}>
           Build
@@ -839,7 +840,8 @@ function Hero({ onBook }) {
             color: overVideo ? "#faf1e2" : "var(--ink)",
           }}
         >
-          Pick your felt, shape the brim, pin your charm. Walk away with a hat nobody else has.
+          Pick your hat, stack feathers, cords and florals, and make it unmistakably yours. Design it
+          online or build it with us at the bar.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginTop: 34 }}>
           <a href="/#builder" className="tc-btn">
@@ -1090,8 +1092,7 @@ function MeetDeborah() {
           <p style={{ margin: "14px 0 0", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" }}>
             She thought about a permanent home for a long time. What held her back was simple: she
             never wanted to be the shop you have to come to. She wanted to be the one that shows up.
-            Now, with the first Hat Bar in El Paso opening at The Solana, she doesn&apos;t have to
-            choose. The bar has a home, and it still rolls.
+            Now, with a home at The Solana in El Paso, she doesn&apos;t have to choose. The bar has a home, and it still rolls.
           </p>
           <blockquote
             style={{
@@ -1250,56 +1251,211 @@ function TheProcess() {
   );
 }
 
-// --- Events & Pop-Ups: vertical chapters, data-driven from data.js ----------
-function EventsSection() {
-  const chapters = EVENTS.filter((e) => !e.featured);
+// --- Upcoming events: flyer cards from src/events/upcoming.js ---------------
+const UPCOMING_FLYERS = import.meta.glob("./assets/upcoming/*.{webp,jpg,jpeg,png}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+const flyerFor = (id) =>
+  Object.entries(UPCOMING_FLYERS).find(([k]) => k.includes(`/upcoming/${id}.`))?.[1] || null;
+
+const KICKER = {
+  fontSize: 11.5,
+  fontWeight: 800,
+  letterSpacing: ".24em",
+  textTransform: "uppercase",
+  color: "var(--teal)",
+  marginBottom: 12,
+};
+
+function EventDetail({ icon, children }) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "baseline", fontWeight: 700, fontSize: 15.5, color: "var(--ink)" }}>
+      <span aria-hidden style={{ width: 22, flex: "0 0 22px", textAlign: "center" }}>
+        {icon}
+      </span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function UpcomingEventCard({ event }) {
+  const flyer = flyerFor(event.id);
+  return (
+    <article className={`tc-up-card${flyer ? "" : " tc-up-card--noflyer"}`}>
+      {flyer && (
+        <figure className="tc-up-flyer">
+          <img
+            src={flyer}
+            alt={`${event.title} flyer: ${event.dateLabel}, ${event.timeLabel}, ${event.place}`}
+            loading="lazy"
+            decoding="async"
+            width="900"
+            height="1206"
+          />
+        </figure>
+      )}
+      <div className="tc-up-body">
+        <div style={{ ...KICKER, color: "var(--coral-deep)", marginBottom: 10 }}>{event.kicker}</div>
+        <h3 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(30px,3.6vw,44px)" }}>
+          {event.title}
+        </h3>
+        <p style={{ margin: "16px 0 18px", fontSize: 16, lineHeight: 1.6, color: "#4a3a2c" }}>{event.blurb}</p>
+        <div style={{ display: "grid", gap: 8, marginBottom: 24 }}>
+          <EventDetail icon="📅">{event.dateLabel}</EventDetail>
+          <EventDetail icon="⏰">{event.timeLabel}</EventDetail>
+          <EventDetail icon="📍">{event.place}</EventDetail>
+          {event.partner && <EventDetail icon="🤝">With {event.partner}</EventDetail>}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <a href={directionsUrl(event)} target="_blank" rel="noopener noreferrer" className="tc-btn">
+            Get directions
+          </a>
+          <a href={calendarUrl(event)} target="_blank" rel="noopener noreferrer" className="tc-btn tc-btn--ghost">
+            Add to calendar
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// "Want the hat bar at your event?" band, shared by the landing and /events.
+function BookYourEvent({ onBook }) {
+  return (
+    <div className="tc-book-band">
+      <div style={{ ...KICKER, color: "var(--ink)" }}>Parties, markets, weddings, brands</div>
+      <h3 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(28px,4vw,44px)" }}>
+        Want the hat bar at your event?
+      </h3>
+      <p style={{ maxWidth: 560, margin: "14px auto 24px", fontSize: 16, lineHeight: 1.6, color: "#3a1508", fontWeight: 600 }}>
+        Birthdays, bachelorettes, corporate parties, markets and brand collabs. Tell us about yours and
+        we&apos;ll bring the bar.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+        <button type="button" className="tc-btn" onClick={onBook}>
+          Book the bar
+        </button>
+        <a href={IG} target="_blank" rel="noopener noreferrer" className="tc-btn tc-btn--ghost">
+          DM @_tippincowgirl
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// --- Landing teaser: the next two events and the booking invite ------------
+function EventsSection({ onBook }) {
+  const next = upcomingEvents().slice(0, 2);
   return (
     <section id="events" className="tc-px" style={{ position: "relative", padding: "72px 36px" }}>
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <div style={KICKER}>Pop-ups, markets &amp; collabs</div>
           <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(34px,5vw,58px)" }}>
-            Events &amp; Pop-Ups
+            Catch the hat bar
           </h2>
           <p style={{ maxWidth: 540, margin: "18px auto 0", fontSize: 16, lineHeight: 1.6, color: "#4a3a2c" }}>
-            Weddings, birthdays, markets, corporate parties. The bar rolls up anywhere in El Paso. DM{" "}
-            <a href={IG} target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
-              @_tippincowgirl
-            </a>{" "}
-            to book.
+            The bar rolls out to markets, farms and parties. Come build your hat with us in person.
           </p>
         </div>
-        {chapters.length ? (
-          <div style={{ display: "grid", gap: 64 }}>
-            {chapters.map((e) => (
-              <EventFeature key={e.id} event={e} />
+        {next.length ? (
+          <div style={{ display: "grid", gap: 40 }}>
+            {next.map((e) => (
+              <UpcomingEventCard key={e.id} event={e} />
             ))}
           </div>
         ) : (
-          <div
-            className="tc-halftone"
-            style={{
-              borderRadius: 22,
-              border: "2px dashed rgba(43,26,16,.35)",
-              padding: "44px 24px",
-              textAlign: "center",
-              color: "#6f5b48",
-              fontWeight: 600,
-            }}
-          >
-            More pop-ups announcing soon. Follow{" "}
+          <p style={{ textAlign: "center", fontWeight: 700, color: "#6f5b48" }}>
+            New dates announcing soon. Follow{" "}
             <a href={IG} target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
               @_tippincowgirl
-            </a>{" "}
-            for dates.
-          </div>
+            </a>
+            .
+          </p>
         )}
-        <div style={{ textAlign: "center", marginTop: 44 }}>
-          <a href={IG} target="_blank" rel="noopener noreferrer" className="tc-btn">
-            DM to book your event
+        <div style={{ textAlign: "center", margin: "36px 0 56px" }}>
+          <a href="/events" className="tc-btn tc-btn--ghost">
+            See all events
           </a>
         </div>
+        <BookYourEvent onBook={onBook} />
       </div>
     </section>
+  );
+}
+
+// --- /events: every upcoming event, the booking invite, and where we've been
+function EventsPage({ onBook }) {
+  const upcoming = upcomingEvents();
+  const past = EVENTS.filter((e) => !e.featured);
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "Hat Bar Events, Pop-Ups & Collabs · Tippin' Cowgirl";
+    return () => {
+      document.title = prev;
+    };
+  }, []);
+  return (
+    <main>
+      <section className="tc-px tc-halftone" style={{ position: "relative", padding: "64px 36px 56px", textAlign: "center" }}>
+        <div style={KICKER}>Pop-ups, markets &amp; collabs</div>
+        <h1 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(42px,7vw,84px)" }}>
+          Hat Bar Events
+        </h1>
+        <p style={{ maxWidth: 560, margin: "20px auto 0", fontSize: 17, lineHeight: 1.6, color: "#4a3a2c", fontWeight: 500 }}>
+          Find the bar near you, build your hat in person, or bring the whole experience to your own event.
+        </p>
+      </section>
+
+      <section className="tc-px" style={{ position: "relative", padding: "64px 36px 24px" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <h2 className="tc-sticker" style={{ margin: "0 0 32px", fontSize: "clamp(30px,4.4vw,48px)", textAlign: "center" }}>
+            Coming up
+          </h2>
+          {upcoming.length ? (
+            <div style={{ display: "grid", gap: 48 }}>
+              {upcoming.map((e) => (
+                <UpcomingEventCard key={e.id} event={e} />
+              ))}
+            </div>
+          ) : (
+            <p style={{ textAlign: "center", fontWeight: 700, color: "#6f5b48" }}>
+              New dates announcing soon. Follow{" "}
+              <a href={IG} target="_blank" rel="noopener noreferrer" style={{ color: "var(--coral-deep)", fontWeight: 800 }}>
+                @_tippincowgirl
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="tc-px" style={{ position: "relative", padding: "56px 36px" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <BookYourEvent onBook={onBook} />
+        </div>
+      </section>
+
+      {past.length > 0 && (
+        <section className="tc-px" style={{ position: "relative", padding: "40px 36px 80px" }}>
+          <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 44 }}>
+              <div style={KICKER}>The story so far</div>
+              <h2 className="tc-sticker" style={{ margin: 0, fontSize: "clamp(30px,4.4vw,48px)" }}>
+                Where we&apos;ve been
+              </h2>
+            </div>
+            <div style={{ display: "grid", gap: 64 }}>
+              {past.map((e) => (
+                <EventFeature key={e.id} event={e} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+    </main>
   );
 }
 
@@ -1761,7 +1917,8 @@ function Site() {
 
   // Editing a cart line needs the builder mounted, which only the landing
   // has; elsewhere the row still shows with quantity and remove.
-  const isLanding = !trustRoute && !checkoutRoute;
+  const isEventsPage = pathname === "/events";
+  const isLanding = !trustRoute && !checkoutRoute && !isEventsPage;
 
   return (
     <div
@@ -1792,6 +1949,8 @@ function Site() {
         <CheckoutResult path={checkoutRoute} />
       ) : trustRoute ? (
         <TrustPage route={trustRoute} />
+      ) : isEventsPage ? (
+        <EventsPage onBook={openBooking} />
       ) : (
         <>
           <Hero onBook={openBooking} />
@@ -1800,7 +1959,7 @@ function Site() {
           <HowItWorks />
           <TheProcess />
           <MeetDeborah />
-          <EventsSection />
+          <EventsSection onBook={openBooking} />
           <Gallery />
           <Solana />
           <BuildFab />

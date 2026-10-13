@@ -31,7 +31,7 @@ const NAV_EVENT = "tc:navigate";
 // Pages that should be found in search, each its own canonical URL. These
 // same paths are listed in public/sitemap.xml; keep the two in step. The
 // checkout result pages and the giveaway get no canonical at all.
-export const INDEXABLE_PATHS = ["/", "/shipping-returns", "/privacy", "/terms", "/faq"];
+export const INDEXABLE_PATHS = ["/", "/events", "/shipping-returns", "/privacy", "/terms", "/faq"];
 
 /**
  * Keep exactly one <link rel="canonical"> in the head, pointing at the page

@@ -81,7 +81,7 @@ export const EVENTS = [
     title: "Grand Opening",
     date: "September 5",
     blurb:
-      "We followed the trail all the way here. El Paso's first Hat Bar opens its doors September 5 at The Solana. Come tip one with us.",
+      "We followed the trail all the way here. On September 5 the hat bar found its first home at The Solana in El Paso. Come tip one with us.",
     media: {
       main: cldVid("v1787955985/Tippin_Solana_Horse_-_5_2_okxm4r.mp4"),
     },
