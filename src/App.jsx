@@ -1282,17 +1282,22 @@ function EventDetail({ icon, children }) {
 
 function UpcomingEventCard({ event }) {
   const flyer = flyerFor(event.id);
+  const { sessions } = event;
+  const multi = sessions.length > 1;
+  const first = sessions[0];
+  const directions = directionsUrl(event);
+  const when = sessions.map((s) => s.day + (s.time ? `, ${s.time}` : "")).join(" and ");
   return (
     <article className={`tc-up-card${flyer ? "" : " tc-up-card--noflyer"}`}>
       {flyer && (
         <figure className="tc-up-flyer">
           <img
             src={flyer}
-            alt={`${event.title} flyer: ${event.dateLabel}, ${event.timeLabel}, ${event.place}`}
+            alt={`${event.title} flyer: ${when}, ${event.place}`}
             loading="lazy"
             decoding="async"
             width="900"
-            height="1206"
+            height="1205"
           />
         </figure>
       )}
@@ -1303,18 +1308,40 @@ function UpcomingEventCard({ event }) {
         </h3>
         <p style={{ margin: "16px 0 18px", fontSize: 16, lineHeight: 1.6, color: "#4a3a2c" }}>{event.blurb}</p>
         <div style={{ display: "grid", gap: 8, marginBottom: 24 }}>
-          <EventDetail icon="📅">{event.dateLabel}</EventDetail>
-          <EventDetail icon="⏰">{event.timeLabel}</EventDetail>
+          {multi ? (
+            sessions.map((s) => (
+              <EventDetail key={s.date} icon="📅">
+                {s.day}
+                {s.time ? `, ${s.time}` : ""}
+              </EventDetail>
+            ))
+          ) : (
+            <>
+              <EventDetail icon="📅">{first.day}</EventDetail>
+              {first.time && <EventDetail icon="⏰">{first.time}</EventDetail>}
+            </>
+          )}
           <EventDetail icon="📍">{event.place}</EventDetail>
-          {event.partner && <EventDetail icon="🤝">With {event.partner}</EventDetail>}
+          {event.partner && event.partner !== event.place && <EventDetail icon="🤝">With {event.partner}</EventDetail>}
+          {event.note && <EventDetail icon="🎟️">{event.note}</EventDetail>}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <a href={directionsUrl(event)} target="_blank" rel="noopener noreferrer" className="tc-btn">
-            Get directions
-          </a>
-          <a href={calendarUrl(event)} target="_blank" rel="noopener noreferrer" className="tc-btn tc-btn--ghost">
-            Add to calendar
-          </a>
+          {directions && (
+            <a href={directions} target="_blank" rel="noopener noreferrer" className="tc-btn">
+              Get directions
+            </a>
+          )}
+          {sessions.map((s, i) => (
+            <a
+              key={s.date}
+              href={calendarUrl(event, s)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`tc-btn${directions || i > 0 ? " tc-btn--ghost" : ""}`}
+            >
+              {multi ? `Add ${s.day.split(",")[0]} to calendar` : "Add to calendar"}
+            </a>
+          ))}
         </div>
       </div>
     </article>
