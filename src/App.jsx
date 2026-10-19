@@ -1326,8 +1326,13 @@ function UpcomingEventCard({ event }) {
           {event.note && <EventDetail icon="🎟️">{event.note}</EventDetail>}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          {event.cta && (
+            <a href={event.cta.href} className="tc-btn">
+              {event.cta.label}
+            </a>
+          )}
           {directions && (
-            <a href={directions} target="_blank" rel="noopener noreferrer" className="tc-btn">
+            <a href={directions} target="_blank" rel="noopener noreferrer" className={`tc-btn${event.cta ? " tc-btn--ghost" : ""}`}>
               Get directions
             </a>
           )}
@@ -1337,7 +1342,7 @@ function UpcomingEventCard({ event }) {
               href={calendarUrl(event, s)}
               target="_blank"
               rel="noopener noreferrer"
-              className={`tc-btn${directions || i > 0 ? " tc-btn--ghost" : ""}`}
+              className={`tc-btn${event.cta || directions || i > 0 ? " tc-btn--ghost" : ""}`}
             >
               {multi ? `Add ${s.day.split(",")[0]} to calendar` : "Add to calendar"}
             </a>

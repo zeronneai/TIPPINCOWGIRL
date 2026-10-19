@@ -19,6 +19,8 @@
 //              to hide the button when there is no reliable address)
 //   partner    the collab partner, shown as "With ..." (optional)
 //   note       one short line such as "Free admission" (optional)
+//   cta        the main button, e.g. tickets: { href: "/boo", label: "Get tickets" }
+//              (optional; directions and calendar become secondary)
 // ---------------------------------------------------------------------------
 
 export const EVENT_TIME_ZONE = "America/Denver";
@@ -45,6 +47,18 @@ export const UPCOMING_EVENTS = [
     note: "Free admission",
     blurb:
       "Trick or treat yourself to a new hat! BBQ cook-off, vendors, music, trick-or-treating and a pet costume contest. Come in costume and build your hat with us.",
+  },
+  {
+    id: "bring-your-boo",
+    kicker: "Date night or girls' night",
+    title: "Bring Your Boo",
+    sessions: [{ date: "2026-10-29", day: "Thursday, October 29", time: "6 PM TO 9 PM", start: "18:00", end: "21:00" }],
+    place: "Tippin' Cowgirl Hat Bar, The Shoppes at Solana",
+    mapsQuery: "The Shoppes at Solana, 750 Sunland Park Dr, El Paso, TX 79912",
+    note: "$10 tickets, applied toward your hat. Limited spots",
+    cta: { href: "/bringyourboo", label: "Get tickets" },
+    blurb:
+      "Boots, Brims & Bubbly at the hat bar: live country music, complimentary drinks, small bites and a cute photo area. Bring your boyfriend, girlfriend, spouse or bestie!",
   },
   {
     id: "wicked-wine-and-western",
