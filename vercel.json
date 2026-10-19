@@ -36,12 +36,28 @@
           "value": "noindex, nofollow"
         }
       ]
+    },
+    {
+      "source": "/bringyourboo/ticket",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/boo",
+      "destination": "/bringyourboo",
+      "permanent": false
     }
   ]
 }

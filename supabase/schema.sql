@@ -377,3 +377,182 @@ $$;
 
 revoke all on function public.staff_set_booking_status(uuid, text, date, text) from public, anon;
 grant execute on function public.staff_set_booking_status(uuid, text, date, text) to authenticated;
+
+-- ===========================================================================
+-- Ticketed events (Bring Your Boo, and any later one). Added after launch:
+-- running this whole file again on an existing project adds it.
+--
+--   the website (api/tickets.js, SERVICE ROLE)  holds seats and marks them
+--                        paid, only through the two functions below.
+--   staff                read every ticket; check guests in, add notes,
+--                        cancel or restore a ticket. They cannot mark a
+--                        ticket paid by hand: only Stripe does that.
+--   anyone else          nothing.
+--
+-- A ticket row is one purchase (1 to a few seats). Its folio (BOO-001...)
+-- is given when it is paid, in payment order.
+-- ===========================================================================
+
+create table if not exists public.event_tickets (
+  id                    uuid primary key default gen_random_uuid(),
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  event_id              text not null,
+  status                text not null default 'pending'
+                        check (status in ('pending', 'paid', 'cancelled')),
+  folio                 text unique,
+  name                  text not null,
+  email                 text not null,
+  phone                 text,
+  guest_name            text,
+  quantity              integer not null check (quantity between 1 and 10),
+  amount_cents          integer not null default 0,
+  stripe_session_id     text unique,
+  stripe_payment_intent text,
+  -- an unpaid hold stops counting toward the cap after this
+  hold_expires_at       timestamptz,
+  paid_at               timestamptz,
+  checked_in_at         timestamptz,
+  internal_notes        text
+);
+
+create index if not exists event_tickets_event_idx on public.event_tickets (event_id, status);
+create index if not exists event_tickets_created_idx on public.event_tickets (created_at desc);
+
+drop trigger if exists event_tickets_before_update on public.event_tickets;
+create trigger event_tickets_before_update
+  before update on public.event_tickets
+  for each row execute function public.set_updated_at();
+
+-- Staff may cancel or restore a ticket, never make one "paid" by hand.
+create or replace function public.event_tickets_guard()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.role() = 'authenticated' and new.status = 'paid' and old.status <> 'paid' and old.folio is null then
+    raise exception 'Only a Stripe payment can mark a ticket paid' using errcode = '22023';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists event_tickets_guard on public.event_tickets;
+create trigger event_tickets_guard
+  before update on public.event_tickets
+  for each row execute function public.event_tickets_guard();
+
+alter table public.event_tickets enable row level security;
+
+drop policy if exists "staff read tickets" on public.event_tickets;
+create policy "staff read tickets" on public.event_tickets
+  for select to authenticated using (public.is_staff());
+
+drop policy if exists "staff update tickets" on public.event_tickets;
+create policy "staff update tickets" on public.event_tickets
+  for update to authenticated using (public.is_staff()) with check (public.is_staff());
+
+revoke all on public.event_tickets from anon;
+revoke insert, update, delete, truncate on public.event_tickets from authenticated;
+grant select on public.event_tickets to authenticated;
+grant update (status, checked_in_at, internal_notes) on public.event_tickets to authenticated;
+
+-- Hold seats, or say how many are left. One buyer at a time per event (an
+-- advisory lock), so two people can never both take the last seat.
+create or replace function public.reserve_event_tickets(
+  p_event_id     text,
+  p_capacity     integer,
+  p_quantity     integer,
+  p_name         text,
+  p_email        text,
+  p_phone        text,
+  p_guest_name   text,
+  p_amount_cents integer,
+  p_hold_minutes integer
+)
+returns table (ticket_id uuid, remaining integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  taken  integer;
+  new_id uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext('event_tickets:' || p_event_id));
+  select coalesce(sum(quantity), 0) into taken
+    from public.event_tickets
+   where event_id = p_event_id
+     and (status = 'paid' or (status = 'pending' and hold_expires_at > now()));
+  if taken + p_quantity > p_capacity then
+    return query select null::uuid, greatest(p_capacity - taken, 0);
+    return;
+  end if;
+  insert into public.event_tickets (event_id, name, email, phone, guest_name, quantity, amount_cents, hold_expires_at)
+  values (p_event_id, p_name, p_email, p_phone, p_guest_name, p_quantity, p_amount_cents,
+          now() + make_interval(mins => p_hold_minutes))
+  returning id into new_id;
+  return query select new_id, p_capacity - taken - p_quantity;
+end;
+$$;
+
+-- Seats still available (paid plus live holds), without holding any.
+create or replace function public.event_tickets_remaining(p_event_id text, p_capacity integer)
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select greatest(p_capacity - coalesce(sum(quantity), 0), 0)::integer
+    from public.event_tickets
+   where event_id = p_event_id
+     and (status = 'paid' or (status = 'pending' and hold_expires_at > now()));
+$$;
+
+-- Stripe says it is paid: mark it and give it the next folio. Safe to call
+-- again (webhook retries, the ticket page checking): a paid ticket keeps
+-- its folio and nothing changes.
+create or replace function public.mark_event_ticket_paid(
+  p_ticket_id      uuid,
+  p_session_id     text,
+  p_payment_intent text,
+  p_amount_cents   integer,
+  p_folio_prefix   text
+)
+returns setof public.event_tickets
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  t    public.event_tickets;
+  next integer;
+begin
+  select * into t from public.event_tickets where id = p_ticket_id;
+  if not found then
+    return;
+  end if;
+  perform pg_advisory_xact_lock(hashtext('event_tickets:' || t.event_id));
+  select * into t from public.event_tickets where id = p_ticket_id;
+  if t.folio is null then
+    select count(*) + 1 into next from public.event_tickets where event_id = t.event_id and folio is not null;
+    update public.event_tickets
+       set status = 'paid',
+           folio = p_folio_prefix || '-' || lpad(next::text, 3, '0'),
+           paid_at = now(),
+           stripe_session_id = coalesce(stripe_session_id, p_session_id),
+           stripe_payment_intent = p_payment_intent,
+           amount_cents = coalesce(p_amount_cents, amount_cents)
+     where id = p_ticket_id;
+  end if;
+  return query select * from public.event_tickets where id = p_ticket_id;
+end;
+$$;
+
+revoke all on function public.reserve_event_tickets(text, integer, integer, text, text, text, text, integer, integer) from public, anon, authenticated;
+revoke all on function public.event_tickets_remaining(text, integer) from public, anon, authenticated;
+revoke all on function public.mark_event_ticket_paid(uuid, text, text, integer, text) from public, anon, authenticated;
+grant execute on function public.reserve_event_tickets(text, integer, integer, text, text, text, text, integer, integer) to service_role;
+grant execute on function public.event_tickets_remaining(text, integer) to service_role;
+grant execute on function public.mark_event_ticket_paid(uuid, text, text, integer, text) to service_role;

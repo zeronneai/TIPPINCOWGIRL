@@ -85,6 +85,7 @@ const P = {
   spark: "M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18",
   inbox: "M4 13l2.5-7.5a1 1 0 0 1 1-.5h9a1 1 0 0 1 1 .5L20 13v5.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM4 13h4.5l1 2h5l1-2H20",
   move: "M5 12h14M14 7l5 5-5 5",
+  ticket: "M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4zM14.5 6v12",
   out: "M14 5h4.5A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h9",
 };
 
@@ -185,6 +186,7 @@ const SECTIONS = [
   { id: "orders", href: "/admin/orders", label: "Orders", icon: "orders" },
   { id: "bookings", href: "/admin/bookings", label: "Bookings", icon: "bookings" },
   { id: "calendar", href: "/admin/calendar", label: "Calendar", icon: "calendar" },
+  { id: "tickets", href: "/admin/tickets", label: "Tickets", icon: "ticket" },
 ];
 
 function Account({ staff, onSignOut }) {

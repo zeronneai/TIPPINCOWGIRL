@@ -409,7 +409,7 @@
   bottom: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: var(--ad-surface);
   border-top: 1px solid var(--ad-line-2);
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -1937,4 +1937,72 @@ a.ad-kpi:hover {
   border-radius: 50%;
   display: block;
   margin: 0 auto 12px;
+}
+
+/* ---- tickets (ticketed events) ------------------------------------------------------- */
+.ad-ticket {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  align-items: center;
+  padding: 13px 15px;
+}
+.ad-ticket-folio {
+  font-family: "Courier New", monospace;
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--ad-coral-deep);
+  background: var(--ad-coral-tint);
+  border-radius: 10px;
+  padding: 10px 10px;
+  min-width: 92px;
+  text-align: center;
+  align-self: start;
+}
+.ad-ticket-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.ad-ticket-side {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (min-width: 720px) {
+  .ad-ticket {
+    grid-template-columns: auto 1fr auto;
+  }
+  .ad-ticket-side {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+}
+.ad-ticket-status {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.ad-linkbtn {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ad-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ad-linkbtn:disabled {
+  opacity: 0.5;
+}
+.ad-ticket .ad-row-meta {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

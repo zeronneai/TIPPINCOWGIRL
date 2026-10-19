@@ -100,7 +100,9 @@ test("the Sheet write in the booking form is exactly as before; the copy runs be
 
 // ---- the schema's rules --------------------------------------------------------------------------
 const SQL = readFileSync(path.join(root, "supabase/schema.sql"), "utf8");
-const phase2 = SQL.slice(SQL.indexOf("Phase 2: booking requests"))
+// up to the ticketed events section, which tests/tickets.test.mjs checks
+const TICKETS_AT = SQL.indexOf("Ticketed events (Bring Your Boo");
+const phase2 = SQL.slice(SQL.indexOf("Phase 2: booking requests"), TICKETS_AT === -1 ? undefined : TICKETS_AT)
   .split("\n")
   .filter((l) => !l.trim().startsWith("--"))
   .join("\n")

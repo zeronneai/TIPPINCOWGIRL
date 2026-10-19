@@ -1885,6 +1885,11 @@ const Giveaway = lazy(() => import("./components/Giveaway.jsx"));
 // chunk, no site chrome, and no analytics, so staff visits never count as
 // traffic. It is noindex (vercel.json, robots.txt).
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx"));
+
+// Ticketed events (/bringyourboo and its /ticket page after Stripe): standalone
+// like the giveaway, its own chunk. See src/events/ticketed.js.
+const BringYourBoo = lazy(() => import("./components/BringYourBoo.jsx"));
+const isBooPath = (p) => p === "/bringyourboo" || p === "/bringyourboo/ticket";
 const isAdminPath = (p) => p === "/admin" || p.startsWith("/admin/");
 
 export default function App() {
@@ -1909,6 +1914,10 @@ export default function App() {
       {path === "/giveaway" ? (
         <Suspense fallback={<div className="gw-page" />}>
           <Giveaway />
+        </Suspense>
+      ) : isBooPath(path) ? (
+        <Suspense fallback={<div style={{ minHeight: "100vh", background: "#1f140d" }} />}>
+          <BringYourBoo path={path} />
         </Suspense>
       ) : (
         <CartProvider>

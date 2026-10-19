@@ -330,3 +330,23 @@ no `.env` file; the variables set in the shell are still used.
   field, refuses invalid emails and over long text, ignores bots (a hidden
   field people never fill in), and folds a quick resend of the same request
   into one.
+
+## Ticketed events (Bring Your Boo)
+
+The page is **/bringyourboo** (short link **/boo**). People fill in their
+name, email, phone and their boo's name, pick how many tickets, and pay with
+Stripe. The seats are held for 35 minutes while they pay, so the event can
+never sell more than its cap (20). After paying they land on their ticket,
+with a folio such as **BOO-007**, and get it by email; Deborah gets an email
+too.
+
+In the portal, **Tickets** shows seats sold out of 20, who is paying right
+now, who checked in, and every ticket: folio, names, seats, email, phone and
+whether it is paid. At the door, press **Check in** on each ticket. **Cancel
+ticket** frees its seats (refund the payment in Stripe yourself if needed).
+Nobody can mark a ticket paid by hand: only a Stripe payment does that.
+
+Setting it up: run `supabase/schema.sql` again in the SQL Editor (it only
+adds what is missing). Nothing else: it uses the same Stripe keys, webhook
+and Resend as the hat orders. The event's date, price and cap live in
+`src/events/ticketed.js`.

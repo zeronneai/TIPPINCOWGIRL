@@ -66,6 +66,8 @@ import Stripe from "stripe";
 import { buildCustomerEmail } from "../src/shop/customerEmail.js";
 import { buildOrderEmail } from "../src/shop/orderEmail.js";
 import { saveOrder } from "./_lib/orders.js";
+import { buildTicketEmail, buildTicketNotice, isTicketSession, markPaid, seatsRemaining } from "./_lib/tickets.js";
+import { getTicketedEvent } from "../src/events/ticketed.js";
 
 // Vercel parses JSON bodies by default. Stripe signatures do not survive
 // that, so it stays off for this function.
@@ -160,6 +162,10 @@ export default async function handler(req, res) {
   if (session.payment_status !== "paid")
     return res.status(200).json({ received: true, ignored: `payment_status ${session.payment_status}` });
 
+  // ---- event tickets (Bring Your Boo...) are not hat orders ---------------
+  // Their own path, before anything else: no order row, no work order email.
+  if (isTicketSession(session)) return handleTicket(session, req, res);
+
   // ---- 0. the order, into the staff portal's database. --------------------
   // Its own try/catch: nothing here may stop the emails below.
   let stored = false;
@@ -236,4 +242,58 @@ export default async function handler(req, res) {
     console.error(`[webhook] order notification failed for ${session.id}:`, err);
     return res.status(200).json({ received: true, stored, emailed: false });
   }
+}
+
+/**
+ * A paid event ticket: mark it paid with its folio, email the buyer their
+ * ticket and Deborah a heads up. Same promises as the hat path: always 200
+ * once the signature is good, every failure logged and swallowed. A repeat
+ * delivery keeps the same folio (mark_event_ticket_paid is idempotent) and
+ * may repeat the emails.
+ */
+async function handleTicket(session, req, res) {
+  let row = null;
+  try {
+    row = await markPaid(session);
+    if (!row) console.error(`[webhook] ticket ${session.metadata?.ticket_id} (${session.id}) could not be recorded: no database or no such ticket.`);
+  } catch (err) {
+    console.error(`[webhook] could not record ticket for ${session.id}:`, err?.message || err);
+  }
+  if (!row?.folio) return res.status(200).json({ received: true, ticket: false });
+
+  const resendKey = process.env.RESEND_API_KEY;
+  const owner = process.env.ORDER_NOTIFICATION_EMAIL;
+  if (!resendKey) {
+    console.error(`[webhook] ticket ${row.folio} recorded, but RESEND_API_KEY is missing: no emails sent.`);
+    return res.status(200).json({ received: true, ticket: row.folio, emailed: false });
+  }
+  const resend = new Resend(resendKey);
+  let emailed = false;
+  let notified = false;
+  try {
+    const mail = buildTicketEmail(row, { baseUrl: resolveOrigin(req) });
+    const { error } = await resend.emails.send({ from: FROM, to: row.email, replyTo: owner || undefined, ...mail });
+    if (error) console.error(`[webhook] Resend refused ticket email ${row.folio}:`, error);
+    else emailed = true;
+  } catch (err) {
+    console.error(`[webhook] ticket email ${row.folio} failed:`, err);
+  }
+  if (owner) {
+    try {
+      let remaining = null;
+      try {
+        const event = getTicketedEvent(row.event_id);
+        if (event) remaining = await seatsRemaining(event);
+      } catch {
+        /* the count is a nice to have in the notice */
+      }
+      const notice = buildTicketNotice(row, { remaining });
+      const { error } = await resend.emails.send({ from: FROM, to: owner, ...notice });
+      if (error) console.error(`[webhook] Resend refused ticket notice ${row.folio}:`, error);
+      else notified = true;
+    } catch (err) {
+      console.error(`[webhook] ticket notice ${row.folio} failed:`, err);
+    }
+  }
+  return res.status(200).json({ received: true, ticket: row.folio, emailed, notified });
 }

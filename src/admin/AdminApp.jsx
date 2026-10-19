@@ -7,6 +7,7 @@ import CalendarScreen from "./CalendarScreen.jsx";
 import Dashboard from "./Dashboard.jsx";
 import OrderDetail from "./OrderDetail.jsx";
 import OrdersList from "./OrdersList.jsx";
+import TicketsList from "./TicketsList.jsx";
 import { excludeDemo } from "./format.js";
 import { supabase } from "./supabase.js";
 import { Bare, DemoProvider, Shell, logo, useDemo } from "./ui.jsx";
@@ -21,6 +22,7 @@ import { Bare, DemoProvider, Shell, logo, useDemo } from "./ui.jsx";
 //   /admin/bookings         booking requests: a list, or ?view=board
 //   /admin/bookings/<id>    one request: contact, event, status, notes
 //   /admin/calendar         event dates by month
+//   /admin/tickets          ticketed events: who bought, folio, check in
 //
 // Sign in is Supabase Auth with email and password. A person who signs in
 // but is not in the `staff` table is signed straight back out with the same
@@ -70,6 +72,7 @@ function route(path) {
   if ((m = path.match(new RegExp(`^/admin/bookings/${UUID}$`, "i")))) return { section: "bookings", screen: "booking", id: m[1] };
   if (path === "/admin/bookings") return { section: "bookings", screen: "bookings" };
   if (path === "/admin/calendar") return { section: "calendar", screen: "calendar" };
+  if (path === "/admin/tickets") return { section: "tickets", screen: "tickets" };
   return { section: "dashboard", screen: "dashboard" };
 }
 
@@ -165,6 +168,7 @@ function Gate({ path }) {
       {r.screen === "booking" && <BookingDetail id={r.id} onChanged={bump} />}
       {r.screen === "bookings" && <BookingsList onChanged={bump} />}
       {r.screen === "calendar" && <CalendarScreen onChanged={bump} />}
+      {r.screen === "tickets" && <TicketsList />}
       {r.screen === "dashboard" && <Dashboard />}
     </Shell>
   );
