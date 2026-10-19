@@ -43,6 +43,45 @@ export default function BringYourBoo({ path }) {
   return path.endsWith("/ticket") ? <TicketView /> : <EventPage />;
 }
 
+// ---- the hero video ----------------------------------------------------------------------------
+// Deborah making the two hats, a 24 second silent loop (public/events/
+// bring-your-boo/hero.mp4, 1.4 MB, cut from her reel without the movie
+// title graphic). Visitors who ask for less motion get the still frame.
+const HERO_VIDEO = "/events/bring-your-boo/hero.mp4";
+const HERO_WEBM = "/events/bring-your-boo/hero.webm";
+const HERO_POSTER = "/events/bring-your-boo/hero.jpg";
+
+function HeroVideo() {
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    setStill(!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+  return (
+    <div className="byb-stage-media" style={{ "--poster": `url(${HERO_POSTER})` }}>
+      {still ? (
+        <img src={HERO_POSTER} alt="" />
+      ) : (
+        <>
+          {/* wide screens only (CSS): the same clip, blurred, fills the sides */}
+          <video className="byb-stage-blur" autoPlay muted loop playsInline preload="auto" aria-hidden tabIndex={-1}>
+            <source src={HERO_WEBM} type="video/webm" />
+            <source src={HERO_VIDEO} type="video/mp4" />
+          </video>
+          <video className="byb-stage-clip" poster={HERO_POSTER} autoPlay muted loop playsInline preload="auto" aria-hidden>
+            <source src={HERO_WEBM} type="video/webm" />
+            <source src={HERO_VIDEO} type="video/mp4" />
+          </video>
+        </>
+      )}
+    </div>
+  );
+}
+
+const scrollToTickets = (e) => {
+  e.preventDefault();
+  document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 // ---- the event page -------------------------------------------------------------------------
 function EventPage() {
   usePageMeta(`${EVENT.title}: ${EVENT.subtitle} | Tippin' Cowgirl`);
@@ -61,12 +100,14 @@ function EventPage() {
   const soldOut = seats.remaining === 0;
 
   return (
-    <div className="byb-page">
-      <div className="byb-wrap">
-        <header className="byb-hero">
-          <a href="/" className="byb-logo" aria-label="Tippin' Cowgirl home">
-            <img src={logo} alt="" width="54" height="54" />
-          </a>
+    <div className="byb-page byb-page--stage">
+      <header className="byb-stage">
+        <HeroVideo />
+        <div className="byb-stage-shade" aria-hidden />
+        <a href="/" className="byb-logo byb-stage-logo" aria-label="Tippin' Cowgirl home">
+          <img src={logo} alt="" width="54" height="54" />
+        </a>
+        <div className="byb-stage-in">
           <p className="byb-kicker">Tippin' Cowgirl presents</p>
           <h1 className="byb-title">
             Bring Your <span>Boo</span>
@@ -82,8 +123,23 @@ function EventPage() {
               <span>Shoppes at Solana</span>
             </li>
           </ul>
-        </header>
+          <a href="#tickets" className="byb-btn byb-btn--hero" onClick={scrollToTickets}>
+            Get my tickets
+          </a>
+        </div>
+      </header>
 
+      <div className="byb-marquee" aria-hidden>
+        <div className="byb-marquee-track">
+          {[0, 1].map((k) => (
+            <span key={k}>
+              ✦ Boots ✦ Brims ✦ Bubbly ✦ Date night ✦ Girls' night ✦ Live country music ✦ Bring your boo&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="byb-wrap">
         <section className="byb-card byb-intro">
           <p>
             A cute western night out at the hat bar. Your boo can be your boyfriend, your girlfriend, your spouse or your
@@ -109,7 +165,7 @@ function EventPage() {
           </p>
         </section>
 
-        <section className="byb-card byb-buy" aria-labelledby="byb-buy-h">
+        <section className="byb-card byb-buy" id="tickets" aria-labelledby="byb-buy-h">
           <div className="byb-buy-head">
             <h2 id="byb-buy-h">Get your tickets</h2>
             <SeatsBadge remaining={seats.remaining} />
