@@ -23,6 +23,7 @@
 // the one that was charged. describeConfig's one line summary is used for
 // the hat image's alt text, which is all a reader sees when their client
 // blocks remote images.
+import { discountOf } from "./promos.js";
 import { ACCESSORY_PUBLIC_IDS, CLOUDINARY_CLOUD, accessoryLayers, baseArtFor } from "./catalog.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
 import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
@@ -223,6 +224,8 @@ export function buildOrderEmail({ session, baseUrl = "" }) {
   const subtotal = amount(s.amount_subtotal, md.subtotal);
   const shippingCost = amount(s.total_details?.amount_shipping, md.shipping);
   const total = amount(s.amount_total, md.order_total);
+  const discount = discountOf(s);
+  const discountLabel = discount.code ? `Discount (${discount.code})` : "Discount";
 
   const totalHats = cart.reduce((sum, line) => sum + line.quantity, 0) || Number(md.total_quantity) || 0;
   const hatWord = totalHats === 1 ? "hat" : "hats";
@@ -372,7 +375,7 @@ ${contactRow("Name", name)}${contactRow("Email", customer.email)}${contactRow("P
           <tr>
             <td style="padding: 18px 20px 0 20px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-${totalsRow("Subtotal", money(subtotal))}${totalsRow("Shipping", shippingCost === 0 ? "Free shipping" : money(shippingCost))}${totalsRow("Total", money(total), true)}
+${totalsRow("Subtotal", money(subtotal))}${discount.amount ? totalsRow(discountLabel, `-${money(discount.amount)}`) : ""}${totalsRow("Shipping", shippingCost === 0 ? "Free shipping" : money(shippingCost))}${totalsRow("Total", money(total), true)}
               </table>
             </td>
           </tr>
@@ -425,6 +428,7 @@ ${totalsRow("Subtotal", money(subtotal))}${totalsRow("Shipping", shippingCost ==
     "",
     "TOTALS",
     `  Subtotal: ${money(subtotal)}`,
+    ...(discount.amount ? [`  ${discountLabel}: -${money(discount.amount)}`] : []),
     `  Shipping: ${shippingCost === 0 ? "Free shipping" : money(shippingCost)}`,
     `  Total: ${money(total)}`,
     "",

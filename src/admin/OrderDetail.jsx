@@ -125,6 +125,12 @@ export default function OrderDetail({ id }) {
             <dl className="ad-dl">
               <dt>Subtotal</dt>
               <dd>{money(order.subtotal, order.currency)}</dd>
+              {order.discount > 0 && (
+                <>
+                  <dt>Discount{order.promo_code ? ` (${order.promo_code})` : ""}</dt>
+                  <dd>-{money(order.discount, order.currency)}</dd>
+                </>
+              )}
               <dt>Shipping</dt>
               <dd>{order.shipping ? money(order.shipping, order.currency) : "Free"}</dd>
               <dt>Total charged</dt>

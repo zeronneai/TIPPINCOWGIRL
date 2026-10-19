@@ -8,7 +8,8 @@
 // list in this project and it lives in src/shop/pricing.js.
 //
 // Request body: { cart: [ { hatType, baseId, featherId, cordId, cordColor,
-// stitchingNote, budSize, budColor, matchesColor, size, quantity }, ... ] }
+// stitchingNote, budSize, budColor, matchesColor, size, quantity }, ... ],
+//                 promo?: { code, email } }
 // (the exact field list is CONFIG_FIELDS in pricing.js; brand fields are
 // accepted and ignored while BRANDS_ENABLED is off)
 //
@@ -40,6 +41,8 @@
 import Stripe from "stripe";
 import { encodeOrderMetadata } from "../src/shop/orderMetadata.js";
 import { buildOrder, pickConfig, validateCart } from "../src/shop/pricing.js";
+import { PROMO_MESSAGES, PROMO_METADATA_KEY, normalizePromoCode } from "../src/shop/promos.js";
+import { checkPromo } from "./_lib/promos.js";
 
 // SESSION METADATA: the format (v2, with v1 still readable), the key budget
 // and the 500 character limit are all documented in src/shop/orderMetadata.js,
@@ -132,6 +135,26 @@ export default async function handler(req, res) {
 
   const metadata = encodeOrderMetadata(order);
 
+  // ---- promo code (optional) -------------------------------------------
+  // Applied only when the email is on that code's allow list and has not
+  // used it yet (api/_lib/promos.js). The checkout is then locked to that
+  // email, so the person who pays is the person on the list.
+  let promo = null;
+  const promoInput = payload.promo && typeof payload.promo === "object" ? payload.promo : null;
+  if (promoInput && normalizePromoCode(promoInput.code)) {
+    let check;
+    try {
+      check = await checkPromo(promoInput.code, promoInput.email);
+    } catch (err) {
+      console.error("[checkout] promo check failed:", err?.message || err);
+      check = { ok: false, reason: "unavailable" };
+    }
+    if (!check.ok) return json(res, 400, { error: "Promo code refused", promoError: PROMO_MESSAGES[check.reason] || PROMO_MESSAGES.unavailable, promoReason: check.reason });
+    promo = check;
+    metadata[PROMO_METADATA_KEY] = promo.promo.code;
+    metadata.promo_email = promo.email;
+  }
+
   try {
     const stripe = new Stripe(secretKey);
     const session = await stripe.checkout.sessions.create({
@@ -163,6 +186,7 @@ export default async function handler(req, res) {
       // carried on the URL.
       cancel_url: `${origin}/checkout-cancelled`,
       metadata,
+      ...(promo ? { discounts: [{ coupon: promo.promo.coupon }], customer_email: promo.email } : {}),
     });
 
     if (!session?.url) {
@@ -171,6 +195,12 @@ export default async function handler(req, res) {
     }
     return json(res, 200, { url: session.url, sessionId: session.id });
   } catch (err) {
+    // A coupon that expired, was deleted or never created in this Stripe
+    // account: say the code is not active rather than "checkout failed".
+    if (promo && /coupon|discount/i.test(`${err?.param || ""} ${err?.message || ""}`)) {
+      console.error("[checkout] Stripe refused the promo coupon:", err?.message || err);
+      return json(res, 400, { error: "Promo code refused", promoError: PROMO_MESSAGES.expired, promoReason: "expired" });
+    }
     // Log the detail for us, return nothing that could leak keys or the
     // shape of our Stripe account to the browser.
     console.error("[checkout] Stripe session creation failed:", err);

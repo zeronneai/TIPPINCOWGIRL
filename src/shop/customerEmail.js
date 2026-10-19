@@ -38,6 +38,7 @@
 //      the markup.
 // ---------------------------------------------------------------------------
 
+import { discountOf } from "./promos.js";
 import { STORE_HOURS } from "../business.js";
 import { addressLines, buildHatImageUrl, esc, money, parseCartFromMetadata } from "./orderEmail.js";
 import { findBase, findSize, hatParts } from "./pricing.js";
@@ -163,6 +164,8 @@ export function buildCustomerEmail({ session }) {
   const subtotal = amount(s.amount_subtotal, md.subtotal);
   const shippingCost = amount(s.total_details?.amount_shipping, md.shipping);
   const total = amount(s.amount_total, md.order_total);
+  const discount = discountOf(s);
+  const discountLabel = discount.code ? `Discount (${discount.code})` : "Discount";
   const shippingLabel = shippingCost === 0 ? "Free shipping" : money(shippingCost);
 
   const totalHats = cart.reduce((sum, line) => sum + line.quantity, 0) || Number(md.total_quantity) || 0;
@@ -286,7 +289,7 @@ ${hatBlocks}
             <td style="padding: 8px 24px 0 24px;">
               ${sectionLabel("Order total")}
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-${totalsRow("Subtotal", money(subtotal))}${totalsRow("Shipping", shippingLabel)}${totalsRow("Total paid", money(total), true)}
+${totalsRow("Subtotal", money(subtotal))}${discount.amount ? totalsRow(discountLabel, `-${money(discount.amount)}`) : ""}${totalsRow("Shipping", shippingLabel)}${totalsRow("Total paid", money(total), true)}
               </table>
             </td>
           </tr>
@@ -370,6 +373,7 @@ ${nextStep(esc(FULFILLMENT_NOTE))}${nextStep("If she needs to check anything abo
     "",
     "ORDER TOTAL",
     `  Subtotal: ${money(subtotal)}`,
+    ...(discount.amount ? [`  ${discountLabel}: -${money(discount.amount)}`] : []),
     `  Shipping: ${shippingLabel}`,
     `  Total paid: ${money(total)}`,
     "",

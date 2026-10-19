@@ -350,3 +350,23 @@ Setting it up: run `supabase/schema.sql` again in the SQL Editor (it only
 adds what is missing). Nothing else: it uses the same Stripe keys, webhook
 and Resend as the hat orders. The event's date, price and cap live in
 `src/events/ticketed.js`.
+
+## Promo codes (GIVEAWAY10)
+
+A code works only for the emails on its list, once per email. The rule is
+checked by the site, not by Stripe (src/shop/promos.js, api/_lib/promos.js).
+
+1. Run the latest `supabase/schema.sql` in the SQL Editor (adds
+   `promo_allowlist` and the `discount` / `promo_code` order columns).
+2. In Stripe: Product catalog > Coupons > New. Percentage 10, duration Once,
+   and set the ID to `GIVEAWAY10` (the id must match `coupon` in
+   src/shop/promos.js). An expiry date goes on the coupon (Redemption limits >
+   Limit the date range). Do NOT create a public promotion code.
+3. Export the giveaway Sheet as CSV to `data/giveaway.csv`, then
+   `npm run import:promo -- --dry-run` and `npm run import:promo`.
+4. Customers open the cart, "Have a code?", type the code and the email they
+   entered with. Checkout opens with 10% off and that email locked; the
+   webhook marks the code used once paid.
+
+When the shop moves to Deborah's own Stripe account, create the same coupon
+(same ID) there before switching keys.

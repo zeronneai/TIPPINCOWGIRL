@@ -7,7 +7,8 @@
 //
 // STRIPE LIMITS: 50 keys per session, 500 characters per value. A full cart
 // (10 hats, every one with a stitching note and an engraving) uses
-// 5 + 10 + 10 + 10 = 35 keys, and the longest record is about 90
+// 5 + 10 + 10 + 10 = 35 keys (37 with a promo: promo and promo_email,
+// written by the checkout endpoint), and the longest record is about 90
 // characters; a note is capped at STITCHING_NOTE_MAX_LEN (120), the longest
 // possible engraving code is under 500 (see encodeEngraving in pricing.js),
 // and every value is clipped to 500 again here regardless.

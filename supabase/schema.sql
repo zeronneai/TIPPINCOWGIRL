@@ -556,3 +556,35 @@ revoke all on function public.mark_event_ticket_paid(uuid, text, text, integer, 
 grant execute on function public.reserve_event_tickets(text, integer, integer, text, text, text, text, integer, integer) to service_role;
 grant execute on function public.event_tickets_remaining(text, integer) to service_role;
 grant execute on function public.mark_event_ticket_paid(uuid, text, text, integer, text) to service_role;
+
+-- ===========================================================================
+-- Promo codes (src/shop/promos.js, api/_lib/promos.js)
+-- Safe to run again. Run it in the SQL Editor before the first promo order:
+-- an order with a discount writes the two new orders columns below.
+-- ===========================================================================
+
+alter table public.orders add column if not exists discount   integer not null default 0;
+alter table public.orders add column if not exists promo_code text;
+
+-- Who may use which code, and whether they already did. One row per person
+-- per code; loaded with scripts/import-promo-list.js. Only the server
+-- (service role) reads and writes it at checkout and in the webhook.
+create table if not exists public.promo_allowlist (
+  code             text not null,
+  email            text not null,
+  name             text,
+  added_at         timestamptz not null default now(),
+  redeemed_at      timestamptz,
+  redeemed_session text,
+  primary key (code, email)
+);
+
+alter table public.promo_allowlist enable row level security;
+
+drop policy if exists "staff read promo allowlist" on public.promo_allowlist;
+create policy "staff read promo allowlist" on public.promo_allowlist
+  for select to authenticated using (public.is_staff());
+
+revoke all on public.promo_allowlist from anon;
+revoke insert, update, delete, truncate on public.promo_allowlist from authenticated;
+grant select on public.promo_allowlist to authenticated;

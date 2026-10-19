@@ -17,6 +17,7 @@
 // the record still says what was drawn if a file is renamed later.
 // ---------------------------------------------------------------------------
 
+import { discountOf } from "./promos.js";
 import { accessoryLayers, baseArtFor } from "./catalog.js";
 import { engravingRows } from "./engravingText.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
@@ -127,10 +128,16 @@ export function buildOrderRecord(session) {
     subtotal: firstNumber(s.amount_subtotal, md.subtotal),
     shipping: firstNumber(s.total_details?.amount_shipping, md.shipping),
     total: firstNumber(s.amount_total, md.order_total),
+    discount: discountOf(s).amount,
+    promo_code: discountOf(s).code,
     currency: String(s.currency || "usd").toLowerCase(),
     hats,
     hat_count: hats.reduce((n, h) => n + (Number(h.quantity) || 0), 0),
   };
   if (row.created_at === undefined) delete row.created_at;
+  // Only written when there is one, so an order without a promo stores
+  // exactly as it did before these two columns existed.
+  if (!row.discount) delete row.discount;
+  if (!row.promo_code) delete row.promo_code;
   return { row, problems };
 }

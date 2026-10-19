@@ -3,6 +3,7 @@ import HatStack from "./HatStack.jsx";
 import { useCart } from "./cart.jsx";
 import { useDialog } from "./useDialog.js";
 import { FREE_SHIPPING_MIN_QTY, MAX_QUANTITY, MIN_QUANTITY, buildOrder, formatCents, pickConfig } from "./pricing.js";
+import { findPromo, normalizePromoCode } from "./promos.js";
 
 // ---------------------------------------------------------------------------
 // The cart drawer. Mounted once at the app root so the nav can open it from
@@ -112,6 +113,70 @@ function CartRow({ line, invalid, canEdit, onQuantity, onEdit, onRemove }) {
   );
 }
 
+// "Have a code?": the code and the email it belongs to. Nothing is checked
+// here; the server checks both at checkout and Stripe shows the discount.
+const promoInput = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "10px 12px",
+  border: "2px solid rgba(43,26,16,.35)",
+  borderRadius: 8,
+  background: "#fffaf2",
+  font: "inherit",
+  fontSize: 15,
+  color: "var(--ink)",
+};
+
+function PromoField({ open, onToggle, code, email, error, onCode, onEmail }) {
+  const known = findPromo(code);
+  return (
+    <div style={{ marginTop: 14 }}>
+      <button type="button" onClick={onToggle} aria-expanded={open} style={{ ...rowAction, fontSize: 13.5 }}>
+        {open ? "Hide code" : "Have a code?"}
+      </button>
+      {open && (
+        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontSize: 12.5, fontWeight: 800, color: "#4a3a2c" }}>
+            Code
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => onCode(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={40}
+              style={{ ...promoInput, textTransform: "uppercase", letterSpacing: ".06em" }}
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4, fontSize: 12.5, fontWeight: 800, color: "#4a3a2c" }}>
+            Email you entered with
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => onEmail(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+              maxLength={120}
+              style={promoInput}
+            />
+          </label>
+          {known && !error && (
+            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "var(--teal)", fontWeight: 700 }}>
+              {known.blurb} Applied at checkout.
+            </p>
+          )}
+          {error && (
+            <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: 1.5, fontWeight: 700, color: "var(--coral-deep)" }}>
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CartDrawer({ canEdit = true, onAddAnother }) {
   const { cart, cartOpen, closeCart, setLineQuantity, removeLine, requestEdit } = useCart();
   const panelRef = useRef(null);
@@ -120,6 +185,11 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
   const [errorMsg, setErrorMsg] = useState("");
   // server reported problems, keyed by cart line index
   const [lineErrors, setLineErrors] = useState({});
+  // promo code: typed here, checked and applied by the server at checkout
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoEmail, setPromoEmail] = useState("");
+  const [promoError, setPromoError] = useState("");
 
   useDialog(cartOpen, closeCart, panelRef, returnRef);
   useEffect(() => {
@@ -155,6 +225,8 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
     setStatus("sending");
     setErrorMsg("");
     setLineErrors({});
+    setPromoError("");
+    const code = normalizePromoCode(promoCode);
     try {
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -162,12 +234,19 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
         // configuration only, never prices; the line id stays home
         body: JSON.stringify({
           cart: order.lines.map((line) => pickConfig({ ...line.config, quantity: line.quantity })),
+          ...(code ? { promo: { code, email: promoEmail } } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
         window.location.href = data.url;
         return; // leave the button in its sending state during the redirect
+      }
+      if (res.status === 400 && data.promoError) {
+        setPromoOpen(true);
+        setPromoError(data.promoError);
+        setStatus("error");
+        return;
       }
       if (res.status === 400 && Array.isArray(data.errors)) {
         const byLine = {};
@@ -278,6 +357,22 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
                 <span style={{ color: "var(--coral-deep)" }}>{fmt(order.total)}</span>
               </div>
             </div>
+
+            <PromoField
+              open={promoOpen}
+              onToggle={() => setPromoOpen((v) => !v)}
+              code={promoCode}
+              email={promoEmail}
+              error={promoError}
+              onCode={(v) => {
+                setPromoCode(v);
+                setPromoError("");
+              }}
+              onEmail={(v) => {
+                setPromoEmail(v);
+                setPromoError("");
+              }}
+            />
 
             <button
               type="button"

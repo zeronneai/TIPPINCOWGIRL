@@ -66,6 +66,7 @@ import Stripe from "stripe";
 import { buildCustomerEmail } from "../src/shop/customerEmail.js";
 import { buildOrderEmail } from "../src/shop/orderEmail.js";
 import { saveOrder } from "./_lib/orders.js";
+import { markPromoRedeemed } from "./_lib/promos.js";
 import { buildTicketEmail, buildTicketNotice, isTicketSession, markPaid, seatsRemaining } from "./_lib/tickets.js";
 import { getTicketedEvent } from "../src/events/ticketed.js";
 
@@ -178,6 +179,17 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error(`[webhook] could not store order ${session.id}:`, err?.message || err);
+  }
+
+  // ---- 0b. a promo code on this order is now used up. -----------------------
+  // Also its own try/catch: a failure here is logged, never blocks the emails.
+  if (session.metadata?.promo) {
+    try {
+      const r = await markPromoRedeemed(session);
+      if (!r.marked) console.warn(`[webhook] promo ${session.metadata.promo} on ${session.id} not marked: ${r.reason}`);
+    } catch (err) {
+      console.error(`[webhook] could not mark promo used for ${session.id}:`, err?.message || err);
+    }
   }
 
   try {
