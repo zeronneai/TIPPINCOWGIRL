@@ -135,7 +135,7 @@ function EventPage() {
         </section>
 
         <p className="byb-foot">
-          Only {EVENT.capacity} spots so it stays cozy. Questions? DM{" "}
+          Limited spots so it stays cozy. Questions? DM{" "}
           <a href={IG} target="_blank" rel="noopener noreferrer">
             @_tippincowgirl
           </a>
@@ -146,14 +146,19 @@ function EventPage() {
   );
 }
 
+// No seat count on the public page, on purpose: only "Sold out", or a
+// nudge once few are left. The exact numbers are for the staff portal.
+const FEW_LEFT = 5;
 function SeatsBadge({ remaining }) {
   if (remaining === null || remaining === undefined) return null;
   if (remaining === 0) return <span className="byb-badge byb-badge--out">Sold out</span>;
-  return (
-    <span className="byb-badge" aria-live="polite">
-      {remaining} of {EVENT.capacity} spots left
-    </span>
-  );
+  if (remaining <= FEW_LEFT)
+    return (
+      <span className="byb-badge" aria-live="polite">
+        Almost sold out
+      </span>
+    );
+  return null;
 }
 
 const EMPTY = { name: "", email: "", phone: "", guestName: "", quantity: 2, company: "" };
