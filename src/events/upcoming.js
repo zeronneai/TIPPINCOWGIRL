@@ -47,6 +47,17 @@ export const UPCOMING_EVENTS = [
       "Trick or treat yourself to a new hat! BBQ cook-off, vendors, music, trick-or-treating and a pet costume contest. Come in costume and build your hat with us.",
   },
   {
+    id: "wicked-wine-and-western",
+    kicker: "Zin Valle Vineyards",
+    title: "Wicked Wine & Western",
+    sessions: [{ date: "2026-10-31", day: "Saturday, October 31", time: "12 PM TO 4 PM", start: "12:00", end: "16:00" }],
+    place: "Zin Valle Vineyards",
+    mapsQuery: "Zin Valle Vineyards, Canutillo, TX",
+    partner: "Zin Valle Vineyards",
+    blurb:
+      "A Halloween afternoon of wine, western fun and little surprises all around the vineyard. Come explore everything Zin Valle has planned, then stop by the hat bar and build your custom hat with us!",
+  },
+  {
     id: "wine-not-add-a-hat",
     kicker: "El Paso Wine & Food Festival",
     title: "Wine Not Add a Hat?",
