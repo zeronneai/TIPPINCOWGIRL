@@ -74,7 +74,7 @@ export const BASE_OPTIONS = [
 ];
 export const WOOL_COLORS = BASE_OPTIONS;
 
-// Their artwork is on Cloudinary (catalog.js).
+// Their artwork is in public/hat (catalog.js).
 export const SUEDE_COLORS = [
   { id: "cream", name: "Cream" },
   { id: "black", name: "Black" },

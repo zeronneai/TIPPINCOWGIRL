@@ -27,8 +27,8 @@
 //
 // STACKING CONTRACT (do not reorder):
 //
-//   base     z=10  normal   Cloudinary
-//   brand    z=15  multiply Cloudinary   OFF (BRANDS_ENABLED), burned into
+//   base     z=10  normal   public/hat
+//   brand    z=15  multiply public/hat   OFF (BRANDS_ENABLED), burned into
 //                                        the felt, so under everything else
 //   engrave  z=15  multiply drawn in the browser (EngravingLayer.jsx) from
 //                           public/engraving/: the same burned slot the old
@@ -58,11 +58,15 @@ export const CANVAS = { w: 1600, h: 1600 };
 export const Z_INDEX = { base: 10, brand: 15, feather: 20, cord: 30, bud: 40, matches: 50 };
 export const BLEND = { base: "normal", brand: "multiply", feather: "normal", cord: "normal", bud: "normal", matches: "normal" };
 
-export const CLOUDINARY_CLOUD = "dsprn0ew4";
-const CLD = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload`;
-const layer = (file) => `${CLD}/f_auto,q_auto,w_1600/${file}`;
+// The artwork lives in the site itself (public/hat/), no Cloudinary.
+// The art maps below keep the original file names as identity
+// ("v1789658517/base-ivory_bcsh3a.png"); `artStem` turns one into the
+// file name on disk ("base-ivory"), served as public/hat/base-ivory.webp.
+export const SITE_URL = "https://tippincowgirl.com";
+export const artStem = (file) => publicIdOf(file).replace(/_[a-z0-9]{6}$/, "");
+const layer = (file) => `/hat/${artStem(file)}.webp`;
 
-// The Cloudinary public id of a stored file: the version prefix and the
+// The id of a stored file (its original Cloudinary name, kept as identity): the version prefix and the
 // extension are addressing, not identity, and an overlay reference wants
 // neither. "v1789658517/base-ivory_bcsh3a.png" becomes "base-ivory_bcsh3a".
 export const publicIdOf = (file) =>
@@ -70,7 +74,7 @@ export const publicIdOf = (file) =>
     .replace(/^v\d+\//, "")
     .replace(/\.[a-z0-9]+$/i, "");
 
-// Attach Cloudinary artwork to priced options, matched by id.
+// Attach the artwork to priced options, matched by id.
 // `layerImg` is the plain delivery URL the builder stacks with CSS;
 // `layerFile` and `publicId` let the server flatten the same layers into one
 // image for the order emails.
@@ -122,7 +126,7 @@ const BASES_BY_TYPE = { wool: BASES, suede: SUEDE_BASES, straw: STRAW_BASES };
 /** Every base of a hat type, with its art. */
 export const basesFor = (typeId = DEFAULT_HAT_TYPE) => BASES_BY_TYPE[typeId] || [];
 
-/** The Cloudinary base layer for a config, or null when there is none. */
+/** The base layer for a config, or null when there is none. */
 export const baseArtFor = (config) => findIn(basesFor(config?.hatType ?? DEFAULT_HAT_TYPE), config?.baseId);
 
 // ---- accessories -----------------------------------------------------------
@@ -165,17 +169,9 @@ export const layerKeys = (typeId = DEFAULT_HAT_TYPE) => {
   return Object.fromEntries(Object.entries(thumbKey).map(([step, f]) => [step, (...a) => `${prefix}${f(...a)}`]));
 };
 
-// Where the accessory layers live on Cloudinary, for the order emails. The
-// emails flatten the hat with Cloudinary overlays, so a layer that is not
-// on Cloudinary cannot be drawn there.
-//
-// TODO(email-image): EMPTY until the PNGs in src/shop/layers/ (wool,
-// suede-* and straw-*) are uploaded to Cloudinary. Fill it by layer key, prefix
-// included: { "feather-natural": "<public id>", "suede-feather-natural": ... }.
-// Until every layer a hat uses is listed, the emails show no picture for that
-// hat rather than a picture missing pieces, which would not match what the
-// customer ordered. Base only hats still get their picture.
-export const ACCESSORY_PUBLIC_IDS = {};
+// The order emails show a flat picture of the hat only for base only hats
+// (public/hat/email/<base>.png). A hat with accessories gets no picture
+// rather than a picture missing pieces (see orderEmail.js).
 
 // ---- the burned brand (off) -------------------------------------------------
 // Kept intact for when BRANDS_ENABLED returns. The `custom` option has no

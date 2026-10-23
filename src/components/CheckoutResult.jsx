@@ -12,6 +12,8 @@
 
 import { useEffect, useRef } from "react";
 import { useCart } from "../shop/cart.jsx";
+import { buildOrder } from "../shop/pricing.js";
+import { pixel } from "../metaPixel.js";
 
 export const CHECKOUT_ROUTES = ["/order-confirmed", "/checkout-cancelled"];
 
@@ -43,7 +45,7 @@ function Shell({ kicker, title, children }) {
 const P = { margin: "0 0 16px", fontSize: 16.5, lineHeight: 1.65, color: "#4a3a2c" };
 
 export default function CheckoutResult({ path }) {
-  const { clearCart, openCart } = useCart();
+  const { cart, clearCart, openCart } = useCart();
   const confirmed = path === "/order-confirmed";
   const cleared = useRef(false);
 
@@ -60,9 +62,12 @@ export default function CheckoutResult({ path }) {
     }
     if (paid) {
       cleared.current = true;
+      // the cart still holds what was just paid for: that is the value
+      const order = buildOrder(cart || []);
+      pixel("Purchase", { value: order.total / 100, currency: "USD", num_items: order.totalQuantity });
       clearCart();
     }
-  }, [confirmed, clearCart]);
+  }, [confirmed, clearCart, cart]);
 
   if (confirmed)
     return (

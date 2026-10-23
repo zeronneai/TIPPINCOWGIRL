@@ -9,6 +9,7 @@
 
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
+import { existsSync } from "node:fs";
 
 import * as P from "../src/shop/pricing.js";
 import { BASES, accessoryLayers, baseArtFor, basesFor, sizeGuideRows } from "../src/shop/catalog.js";
@@ -186,7 +187,9 @@ test("size guide per type with US size, inches and cm", () => {
 });
 
 // ---- artwork -------------------------------------------------------------------------
-const CLD = "https://res.cloudinary.com/dsprn0ew4/image/upload";
+// the artwork lives in public/hat/ (no Cloudinary); stems drop the version and the random suffix
+const stem = (file) => file.split("/")[1].replace(/_[a-z0-9]{6}$/, "");
+const EMAIL = "https://tippincowgirl.com/hat/email";
 const ART = {
   wool: {
     // the original six: ids and URLs must never change
@@ -208,7 +211,9 @@ test("every color of every type has its own base, in the site's URL format", () 
     assert.deepEqual(basesFor(t.id).map((b) => b.id), t.colors.map((c) => c.id), t.id);
     for (const c of t.colors) {
       const art = baseArtFor({ hatType: t.id, baseId: c.id });
-      assert.equal(art.layerImg, `${CLD}/f_auto,q_auto,w_1600/${ART[t.id][c.id]}.png`, `${t.id} ${c.id}`);
+      assert.equal(art.layerImg, `/hat/${stem(ART[t.id][c.id])}.webp`, `${t.id} ${c.id}`);
+      assert.ok(existsSync(new URL(`../public${art.layerImg}`, import.meta.url)), `file for ${t.id} ${c.id}`);
+      assert.ok(existsSync(new URL(`../public/hat/email/${stem(ART[t.id][c.id])}.png`, import.meta.url)), `email file for ${t.id} ${c.id}`);
       assert.equal(art.publicId, ART[t.id][c.id].split("/")[1]);
     }
   }
@@ -222,9 +227,9 @@ test("every color of every type has its own base, in the site's URL format", () 
 test("the order email draws the new wool bases", () => {
   assert.equal(
     buildHatImageUrl({ baseId: "cotton-candy-pink", size: "m" }),
-    `${CLD}/w_240,c_fit,f_auto,q_auto/v1791321777/base-cotton-candy-pink_weeofk.png`,
+    `${EMAIL}/base-cotton-candy-pink.png`,
   );
-  assert.equal(buildHatImageUrl({ baseId: "ivory", size: "m" }), `${CLD}/w_240,c_fit,f_auto,q_auto/v1789658517/base-ivory_bcsh3a.png`);
+  assert.equal(buildHatImageUrl({ baseId: "ivory", size: "m" }), `${EMAIL}/base-ivory.png`);
 });
 
 test("a new wool color is valid, at the wool price, and survives the metadata", () => {

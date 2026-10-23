@@ -94,10 +94,9 @@ dependencies). They cover prices per type, validation, the cart, permalinks,
 the metadata, both emails, and the real checkout handler with Stripe
 replaced by a recorder, so they need no key and no network.
 
-The order emails flatten the hat with Cloudinary overlays, and the accessory
-PNGs are not on Cloudinary yet, so a hat with accessories goes out without a
-picture (the rows list every piece). Upload the 27 PNGs to Cloudinary and fill
-`ACCESSORY_PUBLIC_IDS` in `catalog.js` to bring the picture back.
+The order emails show a flat PNG of the base (public/hat/email/), served from
+the site itself. A hat with accessories goes out without a picture (the rows
+list every piece), never with a picture missing pieces.
 
 ### Routing
 
@@ -126,12 +125,8 @@ path, as an `X-Robots-Tag` header in `vercel.json`. Code:
 `src/components/Giveaway.jsx`, styles in `src/components/Giveaway.css` (loaded only with the page). The
 draw date is the `DRAW_DATE` constant at the top of the component.
 
-The prize photo is blurred by Cloudinary in the URL, so the browser only
-ever receives blurred pixels. That does not protect the **original** upload,
-which stays public at the same public id without the transformation. To
-truly hide it until the reveal, upload a pre-blurred copy as its own asset
-and point `PRIZE_ID` at it, then make the original private in Cloudinary or
-remove it until reveal day.
+The prize photo ships already blurred (`public/giveaway-art/prize-*.webp`), so the
+browser only ever receives blurred pixels. The sharp photo is not in the site.
 
 Stripe returns customers to two real paths, which `vercel.json` rewrites to
 the single page app: `/order-confirmed` and `/checkout-cancelled`. The cart

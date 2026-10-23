@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import { test } from "node:test";
 
 import * as P from "../src/shop/pricing.js";
-import { ACCESSORY_PUBLIC_IDS, LAYER_PREFIX, accessoryLayers, layerKeys, thumbKey } from "../src/shop/catalog.js";
+import { LAYER_PREFIX, accessoryLayers, layerKeys, thumbKey } from "../src/shop/catalog.js";
 import { encodeOrderMetadata, parseCartFromMetadata } from "../src/shop/orderMetadata.js";
 import { buildHatImageUrl, hatRows } from "../src/shop/orderEmail.js";
 
@@ -123,20 +123,12 @@ test("the order: metadata, work order rows and the hat picture use suede", () =>
     "Desert Heishi (earth tone heishi bead strand)",
   ]);
 
-  // the picture: the suede base, then the suede-* layers once they are on Cloudinary
+  // the picture: the suede base, and no picture once it carries accessories
   assert.equal(
     buildHatImageUrl(suede({})),
-    "https://res.cloudinary.com/dsprn0ew4/image/upload/w_240,c_fit,f_auto,q_auto/v1791319051/base-suede-camel_q3dftk.png"
+    "https://tippincowgirl.com/hat/email/base-suede-camel.png"
   );
   assert.equal(buildHatImageUrl(hat), null, "no picture until its layers are uploaded, never a wrong one");
-  ACCESSORY_PUBLIC_IDS["suede-feather-cream"] = "acc/suede-feather-cream";
-  ACCESSORY_PUBLIC_IDS["suede-cord-heishi"] = "acc/suede-cord-heishi";
-  ACCESSORY_PUBLIC_IDS["feather-cream"] = "acc/feather-cream";
-  try {
-    const url = buildHatImageUrl(hat);
-    assert.ok(url.includes("l_acc:suede-feather-cream/fl_layer_apply/l_acc:suede-cord-heishi/fl_layer_apply"), url);
-    assert.ok(!url.includes("l_acc:feather-cream/"), "never the wool feather on a suede hat");
-  } finally {
-    for (const k of ["suede-feather-cream", "suede-cord-heishi", "feather-cream"]) delete ACCESSORY_PUBLIC_IDS[k];
-  }
+  // a hat with accessories gets no picture, never one missing pieces
+  assert.equal(buildHatImageUrl(hat), null);
 });

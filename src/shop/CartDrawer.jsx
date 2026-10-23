@@ -4,6 +4,7 @@ import { useCart } from "./cart.jsx";
 import { useDialog } from "./useDialog.js";
 import { FREE_SHIPPING_MIN_QTY, MAX_QUANTITY, MIN_QUANTITY, buildOrder, formatCents, pickConfig } from "./pricing.js";
 import { findPromo, normalizePromoCode } from "./promos.js";
+import { pixel } from "../metaPixel.js";
 
 // ---------------------------------------------------------------------------
 // The cart drawer. Mounted once at the app root so the nav can open it from
@@ -228,6 +229,7 @@ export default function CartDrawer({ canEdit = true, onAddAnother }) {
     setPromoError("");
     const code = normalizePromoCode(promoCode);
     try {
+      pixel("InitiateCheckout", { value: order.total / 100, currency: "USD", num_items: order.totalQuantity });
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

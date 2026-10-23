@@ -23,33 +23,39 @@ export const BOOKING_ENDPOINT =
 export const BOOKING_ENDPOINT_READY = /^https:\/\/script\.google\.com\//.test(BOOKING_ENDPOINT);
 
 // ---------------------------------------------------------------------------
-// Remote media (Cloudinary). The real content lives on Cloudinary, NOT in the
-// repo; local files in src/assets/ remain as overrides (local wins when both
-// exist). Optimization transforms are injected into every URL after /upload/:
-// images f_auto,q_auto,w_1600 (w_800 for gallery/extras), videos
-// f_auto,q_auto,w_1280, and the hero poster is frame zero of the hero video
-// (so_0) delivered as jpg.
+// Media served from the site itself (public/media/), no Cloudinary. Local
+// files in src/assets/ remain as overrides (local wins when both exist).
+// Photos were exported at 1600px (800px for gallery/extras) as WebP; videos
+// at 720p (the hero at 1280), muted. The hero poster is frame zero of the
+// hero video.
 // ---------------------------------------------------------------------------
-const CLD = "https://res.cloudinary.com/dsprn0ew4";
-const cldImg = (path, w = 1600) => `${CLD}/image/upload/f_auto,q_auto,w_${w}/${path}`;
-const cldVid = (path) => `${CLD}/video/upload/f_auto,q_auto,w_1280/${path}`;
-const cldPoster = (path) =>
-  `${CLD}/video/upload/so_0,f_auto,q_auto,w_1280/${path.replace(/\.mp4$/, ".jpg")}`;
+const stem = (path) =>
+  path
+    .split("/")
+    .pop()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/_[a-z0-9]{6}$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+const mediaImg = (path, w = 1600) => `/media/${stem(path)}-${w}.webp`;
+const mediaVid = (path) => `/media/${stem(path)}.mp4`;
+const mediaPoster = (path) => `/media/${stem(path)}-poster.webp`;
 
 const HERO_CLIP = "v1787954335/Horseback_-_Tippin_x_HoB_qdpgsu.mp4";
 
 export const REMOTE_MEDIA = {
-  heroVideo: cldVid(HERO_CLIP),
-  heroPoster: cldPoster(HERO_CLIP),
-  deborah: cldImg("v1787954497/26072026-NZR_8425_yxijsp.jpg"),
+  heroVideo: mediaVid(HERO_CLIP),
+  heroPoster: mediaPoster(HERO_CLIP),
+  deborah: mediaImg("v1787954497/26072026-NZR_8425_yxijsp.jpg"),
   // photos only, shown uncropped in the masonry gallery (w_800)
   gallery: {
-    "01": { image: cldImg("v1787954494/NZR_8627_ravngt.jpg", 800) },
-    "02": { image: cldImg("v1787954514/26072026-NZR_8159_ii0xav.jpg", 800) },
-    "03": { image: cldImg("v1787954495/NZR_7116_n4j27w.jpg", 800) },
-    "04": { image: cldImg("v1787954495/NZR_8790_dhxe1i.jpg", 800) },
-    "05": { image: cldImg("v1787954534/26072026-NZR_8384_itu1k9.jpg", 800) },
-    "06": { image: cldImg("v1787954495/NZR_7232_tfx0w6.jpg", 800) },
+    "01": { image: mediaImg("v1787954494/NZR_8627_ravngt.jpg", 800) },
+    "02": { image: mediaImg("v1787954514/26072026-NZR_8159_ii0xav.jpg", 800) },
+    "03": { image: mediaImg("v1787954495/NZR_7116_n4j27w.jpg", 800) },
+    "04": { image: mediaImg("v1787954495/NZR_8790_dhxe1i.jpg", 800) },
+    "05": { image: mediaImg("v1787954534/26072026-NZR_8384_itu1k9.jpg", 800) },
+    "06": { image: mediaImg("v1787954495/NZR_7232_tfx0w6.jpg", 800) },
   },
 };
 
@@ -58,12 +64,12 @@ export const REMOTE_MEDIA = {
 export const PROCESS_VIDEOS = [
   {
     id: "utep",
-    video: cldVid("v1787954343/UTEP_Hat_-_Tippin_cshbzm.mp4"),
+    video: mediaVid("v1787954343/UTEP_Hat_-_Tippin_cshbzm.mp4"),
     caption: "Custom UTEP build",
   },
   {
     id: "cowboys",
-    video: cldVid("v1787954349/Dallas_Cowboys_Hat_1_iovxcw.mp4"),
+    video: mediaVid("v1787954349/Dallas_Cowboys_Hat_1_iovxcw.mp4"),
     caption: "Custom Cowboys build",
   },
 ];
@@ -83,7 +89,7 @@ export const EVENTS = [
     blurb:
       "We followed the trail all the way here. On September 5 the hat bar found its first home at The Solana in El Paso. Come tip one with us.",
     media: {
-      main: cldVid("v1787955985/Tippin_Solana_Horse_-_5_2_okxm4r.mp4"),
+      main: mediaVid("v1787955985/Tippin_Solana_Horse_-_5_2_okxm4r.mp4"),
     },
   },
   {
@@ -92,10 +98,10 @@ export const EVENTS = [
     date: "July 2026",
     blurb: "The hat bar poolside at The Elmont. Felts, bands and charms in the summer sun.",
     media: {
-      main: cldImg("v1787954497/29072026-NZR_8890_rhhflb.jpg"),
+      main: mediaImg("v1787954497/29072026-NZR_8890_rhhflb.jpg"),
       extras: [
-        cldImg("v1787954493/NZR_8689_sjnnzd.jpg", 800),
-        cldImg("v1787954493/NZR_8666_onavdj.jpg", 800),
+        mediaImg("v1787954493/NZR_8689_sjnnzd.jpg", 800),
+        mediaImg("v1787954493/NZR_8666_onavdj.jpg", 800),
       ],
     },
   },
@@ -105,10 +111,10 @@ export const EVENTS = [
     date: "July 26, 2026",
     blurb: "A collab pop-up with House of Beauty. Custom hats to match fresh looks.",
     media: {
-      main: cldImg("v1787954552/26072026-NZR_8266_xzjmyo.jpg"),
+      main: mediaImg("v1787954552/26072026-NZR_8266_xzjmyo.jpg"),
       extras: [
-        cldImg("v1787954552/26072026-NZR_8445_ehln2u.jpg", 800),
-        cldImg("v1787954552/26072026-NZR_8161_zo0yn4.jpg", 800),
+        mediaImg("v1787954552/26072026-NZR_8445_ehln2u.jpg", 800),
+        mediaImg("v1787954552/26072026-NZR_8161_zo0yn4.jpg", 800),
       ],
     },
   },
@@ -118,10 +124,10 @@ export const EVENTS = [
     date: "Recurring",
     blurb: "The bar keeps rolling around El Paso. Catch the next one on Instagram.",
     media: {
-      main: cldImg("v1787954494/NZR_7221_mkcxrk.jpg"),
+      main: mediaImg("v1787954494/NZR_7221_mkcxrk.jpg"),
       extras: [
-        cldImg("v1787954494/NZR_7104_mcvmgd.jpg", 800),
-        cldImg("v1787954494/NZR_7172_ra1dq1.jpg", 800),
+        mediaImg("v1787954494/NZR_7104_mcvmgd.jpg", 800),
+        mediaImg("v1787954494/NZR_7172_ra1dq1.jpg", 800),
       ],
     },
   },

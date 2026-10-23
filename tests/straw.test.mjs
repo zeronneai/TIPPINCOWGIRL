@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import { test } from "node:test";
 
 import * as P from "../src/shop/pricing.js";
-import { ACCESSORY_PUBLIC_IDS, accessoryLayers, baseArtFor, layerKeys, thumbKey } from "../src/shop/catalog.js";
+import { accessoryLayers, baseArtFor, layerKeys, thumbKey } from "../src/shop/catalog.js";
 import { reviveLine } from "../src/shop/cartLine.js";
 import { encodeOrderMetadata, parseCartFromMetadata } from "../src/shop/orderMetadata.js";
 import { buildHatImageUrl, hatRows } from "../src/shop/orderEmail.js";
@@ -39,8 +39,8 @@ test("Straw is on sale: $80, Cream and Black on the straw bases, S to XL, no bra
   assert.deepEqual([t.enabled, t.basePrice, t.label, t.brandingAllowed], [true, 8000, "Straw Hat", false]);
   assert.deepEqual(t.colors.map((c) => [c.id, c.name]), [["cream", "Cream"], ["black", "Black"]]);
   assert.deepEqual(t.sizes.map((s) => s.name), ["S", "M", "L", "XL"]);
-  assert.match(baseArtFor({ hatType: "straw", baseId: "cream" }).layerImg, /\/base-straw-cream_dgvh8l\.png$/);
-  assert.match(baseArtFor({ hatType: "straw", baseId: "black" }).layerImg, /\/base-straw-black_mqmfpv\.png$/);
+  assert.match(baseArtFor({ hatType: "straw", baseId: "cream" }).layerImg, /\/hat\/base-straw-cream\.webp$/);
+  assert.match(baseArtFor({ hatType: "straw", baseId: "black" }).layerImg, /\/hat\/base-straw-black\.webp$/);
   assert.deepEqual(P.enabledHatTypes().map((x) => x.id), ["wool", "suede", "straw"]);
 });
 
@@ -135,14 +135,8 @@ test("the order: Stripe items, metadata, work order and picture use straw", () =
   assert.ok(!("Branding" in rows));
   assert.equal(
     buildHatImageUrl(straw({ baseId: "black" })),
-    "https://res.cloudinary.com/dsprn0ew4/image/upload/w_240,c_fit,f_auto,q_auto/v1791319050/base-straw-black_mqmfpv.png"
+    "https://tippincowgirl.com/hat/email/base-straw-black.png"
   );
-  ACCESSORY_PUBLIC_IDS["straw-feather-guinea"] = "acc/straw-feather-guinea";
-  ACCESSORY_PUBLIC_IDS["straw-cord-heishi"] = "acc/straw-cord-heishi";
-  try {
-    assert.ok(buildHatImageUrl(hat).includes("l_acc:straw-feather-guinea/fl_layer_apply/l_acc:straw-cord-heishi/fl_layer_apply"));
-  } finally {
-    delete ACCESSORY_PUBLIC_IDS["straw-feather-guinea"];
-    delete ACCESSORY_PUBLIC_IDS["straw-cord-heishi"];
-  }
+  // a hat with accessories gets no picture, never one missing pieces
+  assert.equal(buildHatImageUrl(hat), null);
 });

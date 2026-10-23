@@ -24,7 +24,7 @@
 // the hat image's alt text, which is all a reader sees when their client
 // blocks remote images.
 import { discountOf } from "./promos.js";
-import { ACCESSORY_PUBLIC_IDS, CLOUDINARY_CLOUD, accessoryLayers, baseArtFor } from "./catalog.js";
+import { SITE_URL, accessoryLayers, artStem, baseArtFor } from "./catalog.js";
 import { parseCartFromMetadata } from "./orderMetadata.js";
 import { BRAND_OPTIONS, buildPermalinkQuery, describeConfig, findBase, findSize, hatParts, hatTypeOf } from "./pricing.js";
 import { engravingRows } from "./engravingText.js";
@@ -32,41 +32,23 @@ import { engravingRows } from "./engravingText.js";
 export { parseCartFromMetadata };
 
 // ---------------------------------------------------------------------------
-// One flattened hat image, composed by Cloudinary.
+// One hat image for the email.
 //
-// The site stacks the layers with CSS. Email clients cannot, so Cloudinary
-// flattens them first with chained overlays in the URL itself, in the SAME
-// order catalog.js fixes for the stage:
-//
-//   base     root image
-//   feather  overlay
-//   cord     overlay (over the feather)
-//   bud      overlay
-//   matches  overlay
-//
-// Every layer is 1600x1600, so each overlay lands 1:1 on the full size base,
-// and the resize to email width is the LAST step, after every fl_layer_apply,
-// so scaling can never knock a layer out of register.
+// The site stacks the layers with CSS. Email clients cannot, so the email
+// shows a flat 240px PNG of the base, served from the site itself
+// (public/hat/email/<base>.png).
 //
 // A picture MISSING a piece the customer paid for is worse than no picture:
-// it is exactly the mismatch that turns into a return. So an overlay is only
-// possible for layers listed in ACCESSORY_PUBLIC_IDS (catalog.js), and a hat
-// using any layer that is not listed gets null, meaning no image at all.
-// Today that list is empty (the accessory PNGs are in the repo, not yet on
-// Cloudinary), so only base only hats get a picture. The rows below the
-// picture always carry the full build.
+// it is exactly the mismatch that turns into a return. So a hat with any
+// accessory layer gets null, meaning no image at all. Only base only hats
+// get a picture. The rows below the picture always carry the full build.
 // ---------------------------------------------------------------------------
 
-const CLOUDINARY_BASE = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload`;
-
 // Delivered at twice the displayed size so the picture stays sharp on the
-// phone screens this actually gets read on.
+// phone screens this actually gets read on. PNG on purpose: some email
+// clients cannot decode WebP. The files are public/hat/email/<base>.png.
 const HAT_IMAGE_WIDTH = 240;
 const HAT_IMAGE_DISPLAY = 120;
-
-// Inside an overlay reference a public id cannot carry slashes: folder
-// separators are written as colons.
-const overlayRef = (publicId) => String(publicId).replace(/\//g, ":");
 
 /**
  * Build a single URL for the composed hat, or null when it cannot be built
@@ -83,16 +65,10 @@ export function buildHatImageUrl(config, { width = 240 } = {}) {
     // The base of the hat's own type (catalog.js maps every type's bases).
     const base = baseArtFor(c);
     if (!base?.publicId || !base?.layerFile) return null;
-
-    const w = Number.isInteger(width) && width > 0 ? width : 240;
-    const chain = [];
-    for (const l of accessoryLayers(c)) {
-      const id = ACCESSORY_PUBLIC_IDS[l.key];
-      if (!id) return null; // a piece we cannot draw: no picture, never a wrong one
-      chain.push(`l_${overlayRef(id)}`, "fl_layer_apply");
-    }
-    chain.push(`w_${w},c_fit,f_auto,q_auto`);
-    return `${CLOUDINARY_BASE}/${chain.join("/")}/${base.layerFile}`;
+    // a piece we cannot draw: no picture, never a wrong one
+    if (accessoryLayers(c).length) return null;
+    void width; // one size on disk (240px), shown at 120
+    return `${SITE_URL}/hat/email/${artStem(base.layerFile)}.png`;
   } catch {
     return null;
   }

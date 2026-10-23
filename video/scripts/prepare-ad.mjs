@@ -7,17 +7,17 @@
 //                                                          accessory layers)
 //   src/shop/layers/thumbs -> video/public/ad/thumbs/   (their thumbnails)
 //   public/engraving/      -> video/public/engraving/   (its stamps and fonts)
-//   Cloudinary base hats   -> video/public/ad/bases/    (every base in
+//   public/hat/*.webp      -> video/public/ad/bases/    (every base in
 //                                                          catalog.js, all types)
 //
 // All four folders are generated and gitignored: the originals stay where
 // the site keeps them, so the ad always shows exactly what the builder draws.
 // ---------------------------------------------------------------------------
 
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASES, CLOUDINARY_CLOUD, STRAW_BASES, SUEDE_BASES } from "../../src/shop/catalog.js";
+import { BASES, STRAW_BASES, SUEDE_BASES, artStem } from "../../src/shop/catalog.js";
 
 const VIDEO = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = path.resolve(VIDEO, "..");
@@ -47,27 +47,25 @@ function copyEngraving() {
   console.log("  engraving stamps and fonts: public/engraving");
 }
 
-async function downloadBases() {
+function copyBases() {
   mkdirSync(BASE_DIR, { recursive: true });
   const all = [...BASES, ...SUEDE_BASES, ...STRAW_BASES].filter((b) => b.layerFile);
   let got = 0;
   let failed = 0;
   for (const b of all) {
-    const to = path.join(BASE_DIR, `${b.publicId}.png`);
+    const to = path.join(BASE_DIR, `${b.publicId}.webp`);
     if (existsSync(to)) continue;
-    // the stored PNG at the builder's 1600px
-    const url = `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/f_png,w_1600/${b.layerFile}`;
-    try {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(String(r.status));
-      writeFileSync(to, Buffer.from(await r.arrayBuffer()));
-      got += 1;
-    } catch (e) {
+    // the builder's own 1600px artwork, from the site
+    const from = path.join(ROOT, "public", "hat", `${artStem(b.layerFile)}.webp`);
+    if (!existsSync(from)) {
       failed += 1;
-      console.warn(`  could not download ${b.publicId} (${e.message})`);
+      console.warn(`  missing ${from}`);
+      continue;
     }
+    copyFileSync(from, to);
+    got += 1;
   }
-  console.log(`  base hats: ${got} downloaded, ${readdirSync(BASE_DIR).length} in public/ad/bases${failed ? `, ${failed} failed` : ""}`);
+  console.log(`  base hats: ${got} copied, ${readdirSync(BASE_DIR).length} in public/ad/bases${failed ? `, ${failed} missing` : ""}`);
   if (failed) process.exitCode = 1;
 }
 
@@ -75,5 +73,5 @@ console.log("Hat art for the ad:");
 copyLayers();
 copyThumbs();
 copyEngraving();
-await downloadBases();
-console.log(process.exitCode ? "Some base hats are missing; check the network and run it again." : "Hat art ready.");
+copyBases();
+console.log(process.exitCode ? "Some base hats are missing from public/hat." : "Hat art ready.");

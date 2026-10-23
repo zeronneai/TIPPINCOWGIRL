@@ -111,7 +111,7 @@ They write `out/tippin-ad-30s.mp4`, `out/tippin-ad-15s.mp4` and
 `npm install`.
 
 **The hats are drawn the builder's way.** `src/ad/Hat.tsx` stacks the same
-files in the same order as the site: the Cloudinary base, then the
+files in the same order as the site: the base (public/hat/), then the
 accessory PNGs from `src/shop/layers` in the z-order `catalog.js` gives
 (base, feather, cord, bud, matches), and the engraving through the site's
 own `EngravingLayer.jsx`. Each piece springs into place, with soft shadows

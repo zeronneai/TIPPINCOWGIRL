@@ -30,6 +30,7 @@ import { useEffect, useRef, useState } from "react";
 import { BOOKING_ENDPOINT } from "../hat/data.js";
 import logo from "/logo.png";
 import "./Giveaway.css";
+import { pixel } from "../metaPixel.js";
 
 const GIVEAWAY_ENDPOINT = import.meta.env?.VITE_GIVEAWAY_ENDPOINT || "";
 const ENDPOINT_READY =
@@ -45,21 +46,13 @@ const DRAW_DATE = null;
 const TIPPIN_IG = "https://www.instagram.com/_tippincowgirl/";
 const GRT_IG = "https://www.instagram.com/girlsrunthe915/";
 
-const CLD = "https://res.cloudinary.com/dsprn0ew4/image/upload";
-const GRT_LOGO = `${CLD}/w_240,q_auto,f_auto/v1790382484/ChatGPT_Image_Sep_25_2026_06_27_58_PM_fku7yk.png`;
+const GRT_LOGO = "/giveaway-art/grt-logo.webp";
 
-// The prize, blurred BY CLOUDINARY, never by CSS: the pixels that reach the
-// browser are already blurred, so there is nothing to switch off in devtools.
-// The blur runs on the whole photo first and the crop comes after it, which
-// keeps a readable silhouette; cropping first zooms in and turns it into a
-// smear. e_blur:2000 is Cloudinary's maximum. Lower values (800, 1000) were
-// tried and showed the band.
-//
-// NOTE: this does not hide the ORIGINAL file, which is still public at the
-// same public id with no transformation. See the giveaway notes in README.
-const PRIZE_ID = "v1790382472/GIVEWWAY_jtqlm2.jpg";
-const PRIZE_WIDE = `${CLD}/w_600,c_limit/e_blur:2000/c_fill,ar_16:10,w_720,g_center,y_40/q_auto,f_auto/${PRIZE_ID}`;
-const PRIZE_TALL = `${CLD}/w_600,c_limit/e_blur:2000/q_auto,f_auto/${PRIZE_ID}`;
+// The prize, ALREADY BLURRED in the file itself, never by CSS: the pixels
+// that reach the browser are blurred, so there is nothing to switch off in
+// devtools. The site never ships the sharp photo.
+const PRIZE_WIDE = "/giveaway-art/prize-wide.webp";
+const PRIZE_TALL = "/giveaway-art/prize-tall.webp";
 
 const LIMITS = { name: 80, email: 120, phone: 20 };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -235,6 +228,7 @@ export default function Giveaway() {
     if (body?.ok === true) {
       setValues(EMPTY);
       setErrors({});
+      if (body.duplicate !== true) pixel("Lead", { content_name: "giveaway" });
       setStatus(body.duplicate === true ? "duplicate" : "done");
       return;
     }

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { scrubEvent } from "./analytics.js";
+import { pixel, pixelPageView } from "./metaPixel.js";
 import { CONTACT_EMAIL, STORE_HOURS } from "./business.js";
 import CheckoutResult, { CHECKOUT_ROUTES } from "./components/CheckoutResult.jsx";
 import TrustPage, { TRUST_ROUTES } from "./components/TrustPages.jsx";
@@ -434,6 +435,7 @@ function BookingDrawer({ open, onClose, returnRef }) {
       // an explicit failure from the script is treated as one.
       const body = await res.clone().json().catch(() => null);
       if (body && (body.ok === false || body.result === "error")) throw new Error(body.message || "script error");
+      pixel("Lead", { content_name: "booking" });
       setValues(EMPTY_BOOKING);
       setAddOns(EMPTY_ADDONS);
       setErrors({});
@@ -765,7 +767,7 @@ function Nav({ onBook }) {
 
 // --- Hero: autoplay video loop slot with sticker headline over it ------------
 function Hero({ onBook }) {
-  // local files override the Cloudinary manifest when present
+  // local files override the media manifest when present
   const video = firstUrl(HERO_VIDEO) || REMOTE_MEDIA.heroVideo;
   const poster = firstUrl(HERO_POSTER) || REMOTE_MEDIA.heroPoster;
   const overVideo = !!(video || poster);
@@ -1525,7 +1527,7 @@ const naturalImg = { width: "100%", height: "auto", display: "block" };
 function GalleryPiece({ name, alt, label }) {
   const local = name ? gallerySrc(name) : null;
   const remote = name ? REMOTE_MEDIA.gallery[name] : null;
-  // local file overrides the Cloudinary manifest
+  // local file overrides the media manifest
   if (local?.video)
     return (
       <div style={{ ...pieceFrame, aspectRatio: "4 / 5" }}>
@@ -1903,6 +1905,10 @@ export default function App() {
   useEffect(() => installLinkInterception(), []);
   useEffect(() => scrollToInitialHash(), []);
   useCanonical(path);
+  // Meta Pixel on every public page, never the staff portal
+  useEffect(() => {
+    if (!isAdminPath(path)) pixelPageView();
+  }, [path]);
 
   if (isAdminPath(path))
     return (

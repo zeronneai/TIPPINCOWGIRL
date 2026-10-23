@@ -11,7 +11,7 @@ const EngravingLayer = lazy(() => import("./EngravingLayer.jsx"));
 // both render through exactly the same stacking rules. Nothing here decides
 // anything: which layers, their z-order and blend modes all come from
 // catalog.js (accessoryLayers), and the files from layerArt.js. The base is
-// the Cloudinary PNG; every accessory is a local 1600px PNG on the same
+// the base WebP in public/hat; every accessory is a local 1600px PNG on the same
 // canvas, so all of them stack at inset 0 with no offsets.
 //
 // It fills its positioned parent, so give the parent a size and

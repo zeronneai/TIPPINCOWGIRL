@@ -24,7 +24,7 @@ type Layer = { key: string; src: string; z: number; blend: string };
 export function hatLayers(config: HatConfig): Layer[] {
   const base = baseArtFor(config) as { publicId: string } | null;
   const out: Layer[] = [];
-  if (base) out.push({ key: `base:${base.publicId}`, src: staticFile(`ad/bases/${base.publicId}.png`), z: Z_INDEX.base, blend: BLEND.base });
+  if (base) out.push({ key: `base:${base.publicId}`, src: staticFile(`ad/bases/${base.publicId}.webp`), z: Z_INDEX.base, blend: BLEND.base });
   for (const l of accessoryLayers(config) as { key: string; z: number; blend: string }[]) out.push({ key: l.key, src: staticFile(`ad/layers/${l.key}.png`), z: l.z, blend: l.blend });
   return out;
 }

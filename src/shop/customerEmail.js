@@ -64,11 +64,11 @@ import { engravingRows } from "./engravingText.js";
 const FULFILLMENT_NOTE =
   "Every hat is made to order by hand, so it is not an off the shelf thing. Deborah will email you with the shipping details as soon as your order is on its way.";
 
-// The logo, served at 400px and displayed at 200 so it stays sharp on a
-// retina phone. No f_auto on purpose: that would hand WebP to clients that
-// cannot decode it, and a broken logo is the first thing a reader sees.
-const LOGO_URL =
-  "https://res.cloudinary.com/dsprn0ew4/image/upload/w_400,q_auto/v1781730462/ChatGPT_Image_Jun_17_2026_03_05_51_PM_1_wyaelg.png";
+// The logo, a 400px PNG served from the site (public/email/logo.png) and
+// displayed at 200 so it stays sharp on a retina phone. PNG on purpose: some
+// email clients cannot decode WebP, and a broken logo is the first thing a
+// reader sees.
+const LOGO_URL = "https://tippincowgirl.com/email/logo.png";
 const LOGO_DISPLAY = 200;
 
 // The shop. Kept in sync by hand with SOLANA_ADDRESS in src/App.jsx.

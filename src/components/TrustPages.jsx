@@ -154,7 +154,14 @@ export const TRUST_ROUTES = {
           you here.
         </p>
         <p style={P}>
-          No ad trackers, no tracking cookies, and nothing is sold. Your browser keeps your cart on your own
+          We also use the Meta Pixel, so we can show our hats on Instagram and Facebook to people who visited
+          and see which ads bring orders. It runs on the public pages and records the pages you visit and a
+          few actions: tapping to call or email, sending a booking request or a giveaway entry, starting
+          checkout and completing an order (with its total). Meta may use cookies for this. You can limit it
+          in your Meta ad settings or by blocking third party cookies in your browser.
+        </p>
+        <p style={P}>
+          Nothing is sold. Your browser keeps your cart on your own
           device so it survives closing the tab; clear your browser storage and it is gone. The map in the
           Solana section is Google Maps and only loads if you tap it. Our fonts come from Google Fonts and
           Fontshare, which see your IP address the way any site you load a file from does.
