@@ -1878,6 +1878,15 @@ function Footer({ onBook }) {
         <div style={{ fontSize: 13, color: "#8a7460", fontWeight: 600 }}>
           Custom Hat Bar · The Shoppes at Solana · El Paso, TX
         </div>
+        <a
+          href="https://purpleroots.agency"
+          target="_blank"
+          rel="noopener"
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, color: "#8a7460", textDecoration: "none", opacity: 0.8, justifySelf: "start" }}
+        >
+          Website created by
+          <img src="/purple-roots.png" alt="Purple Roots Agency" width={115} height={11} loading="lazy" style={{ height: 11, width: "auto" }} />
+        </a>
       </div>
     </footer>
   );
