@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TICKET_LIMITS, cleanTicketRequest, getTicketedEvent, money, salesOpen } from "../events/ticketed.js";
 import logo from "/logo.png";
+import flyer from "../assets/upcoming/bring-your-boo.webp";
 import "./BringYourBoo.css";
 
 const EVENT = getTicketedEvent("bring-your-boo-2026");
@@ -152,6 +153,20 @@ function EventPage() {
             <li>📸 A cute photo area</li>
           </ul>
         </section>
+
+        {/* the event flyer (the same file the /events card uses); tap for full size */}
+        <figure className="byb-flyer">
+          <a href={flyer} target="_blank" rel="noopener noreferrer" aria-label="Open the Bring Your Boo flyer">
+            <img
+              src={flyer}
+              width="900"
+              height="1205"
+              loading="lazy"
+              decoding="async"
+              alt="Bring Your Boo flyer: Boots, Brims & Bubbly. Thursday, Oct 29, 6 TO 9 PM at the hat bar. $10 tickets go toward your hat, limited spots."
+            />
+          </a>
+        </figure>
 
         <section className="byb-card byb-deal" aria-labelledby="byb-deal-h">
           <h2 id="byb-deal-h">The deal</h2>

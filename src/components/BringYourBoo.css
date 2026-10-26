@@ -599,3 +599,24 @@
   transform: translateX(-50%);
   z-index: 2;
 }
+
+/* ---- the flyer, between the intro and the deal ---- */
+.byb-flyer {
+  margin: 22px 0 0;
+}
+.byb-flyer a {
+  display: block;
+  border-radius: 18px;
+}
+.byb-flyer img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 5px 0 #0e0805, 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+.byb-flyer a:focus-visible {
+  outline: 3px solid #e8674a;
+  outline-offset: 4px;
+}
