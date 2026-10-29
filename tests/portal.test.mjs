@@ -48,7 +48,7 @@ test("the order row: customer, address, Stripe's totals, every hat in full", () 
   assert.equal(row.created_at, new Date(1791500000 * 1000).toISOString());
   assert.deepEqual([row.customer_name, row.customer_email], ["Ana Ruiz", "ana@example.com"]);
   assert.deepEqual(row.shipping_address, { name: "Ana Ruiz", line1: "1 Main", line2: null, city: "El Paso", state: "TX", postal_code: "79912", country: "US", phone: "+19155550100" });
-  assert.deepEqual([row.subtotal, row.shipping, row.total, row.currency, row.hat_count], [40000, 0, 40000, "usd", 3]);
+  assert.deepEqual([row.subtotal, row.shipping, row.total, row.currency, row.hat_count], [46000, 0, 46000, "usd", 3]);
   for (const k of ["status", "tracking_number", "internal_notes"]) assert.ok(!(k in row), `${k} is the staff's, never written by Stripe`);
 
   const [wool, straw] = row.hats;
@@ -63,7 +63,7 @@ test("the order row: customer, address, Stripe's totals, every hat in full", () 
   });
   assert.deepEqual([wool.unit_price, wool.line_total], [21000, 21000], "$140 + $50 + $10 + $10 branding, from the catalog");
   assert.deepEqual(wool.config, P.normalizeConfig(CART[0]), "the config HatStack redraws from");
-  assert.deepEqual([straw.hat_type, straw.layers.accessories[0].key, straw.quantity, straw.unit_price, straw.line_total], ["straw", "straw-cord-heishi", 2, 9500, 19000]);
+  assert.deepEqual([straw.hat_type, straw.layers.accessories[0].key, straw.quantity, straw.unit_price, straw.line_total], ["straw", "straw-cord-heishi", 2, 12500, 25000]);
 });
 
 test("money comes from what Stripe charged, never from anything else", () => {

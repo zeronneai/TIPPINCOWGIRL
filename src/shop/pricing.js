@@ -125,11 +125,11 @@ export const CORD_OPTIONS = [
   { id: "stitching", name: "Saddle Stitch", plain: "suede stitching", price: 1000, colors: STITCHING_COLORS },
   { id: "leather-rope", name: "Ranch Hand Rope", plain: "leather rope", price: 1000 },
   { id: "barbed-wire", name: "Barbed & Beautiful", plain: "leather barbed wire", price: 1000 },
-  { id: "rhinestone", name: "Rhinestone Sass", plain: "double row crystal band", price: 1500 },
-  { id: "turquoise", name: "Turquoise Trail", plain: "turquoise seed bead strands with silver chain", price: 1500 },
-  { id: "concho-turquoise", name: "Turquoise Concho", plain: "silver concho chain with turquoise stones", price: 1500 },
-  { id: "concho-silver", name: "Silver Sundance", plain: "stamped silver square concho chain", price: 1500 },
-  { id: "heishi", name: "Desert Heishi", plain: "earth tone heishi bead strand", price: 1500 },
+  { id: "rhinestone", name: "Rhinestone Sass", plain: "double row crystal band", price: 6000 },
+  { id: "turquoise", name: "Turquoise Trail", plain: "turquoise seed bead strands with silver chain", price: 4500 },
+  { id: "concho-turquoise", name: "Turquoise Concho", plain: "silver concho chain with turquoise stones", price: 5000 },
+  { id: "concho-silver", name: "Silver Sundance", plain: "stamped silver square concho chain", price: 5000 },
+  { id: "heishi", name: "Desert Heishi", plain: "earth tone heishi bead strand", price: 4500 },
 ];
 
 // The brim bud is chosen size first, then color. The colors differ by size.

@@ -123,9 +123,9 @@ test("the order: Stripe items, metadata, work order and picture use straw", () =
   assert.deepEqual(o.items.map((i) => [i.label, i.unitPrice]), [
     ["Straw Hat: Black", 8000],
     ["Feather: Dusty Trail", 5000],
-    ["Cord: Desert Heishi", 1500],
+    ["Cord: Desert Heishi", 4500],
   ]);
-  assert.deepEqual([o.subtotal, o.shipping, o.total], [14500, 1200, 15700]);
+  assert.deepEqual([o.subtotal, o.shipping, o.total], [17500, 1200, 18700]);
   const md = encodeOrderMetadata(o);
   assert.equal(md.hat_1, "v3|straw|black|guinea|heishi||none||none|none||L|1");
   const back = parseCartFromMetadata(md);

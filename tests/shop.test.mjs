@@ -78,7 +78,7 @@ test("price per type: the type sets the base price, never the color", () => {
   assert.equal(order({ hatType: "straw", baseId: "cream" }).subtotal, 8000);
   assert.equal(new Set(P.findHatType("wool").colors.map((c) => order({ baseId: c.id }).subtotal)).size, 1);
   const full = order({ baseId: "black", featherId: "magenta", cordId: "rhinestone", budSize: "large", budColor: "teal", matchesColor: "red" });
-  assert.deepEqual([full.subtotal, full.shipping, full.total], [24500, 1200, 25700]);
+  assert.deepEqual([full.subtotal, full.shipping, full.total], [29000, 1200, 30200]);
   assert.equal(full.items[0].label, "Wool Hat: Black");
 });
 
@@ -358,10 +358,10 @@ test("checkout recomputes every amount on the server and refuses disabled types"
   // a forged browser claims $1 for everything, and sends no hatType at all
   let r = await post([{ baseId: "wine", featherId: "magenta", cordId: "rhinestone", budSize: "large", budColor: "purple", matchesColor: "black", size: "m", quantity: 1, price: 100, unitPrice: 100, total: 100, basePrice: 100 }]);
   assert.equal(r.code, 200, JSON.stringify(r.body));
-  assert.equal(charged(calls[0]), 24500);
+  assert.equal(charged(calls[0]), 29000);
   assert.equal(calls[0].line_items[0].price_data.unit_amount, 14000);
   assert.equal(calls[0].line_items[0].price_data.product_data.name, "Wool Hat: Burgundy");
-  assert.equal(calls[0].metadata.order_total, "25700");
+  assert.equal(calls[0].metadata.order_total, "30200");
   assert.ok(calls[0].metadata.hat_1.startsWith("v3|wool|wine|"));
 
   // a forged browser asks for a type that is off sale (straw, taken off for this test)

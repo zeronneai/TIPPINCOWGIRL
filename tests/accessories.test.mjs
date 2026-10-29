@@ -32,11 +32,11 @@ test("everything that existed keeps its id, name and price, in order; the new pi
     ["stitching", "Saddle Stitch", 1000],
     ["leather-rope", "Ranch Hand Rope", 1000],
     ["barbed-wire", "Barbed & Beautiful", 1000],
-    ["rhinestone", "Rhinestone Sass", 1500],
-    ["turquoise", "Turquoise Trail", 1500],
-    ["concho-turquoise", "Turquoise Concho", 1500],
-    ["concho-silver", "Silver Sundance", 1500],
-    ["heishi", "Desert Heishi", 1500],
+    ["rhinestone", "Rhinestone Sass", 6000],
+    ["turquoise", "Turquoise Trail", 4500],
+    ["concho-turquoise", "Turquoise Concho", 5000],
+    ["concho-silver", "Silver Sundance", 5000],
+    ["heishi", "Desert Heishi", 4500],
   ]);
 });
 
@@ -54,20 +54,20 @@ test("the owner's plain descriptions", () => {
 test("the four new pieces are valid on wool at their price", () => {
   for (const [line, subtotal, label] of [
     [{ featherId: "cream" }, 19000, "Feather: Snow Quail"],
-    [{ cordId: "concho-turquoise" }, 15500, "Cord: Turquoise Concho"],
-    [{ cordId: "concho-silver" }, 15500, "Cord: Silver Sundance"],
-    [{ cordId: "heishi" }, 15500, "Cord: Desert Heishi"],
+    [{ cordId: "concho-turquoise" }, 19000, "Cord: Turquoise Concho"],
+    [{ cordId: "concho-silver" }, 19000, "Cord: Silver Sundance"],
+    [{ cordId: "heishi" }, 18500, "Cord: Desert Heishi"],
   ]) {
     assert.deepEqual(P.validateConfig({ baseId: "ivory", size: "m", quantity: 1, ...line }).errors, [], JSON.stringify(line));
     const o = order(line);
     assert.equal(o.subtotal, subtotal, JSON.stringify(line));
     assert.equal(o.items[1].label, label);
   }
-  assert.equal(order({ featherId: "cream", cordId: "heishi" }).subtotal, 20500);
+  assert.equal(order({ featherId: "cream", cordId: "heishi" }).subtotal, 23500);
 });
 
 test("the four new pieces are valid on straw too, at $80 plus the piece", () => {
-  for (const [line, price] of [[{ featherId: "cream" }, 5000], [{ cordId: "concho-turquoise" }, 1500], [{ cordId: "concho-silver" }, 1500], [{ cordId: "heishi" }, 1500]]) {
+  for (const [line, price] of [[{ featherId: "cream" }, 5000], [{ cordId: "concho-turquoise" }, 5000], [{ cordId: "concho-silver" }, 5000], [{ cordId: "heishi" }, 4500]]) {
     const hat = { hatType: "straw", baseId: "cream", size: "m", quantity: 1, ...line };
     assert.deepEqual(P.validateConfig(hat).errors, [], JSON.stringify(line));
     assert.equal(P.buildOrder([hat]).subtotal, 8000 + price, JSON.stringify(line));

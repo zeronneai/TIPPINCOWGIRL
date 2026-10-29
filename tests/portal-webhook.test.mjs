@@ -93,7 +93,7 @@ test("the webhook stores the order and still sends both emails, whatever the dat
     assert.deepEqual([r.code, r.body.stored, r.body.emailed, r.body.confirmed], [200, true, true, true]);
     assert.equal(stored[0].table, "orders");
     assert.equal(stored[0].row.stripe_session_id, "cs_test_portal_1");
-    assert.equal(stored[0].row.total, 38000);
+    assert.equal(stored[0].row.total, 44000);
     assert.deepEqual(sent, ["orders@example.com", "ana@example.com"]);
 
     // Stripe delivers the same event again: no new order, no new history
