@@ -235,7 +235,7 @@ test("nothing outside src/admin imports the portal, except App's lazy import", (
   // the charts and the portal's stylesheet are only reachable from the portal
   const admin = walk(path.join(root, "src/admin"));
   const chartUsers = admin.filter((f) => /from "\.\/charts\.jsx"/.test(readFileSync(f, "utf8"))).map((f) => path.basename(f));
-  assert.deepEqual(chartUsers, ["Dashboard.jsx"]);
+  assert.deepEqual(chartUsers, ["Dashboard.jsx", "WebsiteScreen.jsx"]);
   assert.deepEqual(admin.filter((f) => /import "\.\/admin\.css"/.test(readFileSync(f, "utf8"))).map((f) => path.basename(f)), ["AdminApp.jsx"]);
   const pkg = JSON.parse(read("package.json"));
   assert.deepEqual(Object.keys(pkg.dependencies || {}).filter((d) => /chart|d3|recharts|victory|nivo/i.test(d)), [], "no chart library");
@@ -243,7 +243,15 @@ test("nothing outside src/admin imports the portal, except App's lazy import", (
 
 test("the portal never sends anything itself: no fetch, no email or WhatsApp API", () => {
   for (const f of walk(path.join(root, "src/admin"))) {
-    const text = readFileSync(f, "utf8");
+    let text = readFileSync(f, "utf8");
+    // the one exception: the Website screen READS its numbers from our own
+    // /api/web-stats (a GET, staff checked on the server)
+    if (f.endsWith(`${path.sep}WebsiteScreen.jsx`)) {
+      assert.equal((text.match(/\bfetch\(/g) || []).length, 1, f);
+      assert.match(text, /fetch\(`\/api\/web-stats\?days=\$\{days\}`, \{ headers: \{ Authorization:/);
+      assert.doesNotMatch(text, /method:\s*["'](POST|PUT|PATCH|DELETE)/i, f);
+      text = text.replace(/\bfetch\(`\/api\/web-stats/, "");
+    }
     assert.doesNotMatch(text, /\bfetch\(|XMLHttpRequest|sendBeacon|graph\.facebook|api\.whatsapp|resend|sendgrid|nodemailer/i, f);
   }
 });

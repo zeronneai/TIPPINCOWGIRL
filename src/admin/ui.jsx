@@ -86,6 +86,7 @@ const P = {
   inbox: "M4 13l2.5-7.5a1 1 0 0 1 1-.5h9a1 1 0 0 1 1 .5L20 13v5.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5zM4 13h4.5l1 2h5l1-2H20",
   move: "M5 12h14M14 7l5 5-5 5",
   ticket: "M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4zM14.5 6v12",
+  web: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3.5 9h17M3.5 15h17M12 3c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9M12 3C9.6 5.6 8.4 8.6 8.4 12s1.2 6.4 3.6 9",
   out: "M14 5h4.5A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h9",
 };
 
@@ -187,6 +188,7 @@ const SECTIONS = [
   { id: "bookings", href: "/admin/bookings", label: "Bookings", icon: "bookings" },
   { id: "calendar", href: "/admin/calendar", label: "Calendar", icon: "calendar" },
   { id: "tickets", href: "/admin/tickets", label: "Tickets", icon: "ticket" },
+  { id: "website", href: "/admin/website", label: "Website", icon: "web" },
 ];
 
 function Account({ staff, onSignOut }) {

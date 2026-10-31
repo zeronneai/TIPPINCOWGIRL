@@ -84,8 +84,16 @@
         }
       }
     </script>
-    <!-- Roots Engine: analítica web (sin cookies) -->
-    <script defer src="https://roots-engine.vercel.app/t.js" data-site="ab7347dde08e3b55079ba2c935edf43d"></script>
+    <!-- Roots Engine: analítica web (sin cookies). No en /admin: las visitas del staff no cuentan. -->
+    <script>
+      if (!/^\/admin(\/|$)/.test(location.pathname)) {
+        var re = document.createElement("script");
+        re.defer = true;
+        re.src = "https://roots-engine.vercel.app/t.js";
+        re.setAttribute("data-site", "ab7347dde08e3b55079ba2c935edf43d");
+        document.head.appendChild(re);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
