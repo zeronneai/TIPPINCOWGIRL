@@ -145,6 +145,14 @@ Developers > Webhooks, subscribed to `checkout.session.completed`, and copy
 the signing secret into `STRIPE_WEBHOOK_SECRET`. Test mode and live mode are
 separate endpoints with separate signing secrets.
 
+Also subscribe the same endpoint to `checkout.session.expired` for the
+abandoned cart reminder (`src/shop/cartReminderEmail.js`). An unpaid Stripe
+page expires after `CART_REMINDER_AFTER_MIN` (60) minutes; if the customer
+typed an email and ticked the "keep me updated" box Stripe shows under it,
+and has not started a newer checkout, they get one email with their hat and a
+button that rebuilds it in the builder. Without that event the reminder
+simply never fires.
+
 Mail goes out as `Tippin' Cowgirl <orders@tippincowgirl.com>`, which only
 works once tippincowgirl.com is verified in Resend. If the order email stops
 arriving, check the Resend dashboard before suspecting this code.

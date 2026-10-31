@@ -69,6 +69,7 @@ import { saveOrder } from "./_lib/orders.js";
 import { markPromoRedeemed } from "./_lib/promos.js";
 import { buildTicketEmail, buildTicketNotice, isTicketSession, markPaid, seatsRemaining } from "./_lib/tickets.js";
 import { getTicketedEvent } from "../src/events/ticketed.js";
+import { buildCartReminderEmail, shouldSendCartReminder } from "../src/shop/cartReminderEmail.js";
 
 // Vercel parses JSON bodies by default. Stripe signatures do not survive
 // that, so it stays off for this function.
@@ -156,6 +157,7 @@ export default async function handler(req, res) {
 
   // Past this line the request is genuinely from Stripe, so the answer is
   // 200 no matter what happens next.
+  if (event.type === "checkout.session.expired") return handleExpired(event.data?.object || {}, secretKey, req, res);
   if (event.type !== "checkout.session.completed")
     return res.status(200).json({ received: true, ignored: event.type });
 
@@ -308,4 +310,47 @@ async function handleTicket(session, req, res) {
     }
   }
   return res.status(200).json({ received: true, ticket: row.folio, emailed, notified });
+}
+
+/**
+ * An unpaid checkout expired: the abandoned cart reminder. One email, only
+ * to someone who typed their email on the Stripe page and ticked the box to
+ * hear from us, and only when they have not started a newer checkout since
+ * (they came back on their own, or already bought). Always 200.
+ */
+async function handleExpired(session, secretKey, req, res) {
+  const skip = (reason) => res.status(200).json({ received: true, reminder: false, reason });
+  if (isTicketSession(session)) return skip("ticket");
+  const check = shouldSendCartReminder(session);
+  if (!check.ok) return skip(check.reason);
+
+  const email = session.customer_details.email;
+  try {
+    const later = await new Stripe(secretKey).checkout.sessions.list({ customer_details: { email }, limit: 10 });
+    if ((later?.data || []).some((x) => x.id !== session.id && (x.created || 0) > (session.created || 0)))
+      return skip("newer checkout");
+  } catch (err) {
+    // Better one extra reminder than a silent miss.
+    console.warn(`[webhook] could not look for newer checkouts for ${session.id}:`, err?.message || err);
+  }
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.error(`[webhook] cart reminder for ${session.id} not sent: RESEND_API_KEY is missing.`);
+    return skip("no resend key");
+  }
+  try {
+    const mail = buildCartReminderEmail({ session, baseUrl: resolveOrigin(req) || undefined });
+    if (!mail) return skip("nothing to remind");
+    const replyTo = process.env.ORDER_NOTIFICATION_EMAIL || undefined;
+    const { error } = await new Resend(resendKey).emails.send({ from: FROM, to: email, replyTo, ...mail });
+    if (error) {
+      console.error(`[webhook] Resend refused the cart reminder for ${session.id}:`, error);
+      return skip("resend refused");
+    }
+    return res.status(200).json({ received: true, reminder: true });
+  } catch (err) {
+    console.error(`[webhook] cart reminder failed for ${session.id}:`, err);
+    return skip("error");
+  }
 }

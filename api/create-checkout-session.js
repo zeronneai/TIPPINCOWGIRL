@@ -44,6 +44,10 @@ import { buildOrder, pickConfig, validateCart } from "../src/shop/pricing.js";
 import { PROMO_MESSAGES, PROMO_METADATA_KEY, normalizePromoCode } from "../src/shop/promos.js";
 import { checkPromo } from "./_lib/promos.js";
 
+// Minutes an unpaid Stripe page stays open before it expires and the
+// abandoned cart reminder can go out. Stripe allows 30 to 1440.
+export const CART_REMINDER_AFTER_MIN = 60;
+
 // SESSION METADATA: the format (v2, with v1 still readable), the key budget
 // and the 500 character limit are all documented in src/shop/orderMetadata.js,
 // which both writes it here and reads it back in the webhook.
@@ -186,6 +190,12 @@ export default async function handler(req, res) {
       // carried on the URL.
       cancel_url: `${origin}/checkout-cancelled`,
       metadata,
+      // Abandoned cart reminder (api/stripe-webhook.js, checkout.session.
+      // expired): Stripe shows a "keep me updated" box under the email, and
+      // an unpaid page expires after CART_REMINDER_AFTER_MIN so the reminder
+      // goes out the same day instead of 24 hours later.
+      consent_collection: { promotions: "auto" },
+      expires_at: Math.floor(Date.now() / 1000) + CART_REMINDER_AFTER_MIN * 60,
       ...(promo ? { discounts: [{ coupon: promo.promo.coupon }], customer_email: promo.email } : {}),
     });
 

@@ -114,7 +114,7 @@ function firstNameOf(full) {
  * is where those are reported. The pieces come from hatParts(), the same
  * list that priced the order.
  */
-function hatRows(line) {
+export function customerHatRows(line) {
   const rows = [];
   if (line.legacy) {
     // an order from the first builder, paid before the switch
@@ -189,7 +189,7 @@ export function buildCustomerEmail({ session }) {
 
   const hatBlocks = cart
     .map((line, i) => {
-      const rows = hatRows(line)
+      const rows = customerHatRows(line)
         .map(
           ([label, value]) => `
                         <tr>
@@ -351,7 +351,7 @@ ${nextStep(esc(FULFILLMENT_NOTE))}${nextStep("If she needs to check anything abo
   const textHats = cart
     .map((line, i) => {
       const label = cart.length > 1 ? `Hat ${i + 1} of ${cart.length}` : "Your hat";
-      const rows = hatRows(line)
+      const rows = customerHatRows(line)
         .map(([rowLabel, value]) => `  ${rowLabel}: ${value}`)
         .join("\n");
       return `${label}\n${rows}`;
