@@ -46,7 +46,9 @@ export default async function handler(req, res) {
   const staff = await staffFor(token, supabaseAdmin()).catch(() => null);
   if (!staff) return send(res, 401, { error: "Sign in again to see the website numbers." });
 
-  const engineToken = process.env.ROOTS_ENGINE_TOKEN;
+  // trimmed, and quotes dropped: a token pasted as "abc..." or with a
+  // trailing space or newline still works
+  const engineToken = String(process.env.ROOTS_ENGINE_TOKEN || "").trim().replace(/^["']|["']$/g, "");
   if (!engineToken) {
     console.error("[web-stats] ROOTS_ENGINE_TOKEN is not set.");
     return send(res, 503, { error: "Website numbers are not connected yet.", setup: true });
