@@ -1130,6 +1130,14 @@ a.ad-kpi:hover {
   max-height: 260px;
   overflow: auto;
 }
+/* the column titles stay put while the rows scroll under them */
+.ad-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ad-surface);
+  box-shadow: inset 0 -1px 0 var(--ad-line);
+}
 .ad-legend {
   display: flex;
   flex-wrap: wrap;
