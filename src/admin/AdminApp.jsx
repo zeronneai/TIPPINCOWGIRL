@@ -9,6 +9,7 @@ import OrderDetail from "./OrderDetail.jsx";
 import OrdersList from "./OrdersList.jsx";
 import TicketsList from "./TicketsList.jsx";
 import WebsiteScreen from "./WebsiteScreen.jsx";
+import ContentScreen from "./ContentScreen.jsx";
 import { excludeDemo } from "./format.js";
 import { supabase } from "./supabase.js";
 import { Bare, DemoProvider, Shell, logo, useDemo } from "./ui.jsx";
@@ -25,6 +26,7 @@ import { Bare, DemoProvider, Shell, logo, useDemo } from "./ui.jsx";
 //   /admin/calendar         event dates by month
 //   /admin/tickets          ticketed events: who bought, folio, check in
 //   /admin/website          site visits, from Roots Engine (api/web-stats.js)
+//   /admin/content          social posts to approve, from Roots Engine (api/content.js)
 //
 // Sign in is Supabase Auth with email and password. A person who signs in
 // but is not in the `staff` table is signed straight back out with the same
@@ -76,6 +78,7 @@ function route(path) {
   if (path === "/admin/calendar") return { section: "calendar", screen: "calendar" };
   if (path === "/admin/tickets") return { section: "tickets", screen: "tickets" };
   if (path === "/admin/website") return { section: "website", screen: "website" };
+  if (path === "/admin/content") return { section: "content", screen: "content" };
   return { section: "dashboard", screen: "dashboard" };
 }
 
@@ -173,6 +176,7 @@ function Gate({ path }) {
       {r.screen === "calendar" && <CalendarScreen onChanged={bump} />}
       {r.screen === "tickets" && <TicketsList />}
       {r.screen === "website" && <WebsiteScreen />}
+      {r.screen === "content" && <ContentScreen />}
       {r.screen === "dashboard" && <Dashboard />}
     </Shell>
   );
