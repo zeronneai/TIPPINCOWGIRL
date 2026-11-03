@@ -252,6 +252,15 @@ test("the portal never sends anything itself: no fetch, no email or WhatsApp API
       assert.doesNotMatch(text, /method:\s*["'](POST|PUT|PATCH|DELETE)/i, f);
       text = text.replace(/\bfetch\(`\/api\/web-stats/, "");
     }
+    // the Content screen talks to our own /api/content (staff checked on the
+    // server) and uploads a cover or a video with text to the one time
+    // signed link that /api/content hands back; it also reads the video to
+    // add the text in the browser
+    if (f.endsWith(`${path.sep}ContentScreen.jsx`)) {
+      assert.match(text, /fetch\("\/api\/content"/);
+      assert.equal((text.match(/\bfetch\(/g) || []).length, 4, f);
+      text = text.replace(/\bfetch\("\/api\/content"/, "").replace(/\bfetch\(up\.url/g, "").replace(/\bfetch\(i\.url\)/, "");
+    }
     assert.doesNotMatch(text, /\bfetch\(|XMLHttpRequest|sendBeacon|graph\.facebook|api\.whatsapp|resend|sendgrid|nodemailer/i, f);
   }
 });

@@ -370,3 +370,12 @@ checked by the site, not by Stripe (src/shop/promos.js, api/_lib/promos.js).
 
 When the shop moves to Deborah's own Stripe account, create the same coupon
 (same ID) there before switching keys.
+
+## Content approval (/admin/content)
+
+The social media videos are prepared in Roots Engine (Purple Roots Agency): the agency connects the Dropbox folder there, the Roots Engine worker downloads each video, listens to it and writes copy options, on screen text ideas and a suggested cover. The staff sees them in **Content**, picks or edits the copy, optionally adds text on the video, picks any day and approves. The Dropbox link never reaches the portal.
+
+1. Roots Engine: Tippin' Cowgirl > Aprobar > Panel propio del cliente > Copiar token.
+2. Vercel (this project): `ROOTS_PANEL_TOKEN` = that token. Redeploy.
+
+New videos show up after the Roots Engine worker checks the folder (every hour, or right away with **Check for new videos**).
