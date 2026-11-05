@@ -623,7 +623,7 @@ function BookingDrawer({ open, onClose, returnRef }) {
   );
 }
 
-function Brand({ size = 30, fontSize = 19 }) {
+function Brand({ size = 44, fontSize = 19 }) {
   return (
     <div className="tc-brand" style={{ display: "flex", alignItems: "center", gap: 11 }}>
       <img
@@ -1830,7 +1830,7 @@ function Footer({ onBook }) {
             flexWrap: "wrap",
           }}
         >
-          <Brand size={28} fontSize={16} />
+          <Brand size={40} fontSize={16} />
           <button type="button" className="tc-book-nav" onClick={onBook}>
             Book the bar
           </button>
