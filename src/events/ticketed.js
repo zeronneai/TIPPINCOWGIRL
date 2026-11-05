@@ -48,8 +48,8 @@ export const TICKETED_EVENTS = {
     revenueNote: "goes toward their hats",
   },
   // Brims & Blowouts with Nashville Blonde (Rosa's salon): a blowout plus a
-  // hat, $135 per person. Online they pay the $65 deposit; the other $70 is
-  // paid to Deborah at the event for the hat. So priceCents is the deposit.
+  // hat, $135 per person. Online they pay the $70 deposit; the other $65 is
+  // paid to Deborah at the event. So priceCents is the deposit.
   "brims-and-blowouts-2026": {
     id: "brims-and-blowouts-2026",
     path: "/brimsandblowouts",
@@ -64,14 +64,14 @@ export const TICKETED_EVENTS = {
     // TODO: the salon's street address once Deborah confirms it
     address: "",
     capacity: 25,
-    priceCents: 6500,
+    priceCents: 7000,
     totalCents: 13500,
-    balanceCents: 7000,
+    balanceCents: 6500,
     maxPerOrder: 4,
     folioPrefix: "BNB",
     stripeName: "Brims & Blowouts deposit, Nov 14 (blowout + hat combo)",
-    ticketNote: "Your $65 deposit holds your spot. The remaining $70 per guest is paid at the event.",
-    revenueNote: "deposits, $70 more each at the event",
+    ticketNote: "Your $70 deposit holds your spot. The remaining $65 per guest is paid at the event.",
+    revenueNote: "deposits, $65 more each at the event",
   },
 };
 

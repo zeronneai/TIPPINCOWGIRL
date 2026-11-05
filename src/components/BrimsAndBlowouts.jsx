@@ -3,7 +3,7 @@
 // Nashville Blonde, and /brimsandblowouts/ticket?session_id=... after Stripe.
 //
 // The combo is a blowout plus a hat, $135 per person. Online guests pay the
-// $65 deposit (priceCents in src/events/ticketed.js); the remaining $70 is
+// $70 deposit (priceCents in src/events/ticketed.js); the remaining $65 is
 // paid to Deborah at the event. Same page, form and Stripe flow as Bring
 // Your Boo (TicketedEvent.jsx); the tickets land in the portal under Tickets.
 // ---------------------------------------------------------------------------

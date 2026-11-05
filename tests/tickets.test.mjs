@@ -246,9 +246,9 @@ test("Brims & Blowouts is what Deborah and Rosa asked for", () => {
   const bnb = getTicketedEvent("brims-and-blowouts-2026");
   assert.equal(bnb.path, "/brimsandblowouts");
   assert.equal(bnb.capacity, 25);
-  assert.equal(bnb.priceCents, 6500, "online they pay the $65 deposit");
+  assert.equal(bnb.priceCents, 7000, "online they pay the $70 deposit");
   assert.equal(bnb.totalCents, 13500);
-  assert.equal(bnb.priceCents + bnb.balanceCents, bnb.totalCents, "$65 now + $70 at the event = $135");
+  assert.equal(bnb.priceCents + bnb.balanceCents, bnb.totalCents, "$70 now + $65 at the event = $135");
   assert.equal(new Date(bnb.startsAt).toISOString(), "2026-11-14T19:00:00.000Z", "Nov 14, 12 PM in El Paso (MST)");
   assert.equal(new Date(bnb.endsAt).toISOString(), "2026-11-15T01:00:00.000Z", "6 PM");
   assert.equal(bnb.folioPrefix, "BNB");
@@ -257,15 +257,15 @@ test("Brims & Blowouts is what Deborah and Rosa asked for", () => {
 });
 
 test("Brims & Blowouts: the email and the notice talk about the deposit and the balance", () => {
-  const row = { event_id: "brims-and-blowouts-2026", folio: "BNB-001", name: "Ana Ruiz", guest_name: null, quantity: 2, email: "ana@example.com", phone: "915", amount_cents: 13000, stripe_session_id: "cs_test_abcdefghijkl" };
+  const row = { event_id: "brims-and-blowouts-2026", folio: "BNB-001", name: "Ana Ruiz", guest_name: null, quantity: 2, email: "ana@example.com", phone: "915", amount_cents: 14000, stripe_session_id: "cs_test_abcdefghijkl" };
   const mail = buildTicketEmail(row, { baseUrl: "https://tippincowgirl.com" });
   assert.equal(mail.subject, "Your ticket BNB-001: Brims & Blowouts, Saturday, November 14");
-  assert.match(mail.text, /\$65 deposit holds your spot\. The remaining \$70 per guest is paid at the event\./);
+  assert.match(mail.text, /\$70 deposit holds your spot\. The remaining \$65 per guest is paid at the event\./);
   assert.match(mail.text, /https:\/\/tippincowgirl\.com\/brimsandblowouts\/ticket\?session_id=/);
   assert.doesNotMatch(mail.text, /goes toward your hat/);
   assert.doesNotMatch(mail.text, /Nashville Blonde, \n|, $/m);
   const notice = buildTicketNotice(row, { remaining: 23 });
-  assert.match(notice.text, /To collect at the event: \$140/);
+  assert.match(notice.text, /To collect at the event: \$130/);
   assert.match(notice.text, /Seats left: 23 of 25/);
   const boo = buildTicketNotice({ ...row, event_id: EVENT.id, folio: "BOO-001" });
   assert.doesNotMatch(boo.text, /To collect/, "Bring Your Boo has nothing to collect");
