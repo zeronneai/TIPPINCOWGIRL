@@ -620,3 +620,25 @@
   outline: 3px solid #e8674a;
   outline-offset: 4px;
 }
+
+/* ---- events with a photo instead of a video (Brims & Blowouts) ---- */
+/* wide screens: keep the blurred photo on the sides (the video version
+   hides it and uses a blurred clip instead) */
+@media (min-width: 720px) {
+  .byb-stage-media--still::before {
+    display: block;
+  }
+}
+.byb-qty-hint {
+  margin: 8px 0 0;
+}
+
+/* ---- Brims & Blowouts: the flyer's terracotta, a longer second word ---- */
+.byb--bnb .byb-title {
+  font-size: clamp(40px, 11.5vw, 58px);
+}
+.byb--bnb .byb-title span,
+.byb--bnb .byb-stage .byb-title span {
+  font-size: 1.08em;
+  color: #c9694c;
+}

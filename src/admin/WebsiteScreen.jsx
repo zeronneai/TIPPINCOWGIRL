@@ -16,6 +16,7 @@ const PAGE_NAMES = {
   "/": "Home",
   "/events": "Events",
   "/bringyourboo": "Bring Your Boo",
+  "/brimsandblowouts": "Brims & Blowouts",
   "/order-confirmed": "Order confirmed",
   "/checkout-cancelled": "Checkout cancelled",
   "/giveaway": "Giveaway",

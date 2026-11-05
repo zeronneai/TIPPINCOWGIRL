@@ -1902,10 +1902,13 @@ const Giveaway = lazy(() => import("./components/Giveaway.jsx"));
 // traffic. It is noindex (vercel.json, robots.txt).
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx"));
 
-// Ticketed events (/bringyourboo and its /ticket page after Stripe): standalone
-// like the giveaway, its own chunk. See src/events/ticketed.js.
+// Ticketed events (/bringyourboo, /brimsandblowouts and their /ticket pages
+// after Stripe): standalone like the giveaway, each its own chunk. See
+// src/events/ticketed.js.
 const BringYourBoo = lazy(() => import("./components/BringYourBoo.jsx"));
+const BrimsAndBlowouts = lazy(() => import("./components/BrimsAndBlowouts.jsx"));
 const isBooPath = (p) => p === "/bringyourboo" || p === "/bringyourboo/ticket";
+const isBnbPath = (p) => p === "/brimsandblowouts" || p === "/brimsandblowouts/ticket";
 const isAdminPath = (p) => p === "/admin" || p.startsWith("/admin/");
 
 export default function App() {
@@ -1938,6 +1941,10 @@ export default function App() {
       ) : isBooPath(path) ? (
         <Suspense fallback={<div style={{ minHeight: "100vh", background: "#1f140d" }} />}>
           <BringYourBoo path={path} />
+        </Suspense>
+      ) : isBnbPath(path) ? (
+        <Suspense fallback={<div style={{ minHeight: "100vh", background: "#1f140d" }} />}>
+          <BrimsAndBlowouts path={path} />
         </Suspense>
       ) : (
         <CartProvider>

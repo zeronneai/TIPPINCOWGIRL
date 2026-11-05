@@ -16,11 +16,13 @@ const FILTERS = [
   { id: "all", name: "All" },
 ];
 
-const EVENTS = Object.values(TICKETED_EVENTS);
+// newest event first, and the screen opens on the next one still to come
+const EVENTS = Object.values(TICKETED_EVENTS).sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
+const nextEvent = (now = Date.now()) => [...EVENTS].reverse().find((e) => Date.parse(e.endsAt) > now) || EVENTS[0];
 const isLiveHold = (t, now = Date.now()) => t.status === "pending" && t.hold_expires_at && Date.parse(t.hold_expires_at) > now;
 
 export default function TicketsList() {
-  const [eventId, setEventId] = useState(EVENTS[0]?.id);
+  const [eventId, setEventId] = useState(() => nextEvent()?.id);
   const event = TICKETED_EVENTS[eventId];
   const [rows, setRows] = useState(null);
   const [filter, setFilter] = useState("paid");
@@ -92,7 +94,7 @@ export default function TicketsList() {
           <Tile id="sold" label="Seats sold" value={`${seatsSold} / ${event.capacity}`} sub={`${Math.max(event.capacity - seatsSold - seatsHeld, 0)} still available`} icon="check" />
           <Tile id="held" label="In checkout" value={seatsHeld} sub="held while they pay (35 min)" icon="clock" />
           <Tile id="in" label="Checked in" value={`${checkedIn} / ${seatsSold}`} sub="at the door" icon="hat" />
-          <Tile id="revenue" label="Ticket sales" value={money(revenue)} sub="goes toward their hats" icon="money" />
+          <Tile id="revenue" label="Ticket sales" value={money(revenue)} sub={event.revenueNote || "paid online"} icon="money" />
         </div>
       )}
 
@@ -128,7 +130,7 @@ export default function TicketsList() {
         <ul className="ad-rows">
           {shown.map((t) => (
             <li key={t.id}>
-              <TicketRow t={t} busy={busy === t.id} onUpdate={(patch) => update(t, patch)} />
+              <TicketRow t={t} event={event} busy={busy === t.id} onUpdate={(patch) => update(t, patch)} />
             </li>
           ))}
         </ul>
@@ -171,7 +173,7 @@ const STATUS_LOOK = {
   cancelled: { label: "Cancelled", bg: "#f6dfdb", ink: "#9b3423" },
 };
 
-function TicketRow({ t, busy, onUpdate }) {
+function TicketRow({ t, event, busy, onUpdate }) {
   const look = STATUS_LOOK[t.status === "pending" && !isLiveHold(t) ? "expired" : t.status] || STATUS_LOOK.pending;
   return (
     <div className="ad-card ad-ticket" data-ticket={t.folio || t.id}>
@@ -186,6 +188,12 @@ function TicketRow({ t, busy, onUpdate }) {
           {t.phone ? ` · ${t.phone}` : ""}
         </div>
         <div className="ad-row-meta">{t.paid_at ? `Paid ${dateTime(t.paid_at)} · ${money(t.amount_cents || 0)}` : `Started ${dateTime(t.created_at)}`}</div>
+        {/* deposit events (Brims & Blowouts): what is still due at the door */}
+        {event?.balanceCents && t.status === "paid" ? (
+          <div className="ad-row-meta" style={{ fontWeight: 700 }}>
+            Collect {money(event.balanceCents * t.quantity)} at the event
+          </div>
+        ) : null}
       </div>
       <div className="ad-ticket-side">
         <span className="ad-ticket-status" style={{ background: look.bg, color: look.ink }}>

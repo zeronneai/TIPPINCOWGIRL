@@ -107,12 +107,13 @@ export const UPCOMING_EVENTS = [
   },
   {
     id: "brims-and-blowouts",
-    kicker: "Save the date",
+    kicker: "Blowout + hat combo",
     title: "Brims & Blowouts",
-    sessions: [{ date: "2026-11-14", day: "Saturday, November 14" }],
+    sessions: [{ date: "2026-11-14", day: "Saturday, November 14", time: "12 PM TO 6 PM", start: "12:00", end: "18:00" }],
     place: "Nashville Blonde",
     partner: "Nashville Blonde",
-    note: "Tickets and details coming soon",
+    note: "$135 combo, $65 deposit saves your spot. Only 25 spots",
+    cta: { href: "/brimsandblowouts", label: "Get tickets" },
     blurb:
       "A fresh blowout plus a custom hat is the perfect combo. We're teaming up with Nashville Blonde for a ticketed event full of good hair, good hats and good company.",
   },

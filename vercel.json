@@ -38,6 +38,15 @@
       ]
     },
     {
+      "source": "/brimsandblowouts/ticket",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/bringyourboo/ticket",
       "headers": [
         {
@@ -57,6 +66,11 @@
     {
       "source": "/boo",
       "destination": "/bringyourboo",
+      "permanent": false
+    },
+    {
+      "source": "/blowouts",
+      "destination": "/brimsandblowouts",
       "permanent": false
     }
   ]

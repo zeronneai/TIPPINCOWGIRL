@@ -8,7 +8,7 @@
 // they are atomic even with two buyers at once.
 // ---------------------------------------------------------------------------
 
-import { HOLD_MINUTES, getTicketedEvent, money } from "../../src/events/ticketed.js";
+import { HOLD_MINUTES, eventPlace, getTicketedEvent, money } from "../../src/events/ticketed.js";
 import { supabaseAdmin } from "./orders.js";
 
 /** What Stripe metadata marks a ticket checkout with (the webhook branches on it). */
@@ -123,9 +123,9 @@ export function buildTicketEmail(row, { baseUrl = "" } = {}) {
     `Ticket: ${row.folio}`,
     `Admits: ${seats}${row.guest_name ? ` (with ${row.guest_name})` : ""}`,
     `When: ${event.dateLabel}, ${event.timeLabel}`,
-    `Where: ${event.venue}, ${event.address}`,
+    `Where: ${eventPlace(event)}`,
     "",
-    `Your ${money(event.priceCents)} per ticket goes toward your hat that night.`,
+    event.ticketNote,
     "Show this email or your ticket number at the door.",
     link ? `\nYour ticket online: ${link}` : "",
     "",
@@ -145,8 +145,8 @@ export function buildTicketEmail(row, { baseUrl = "" } = {}) {
 <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#6f4526">Ticket</div>
 <div style="font-family:'Courier New',monospace;font-size:34px;font-weight:bold;color:#b04e28;letter-spacing:.06em">${esc(row.folio)}</div>
 <div style="font-size:14px;margin-top:4px">Admits ${esc(seats)}${row.guest_name ? ` &middot; with ${esc(row.guest_name)}` : ""}</div></div>
-<p style="margin:0;font-size:15px;line-height:1.6"><b>${esc(event.dateLabel)}, ${esc(event.timeLabel)}</b><br>${esc(event.venue)}<br>${esc(event.address)}</p>
-<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#4a3a2c">Your ${money(event.priceCents)} per ticket goes toward your hat that night. Show this email or your ticket number at the door.</p>
+<p style="margin:0;font-size:15px;line-height:1.6"><b>${esc(event.dateLabel)}, ${esc(event.timeLabel)}</b><br>${esc(event.venue)}${event.address ? `<br>${esc(event.address)}` : ""}</p>
+<p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#4a3a2c">${esc(event.ticketNote)} Show this email or your ticket number at the door.</p>
 ${link ? `<p style="margin:20px 0 0"><a href="${esc(link)}" style="display:inline-block;background:#b04e28;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:10px">See my ticket</a></p>` : ""}
 </td></tr></table></td></tr></table></body></html>`;
   return { subject, text, html };
@@ -164,10 +164,11 @@ export function buildTicketNotice(row, { remaining = null } = {}) {
     `Email: ${row.email}`,
     `Phone: ${row.phone || "not given"}`,
     `Paid: ${money(row.amount_cents || 0)}`,
+    event.balanceCents ? `To collect at the event: ${money(event.balanceCents * row.quantity)}` : null,
     remaining === null ? "" : `Seats left: ${remaining} of ${event.capacity}`,
     "",
     "Every ticket is in the staff portal under Tickets.",
-  ];
+  ].filter((l) => l !== null);
   const text = lines.join("\n");
   const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#2b1a10">${lines.map((l) => (l ? esc(l) : "&nbsp;")).join("<br>")}</div>`;
   return { subject, text, html };

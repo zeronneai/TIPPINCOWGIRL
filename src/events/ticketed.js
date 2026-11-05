@@ -17,7 +17,9 @@
 //      ticket, paid or not, in the staff portal under Tickets.
 //
 // To run another event: add an entry to TICKETED_EVENTS with a new id and
-// folioPrefix, and a page (see src/components/BringYourBoo.jsx).
+// folioPrefix, and a page (see src/components/BringYourBoo.jsx and
+// BrimsAndBlowouts.jsx, both built on TicketedEvent.jsx). The portal's
+// Tickets screen lists every event here on its own.
 // ---------------------------------------------------------------------------
 
 export const HOLD_MINUTES = 35; // Stripe Checkout lives 30 minutes; a little slack on top
@@ -41,10 +43,42 @@ export const TICKETED_EVENTS = {
     folioPrefix: "BOO",
     // what Stripe shows on the checkout line and the receipt
     stripeName: "Bring Your Boo ticket, Oct 29 at Tippin' Cowgirl",
+    // one line under the ticket (page, email): what the money does
+    ticketNote: "Your $10 per ticket goes toward your hat that night.",
+    revenueNote: "goes toward their hats",
+  },
+  // Brims & Blowouts with Nashville Blonde (Rosa's salon): a blowout plus a
+  // hat, $135 per person. Online they pay the $65 deposit; the other $70 is
+  // paid to Deborah at the event for the hat. So priceCents is the deposit.
+  "brims-and-blowouts-2026": {
+    id: "brims-and-blowouts-2026",
+    path: "/brimsandblowouts",
+    title: "Brims & Blowouts",
+    subtitle: "A ticketed event with Nashville Blonde",
+    // Saturday, November 14, 2026, 12 to 6 PM, El Paso (Mountain Standard Time, UTC-7 after Nov 1)
+    startsAt: "2026-11-14T12:00:00-07:00",
+    endsAt: "2026-11-14T18:00:00-07:00",
+    dateLabel: "Saturday, November 14",
+    timeLabel: "12 PM TO 6 PM",
+    venue: "Nashville Blonde",
+    // TODO: the salon's street address once Deborah confirms it
+    address: "",
+    capacity: 25,
+    priceCents: 6500,
+    totalCents: 13500,
+    balanceCents: 7000,
+    maxPerOrder: 4,
+    folioPrefix: "BNB",
+    stripeName: "Brims & Blowouts deposit, Nov 14 (blowout + hat combo)",
+    ticketNote: "Your $65 deposit holds your spot. The remaining $70 per guest is paid at the event.",
+    revenueNote: "deposits, $70 more each at the event",
   },
 };
 
 export const getTicketedEvent = (id) => TICKETED_EVENTS[id] || null;
+
+/** "Venue, address", or just the venue while the address is not set. */
+export const eventPlace = (event) => [event.venue, event.address].filter(Boolean).join(", ");
 export const ticketedEventByPath = (path) => Object.values(TICKETED_EVENTS).find((e) => e.path === path) || null;
 
 /** Ticket sales close when the event starts. */
