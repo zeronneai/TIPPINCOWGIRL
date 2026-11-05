@@ -253,7 +253,7 @@ test("Brims & Blowouts is what Deborah and Rosa asked for", () => {
   assert.equal(new Date(bnb.endsAt).toISOString(), "2026-11-15T01:00:00.000Z", "6 PM");
   assert.equal(bnb.folioPrefix, "BNB");
   assert.equal(salesOpen(bnb, Date.parse("2026-11-05T12:00:00-07:00")), true);
-  assert.ok(!/–|—/.test(JSON.stringify(bnb)), "no long dashes");
+  assert.ok(!/[\u2013\u2014]/.test(JSON.stringify(bnb)), "no long dashes");
 });
 
 test("Brims & Blowouts: the email and the notice talk about the deposit and the balance", () => {
