@@ -159,9 +159,16 @@ export default async function handler(req, res) {
     metadata.promo_email = promo.email;
   }
 
+  // The cart reminder extras (see below). If Stripe refuses them for this
+  // account, checkout must still work: it retries once without them.
+  const reminderExtras = {
+    consent_collection: { promotions: "auto" },
+    expires_at: Math.floor(Date.now() / 1000) + CART_REMINDER_AFTER_MIN * 60,
+  };
+
   try {
     const stripe = new Stripe(secretKey);
-    const session = await stripe.checkout.sessions.create({
+    const params = {
       mode: "payment",
       line_items: order.items.map((item) => ({
         quantity: item.quantity,
@@ -194,10 +201,19 @@ export default async function handler(req, res) {
       // expired): Stripe shows a "keep me updated" box under the email, and
       // an unpaid page expires after CART_REMINDER_AFTER_MIN so the reminder
       // goes out the same day instead of 24 hours later.
-      consent_collection: { promotions: "auto" },
-      expires_at: Math.floor(Date.now() / 1000) + CART_REMINDER_AFTER_MIN * 60,
+      ...reminderExtras,
       ...(promo ? { discounts: [{ coupon: promo.promo.coupon }], customer_email: promo.email } : {}),
-    });
+    };
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(params);
+    } catch (err) {
+      if (!isReminderExtraError(err)) throw err;
+      // never block a sale over the reminder: buy without it
+      console.error("[checkout] Stripe refused the cart reminder settings, retrying without them:", err?.message || err);
+      const { consent_collection: _c, expires_at: _e, ...plain } = params;
+      session = await stripe.checkout.sessions.create(plain);
+    }
 
     if (!session?.url) {
       console.error("[checkout] Stripe returned a session with no URL:", session?.id);
@@ -214,6 +230,14 @@ export default async function handler(req, res) {
     // Log the detail for us, return nothing that could leak keys or the
     // shape of our Stripe account to the browser.
     console.error("[checkout] Stripe session creation failed:", err);
-    return json(res, 502, { error: "Could not start checkout" });
+    // Stripe's error code and the field it refused are not secret and say
+    // what to fix (shown in the browser's network tab, not to shoppers).
+    return json(res, 502, { error: "Could not start checkout", reason: [err?.code, err?.param].filter(Boolean).join(" ") || undefined });
   }
+}
+
+/** Stripe refused the abandoned cart extras (promotions consent or the 60 minute expiry). */
+export function isReminderExtraError(err) {
+  const text = `${err?.param || ""} ${err?.message || ""}`;
+  return /consent_collection|promotion|expires_at/i.test(text);
 }
